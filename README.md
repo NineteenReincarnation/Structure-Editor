@@ -1,10 +1,27 @@
-# Structure Editor · 结构工坊
+# Structure Editor — RimWorld 可视化结构编辑器
 
-面向 RimWorld 的独立 Windows 结构布局编辑器。用于制作房间、据点、防御阵地、遗迹、机械集群等标准化结构，管理建筑、单位和地形布局。
+还在为 RimWorld 的建筑布局、机械集群阵地和特殊事件场景手动编写 XML 吗？
 
-An independent Windows layout editor for RimWorld structures. Author reusable rooms, bases, defenses, ruins and mech clusters using assets from your local game installation.
+**Structure Editor** 是一款面向 RimWorld 的可视化结构编辑工具，旨在让复杂的地图结构设计变得更加直观、便捷。
 
-## 功能
+通过网格化编辑界面，你可以像在游戏中建造一样，自由摆放建筑、调整位置、规划阵地，并实时查看整体布局效果。
+
+## 主要功能
+
+- **可视化结构编辑**：通过直观的网格画布放置、移动、旋转和删除对象。
+- **游戏素材库**：浏览和搜索建筑等游戏素材，支持按集合、类型、分类及来源筛选。
+- **多结构编辑**：通过标签页同时管理不同的结构设计方案。
+- **便捷编辑操作**：支持框选、平移、缩放及常用快捷键，提高布局效率。
+- **结构属性管理**：自定义结构标识、显示名称、结构类别及保存目录。
+- **结构导出**：支持保存 JSON 工程，并导出用于 RimWorld 的结构 XML。
+
+无论是设计机械集群防御阵地、敌方据点，还是制作特殊建筑群与事件场景，都可以在独立编辑器中完成布局规划，无须反复进入游戏进行调整。
+
+**从繁琐的坐标编辑，到直观的可视化设计。**
+
+Structure Editor，希望让 RimWorld Mod 的结构制作更加简单、高效，也让创作者能够把更多精力放在设计本身。
+
+## 更多功能与兼容细节
 
 - 建筑、单位、地形三类图层；支持基础游戏、已安装 DLC 及手动添加的模组素材来源。
 - 素材按类型、来源和 Wiki 建造分类组合筛选；提供常用、收藏、最近使用与机械集群专题集合。
@@ -80,4 +97,8 @@ scripts/                本地构建、打包与验证
 
 `app/`、`dist/`、`migration/`、游戏素材、DLL 和本机设置均不应提交。`migration/` 仅用于本次迁移的本地备份。
 
-维护者：[NineteenReincarnation](https://github.com/NineteenReincarnation)。当前工程已准备为独立仓库，发布前请由维护者选择源码许可证。
+## 许可证
+
+本项目的原创源代码采用 [MIT License](LICENSE) 开源。许可不覆盖 RimWorld、DLC、其他模组或第三方组件的素材与代码；相关权利与说明见 [素材与第三方说明](THIRD_PARTY_NOTICES.md)。
+
+维护者：[NineteenReincarnation](https://github.com/NineteenReincarnation)。
