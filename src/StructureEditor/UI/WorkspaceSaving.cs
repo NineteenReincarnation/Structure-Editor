@@ -94,6 +94,7 @@ public partial class MainForm
         var result=StructureStorage.SaveProject(document,catalog,path);currentFile=path;saveLocationChanged=false;dirty=false;
         activeDocument.LastSavedId=document.DefName;if(result.ExportError==null)activeDocument.LastXmlPath=result.XmlPath;
         Program.Paths.SaveDirectory=Path.GetDirectoryName(path);RememberDocument(path);PersistWorkspace();RefreshSaveLocation();UpdateTitle();
+        if (MP_libraryLoaded) MP_ReloadLibrary();
         exportResult.Text=result.ExportError!=null?"工程已保存；XML 未更新：\n"+result.ExportError:result.XmlPath!=null?"XML 已更新：\n"+result.XmlPath:"工程已保存（自动导出已关闭）。";
         exportResult.ForeColor=result.ExportError==null?muted:Color.Salmon;
         status.Text=result.ExportError!=null?"工程已保存；XML 导出失败："+result.ExportError:result.XmlPath!=null?"工程和 XML 已保存："+result.XmlPath:"已保存工程："+path;

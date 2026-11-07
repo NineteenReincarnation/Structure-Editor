@@ -25,6 +25,9 @@ Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/使用说明.md') -Destinat
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs') -Destination $appOutput -Recurse
 Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md'), (Join-Path $projectRoot 'THIRD_PARTY_NOTICES.md') -Destination $appOutput
 Copy-Item -LiteralPath (Join-Path $projectRoot 'examples') -Destination $appOutput -Recurse
+if (Test-Path -LiteralPath (Join-Path $projectRoot 'structures')) {
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'structures') -Destination $appOutput -Recurse
+}
 if (Test-Path -LiteralPath (Join-Path $projectRoot 'branding/StructureEditor.ico')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/StructureEditor.ico') -Destination $appOutput
     Copy-Item -LiteralPath (Join-Path $projectRoot 'branding/SOURCE.txt') -Destination (Join-Path $appOutput 'ICON_SOURCE.txt')

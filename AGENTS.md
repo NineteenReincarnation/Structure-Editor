@@ -9,3 +9,6 @@
 - Build with `dotnet build src/StructureEditor/StructureEditor.csproj`; textures are loaded from the user's game at runtime.
 - Preserve document compatibility. Newly placed assets default to awake when supported; picked or copied assets keep their original state.
 - Keep README.md and README.en.md as the marketing landing pages; put engineering details in `docs/`.
+
+- User-authored structure JSON and XML files live under root `structures/`; this is the first library source, paired by DefName. Keep user source documents editable and avoid machine-specific absolute XML export paths.
+- Left library UI uses integrated tabs and PNG preview; do not re-introduce a modal structure picker or a redundant DefName expansion level.

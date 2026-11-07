@@ -117,7 +117,8 @@ public partial class MainForm
         if (matches.Count > 0)
         {
             // The editable project is authoritative when its exported XML also exists.
-            var match = matches.OrderBy(e => e.File.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            var match = matches.OrderBy(e => MP_IsProjectStructure(e.File) ? 0 : 1)
+                .ThenBy(e => e.File.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
                 .ThenBy(e => Program.Paths.RecentDocuments.FindIndex(p => SamePath(p, e.File)) is int index && index >= 0 ? index : int.MaxValue)
                 .ThenByDescending(e => File.GetLastWriteTimeUtc(e.File))
                 .ThenBy(e => e.File, StringComparer.OrdinalIgnoreCase).First();

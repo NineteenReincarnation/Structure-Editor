@@ -26,7 +26,7 @@ public partial class MainForm
         documentBar = new() { Dock = DockStyle.Fill, GripStyle = ToolStripGripStyle.Hidden, BackColor = surface, Padding = new(6, 3, 6, 3), CanOverflow = true };
         AddTool(documentBar, "+ 新建", NewDocument);
         AddTool(documentBar, "打开…", OpenDocument);
-        AddTool(documentBar, "结构库", MP_OpenStructureLibrary);
+        AddTool(documentBar, "结构库", MP_ShowStructureLibrary);
         AddTool(documentBar, "关闭 ×", CloseWorkspaceDocument);
         documentBar.Items.Add(new ToolStripSeparator());
         return documentBar;
@@ -36,7 +36,7 @@ public partial class MainForm
     {
         var roots = (catalog?.Sources.Select(s => s.Root) ?? Enumerable.Empty<string>())
             .Concat(Program.Paths.ExtraMods).Append(Program.Paths.ModRoot);
-        var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { OutputFolder };
+        var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Program.StructureLibraryFolder, OutputFolder };
         if (currentFile != null) folders.Add(Path.GetDirectoryName(Path.GetFullPath(currentFile))!);
         if (!string.IsNullOrWhiteSpace(document.XmlExportDirectory)) folders.Add(document.XmlExportDirectory);
         foreach (var session in documents)
@@ -60,7 +60,7 @@ public partial class MainForm
         var result = new List<(string File, string Id, string Label)>();
         string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
         var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (string folder in StructureFolders().Append(Program.DefaultProjects).Append(desktop).Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (string folder in new[] { Program.StructureLibraryFolder }.Concat(StructureFolders()).Append(Program.DefaultProjects).Append(desktop).Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
             foreach (string file in Directory.EnumerateFiles(folder, "*", SamePath(folder, desktop) ? SearchOption.TopDirectoryOnly : SearchOption.AllDirectories)
                 .Where(p => p.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".json", StringComparison.OrdinalIgnoreCase))) files.Add(Path.GetFullPath(file));
         foreach (string file in files)

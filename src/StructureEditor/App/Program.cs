@@ -11,6 +11,27 @@ internal static class Program
     public static readonly string DataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StructureEditor");
     public static string SettingsFile => Path.Combine(DataDirectory, "settings.json");
     public static string DefaultProjects => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Structure Editor");
+    // Prefer the repository's editable structures/ folder when running from app/.
+    // A standalone package also supports app/structures/ as a fallback.
+    public static string StructureLibraryFolder
+    {
+        get
+        {
+            var baseDir = new DirectoryInfo(AppContext.BaseDirectory);
+            if (baseDir.Name.Equals("app", StringComparison.OrdinalIgnoreCase)
+                && baseDir.Parent is not null)
+            {
+                string repoFolder = Path.Combine(baseDir.Parent.FullName, "structures");
+                if (Directory.Exists(repoFolder)) return repoFolder;
+            }
+            for (DirectoryInfo current = baseDir; current is not null; current = current.Parent)
+            {
+                string candidate = Path.Combine(current.FullName, "structures");
+                if (Directory.Exists(candidate)) return candidate;
+            }
+            return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "structures"));
+        }
+    }
     public static string TestDirectory => Path.Combine(DataDirectory, "Validation");
     [STAThread]
     private static void Main(string[] args)

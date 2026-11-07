@@ -319,12 +319,12 @@ public partial class StructureCanvas
         attr.SetColorMatrix(new ColorMatrix(new[] { new[] { color.R / 255f, 0f, 0f, 0f, 0f }, new[] { 0f, color.G / 255f, 0f, 0f, 0f }, new[] { 0f, 0f, color.B / 255f, 0f, 0f }, new[] { 0f, 0f, 0f, alpha, 0f }, new[] { 0f, 0f, 0f, 0f, 1f } }));
         g.DrawImage(image, Rectangle.Round(dest), source.X, source.Y, source.Width, source.Height, GraphicsUnit.Pixel, attr);
     }
-    public Bitmap ExportPreview()
+    public Bitmap ExportPreview(int maxDimension = 2048)
     {
         if (Document.Items.Count == 0) throw new InvalidOperationException("结构为空。");
         Rectangle bounds = BoundsFor(Document.Items); bounds.Inflate(3, 3);
         if (bounds.Width > 512 || bounds.Height > 512) throw new InvalidOperationException("结构范围超过 512 格，无法导出整张预览；请缩小结构范围。");
-        int size = Math.Clamp(2048 / Math.Max(bounds.Width, bounds.Height), 8, 64);
+        int size = Math.Clamp(maxDimension / Math.Max(bounds.Width, bounds.Height), 2, 64);
         Bitmap output = new(bounds.Width * size, bounds.Height * size);
         using Graphics g = Graphics.FromImage(output); g.Clear(Color.FromArgb(42, 48, 51)); g.InterpolationMode = InterpolationMode.Bilinear;
         float savedSize = cellSize; PointF savedOrigin = origin;

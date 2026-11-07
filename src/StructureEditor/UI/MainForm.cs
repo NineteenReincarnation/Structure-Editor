@@ -69,7 +69,7 @@ public partial class MainForm : Form
         try { action(); } catch (Exception ex) { MessageBox.Show(this, ex.Message, "结构工坊", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
     }
     private async void LoadCatalog() => await LoadCatalogAsync();
-    private string StructuresFolder => Program.DefaultProjects;
+    private string StructuresFolder => Directory.Exists(Program.StructureLibraryFolder) ? Program.StructureLibraryFolder : Program.DefaultProjects;
     private string OutputFolder => string.IsNullOrWhiteSpace(Program.Paths.SaveDirectory) ? StructuresFolder : Program.Paths.SaveDirectory;
     private string SelectedCategory => categoryBox.SelectedIndex == 0 ? "MechCluster" : "General";
     private string FilterKind => kindBox.SelectedIndex is >= 0 and <= 2 ? new[] { "Building", "Pawn", "Terrain" }[kindBox.SelectedIndex] : null;

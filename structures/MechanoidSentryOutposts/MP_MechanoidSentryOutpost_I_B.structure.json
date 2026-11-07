@@ -1,0 +1,350 @@
+{
+  "FormatVersion": 1,
+  "DefName": "MP_MechanoidSentryOutpost_I_B",
+  "Label": "\u673A\u68B0\u54E8\u6212\u9635\u5730\u00B7I-B",
+  "Description": "\u4F7F\u7528 Structure Editor \u521B\u5EFA\u7684\u7ED3\u6784\u5E03\u5C40\u3002",
+  "Category": "General",
+  "StartDormant": false,
+  "ExportProfile": "Framework",
+  "AutoExportOnSave": true,
+  "XmlExportDirectory": null,
+  "EnableMPCompatibility": false,
+  "TemplateBounds": null,
+  "PrefabRotations": "North",
+  "PrefabEdgeOnly": false,
+  "RequiredPackages": [],
+  "FrameworkPlacement": null,
+  "FrameworkTags": [],
+  "Items": [
+    {
+      "Kind": "Pawn",
+      "DefName": "Mech_Militor",
+      "Stuff": null,
+      "X": -2,
+      "Z": 0,
+      "Rotation": 2,
+      "StartDormant": false,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Pawn",
+      "DefName": "Mech_Militor",
+      "Stuff": null,
+      "X": 0,
+      "Z": 3,
+      "Rotation": 2,
+      "StartDormant": false,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Pawn",
+      "DefName": "Mech_Militor",
+      "Stuff": null,
+      "X": 3,
+      "Z": 1,
+      "Rotation": 2,
+      "StartDormant": false,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Pawn",
+      "DefName": "Mech_Militor",
+      "Stuff": null,
+      "X": 1,
+      "Z": -2,
+      "Rotation": 2,
+      "StartDormant": false,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 3,
+      "Z": 5,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 2,
+      "Z": 5,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 1,
+      "Z": 5,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 0,
+      "Z": 5,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoChargeBlaster",
+      "Stuff": null,
+      "X": 0,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": false,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 5,
+      "Z": -2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 5,
+      "Z": -1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 5,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 5,
+      "Z": 1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 5,
+      "Z": 2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 5,
+      "Z": 3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -1,
+      "Z": 5,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -2,
+      "Z": 5,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -4,
+      "Z": 3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -4,
+      "Z": 2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -4,
+      "Z": 1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -4,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -4,
+      "Z": -1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -4,
+      "Z": -2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -2,
+      "Z": -4,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -1,
+      "Z": -4,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 0,
+      "Z": -4,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 1,
+      "Z": -4,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 2,
+      "Z": -4,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 3,
+      "Z": -4,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 4,
+      "Z": -3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -3,
+      "Z": -3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -3,
+      "Z": 4,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 4,
+      "Z": 4,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    }
+  ]
+}

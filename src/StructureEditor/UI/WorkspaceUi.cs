@@ -36,7 +36,31 @@ public partial class MainForm
         palette.Dock = DockStyle.Fill; palette.DrawMode = DrawMode.OwnerDrawFixed; palette.ItemHeight = 78; palette.IntegralHeight = false; palette.BorderStyle = BorderStyle.None;
         palette.BackColor = surface; palette.ForeColor = text; palette.DrawItem += DrawPalette; palette.SelectedIndexChanged += (_, _) => SelectBrush();
         libraryInfo.Dock = DockStyle.Bottom; libraryInfo.Height = 43; libraryInfo.ForeColor = muted;
-        library.Controls.Add(palette); library.Controls.Add(filters); library.Controls.Add(libraryInfo); librarySplit.Panel1.Controls.Add(library);
+        library.Controls.Add(palette); library.Controls.Add(filters); library.Controls.Add(libraryInfo);
+        MP_libraryTabs = new TabControl
+        {
+            Dock = DockStyle.Fill, BackColor = surface, ForeColor = text,
+            Padding = new Point(10, 5), DrawMode = TabDrawMode.OwnerDrawFixed
+        };
+        MP_libraryTabs.DrawItem += (_, e) =>
+        {
+            bool active = e.Index == MP_libraryTabs.SelectedIndex;
+            using var fill = new SolidBrush(active ? Color.FromArgb(53, 86, 84) : surface);
+            e.Graphics.FillRectangle(fill, e.Bounds);
+            TextRenderer.DrawText(e.Graphics, MP_libraryTabs.TabPages[e.Index].Text, Font,
+                e.Bounds, text, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+        };
+        TabPage materialsPage = new("素材库") { BackColor = surface, Padding = Padding.Empty };
+        materialsPage.Controls.Add(library);
+        TabPage structuresPage = new("结构库") { BackColor = surface, Padding = Padding.Empty };
+        structuresPage.Controls.Add(MP_CreateStructureLibraryPanel());
+        MP_libraryTabs.TabPages.Add(materialsPage);
+        MP_libraryTabs.TabPages.Add(structuresPage);
+        MP_libraryTabs.SelectedIndexChanged += (_, _) =>
+        {
+            if (MP_libraryTabs.SelectedIndex == 1 && !MP_libraryLoaded) Safe(MP_ReloadLibrary);
+        };
+        librarySplit.Panel1.Controls.Add(MP_libraryTabs);
 
         Panel viewport = new() { Dock = DockStyle.Fill };
         ToolStrip editTools = new() { Dock = DockStyle.Top, Height = 38, AutoSize = false, GripStyle = ToolStripGripStyle.Hidden, BackColor = surface, Padding = new(4, 4, 0, 4) };
