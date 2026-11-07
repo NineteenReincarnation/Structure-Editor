@@ -14,6 +14,7 @@ Structure-Editor/
 │  ├─ 使用说明.md               # 用户操作说明
 │  └─ changelog/               # 历史版本记录
 ├─ examples/                   # 可复用的无游戏资源结构工程
+├─ structures/                 # 用户维护的结构工程库，优先读取，JSON/XML 成对保存
 ├─ scripts/                    # 构建、打包、验证入口
 ├─ src/StructureEditor/
 │  ├─ App/                     # 程序启动、应用品牌与全局运行设置
@@ -56,3 +57,12 @@ Structure-Editor/
 ## 维护策略
 
 以 `main` 为唯一新功能开发主线。优先实现功能、修复确定的问题；不要因为目录整理就改动射击逻辑、布局坐标、素材解析结果、UI 样式或输出格式。新增源代码按职责放到对应目录，而非继续在项目根目录堆放文件。
+
+## 项目结构库（structures/）
+
+- 仓库根目录的 `structures/` 是内置结构库的第一读取来源，按照子文件夹整理布局；与 `app/` 同级，GitHub Desktop 拉取后即可被识别。
+- 左侧提供「素材库 / 结构库」标签，不再弹出单独的文件选择窗口。选中结构将优先显示同名 PNG（`<DefName>.png` / `<DefName>_preview.png`），无图时使用游戏素材渲染 PNG 到本地预览缓存；双击结构直接打开。
+- JSON 工程和同名 XML 属于同一份结构，左侧只显示一条记录，打开时优先使用可编辑的 `.structure.json`，避免重复或误改导出的 XML。
+- 首次保存新工程默认使用仓库结构库（除非用户选择过另一个保存位置）。编辑已有工程时继续在原有位置保存；可通过「保存位置」修改。
+- `scripts/build.ps1` 将结构库复制到独立发行包的 `app/structures/`，因此单独解压发布包时也可读取；在完整仓库里优先读取仓库根目录，避免修改的是过时副本。
+- 不应在 JSON 中保存作者电脑的绝对游戏路径。仓库中的 `structures/Tests/` 是调试布局，`structures/MechanoidSentryOutposts/` 为哨戒阵地。
