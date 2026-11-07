@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+.vs/
+app/
+dist/
+migration/
+Backups/
+*.user
+*.log
+studio-paths.json
+settings.json
+*.lnk
+branding/
+
+Directory.Build.props
