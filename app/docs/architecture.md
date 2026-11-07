@@ -66,3 +66,7 @@ Structure-Editor/
 - 首次保存新工程默认使用仓库结构库（除非用户选择过另一个保存位置）。编辑已有工程时继续在原有位置保存；可通过「保存位置」修改。
 - `scripts/build.ps1` 将结构库复制到独立发行包的 `app/structures/`，因此单独解压发布包时也可读取；在完整仓库里优先读取仓库根目录，避免修改的是过时副本。
 - 不应在 JSON 中保存作者电脑的绝对游戏路径。仓库中的 `structures/Tests/` 是调试布局，`structures/MechanoidSentryOutposts/` 为哨戒阵地。
+
+### 结构重命名
+
+`Core/MP_StructureRenamer.cs` 负责重命名预检查与文件操作，`UI/WorkspaceLibraryTree.cs` 在左侧树中提供「右键重命名 / F2」并更新工作栏。根据选中工程及关联的 XML 输出目录跟踪文件；只修改与原 DefName 匹配的 XML 节点，不覆盖其他结构定义。文件操作先备份，预检查目标路径冲突，失败尝试恢复。对应轻量回归在 `Validation/MP_StructureRenameChecks.cs`。
