@@ -72,3 +72,10 @@ Structure-Editor/
 `Core/MP_StructureRenamer.cs` 负责重命名预检查与文件操作，`UI/WorkspaceLibraryTree.cs` 在左侧树中提供「右键重命名 / F2」并更新工作栏。根据选中工程及关联的 XML 输出目录跟踪文件；只修改与原 DefName 匹配的 XML 节点，不覆盖其他结构定义。文件操作先备份，预检查目标路径冲突，失败尝试恢复。对应轻量回归在 `Validation/MP_StructureRenameChecks.cs`。
 
 手动指定的 XML 导出路径记录于本机 `StudioPaths.MP_XmlExportPaths`，由 `WorkspaceExport.MP_RecordExportTarget` 维护，避免将用户绝对路径写进仓库的共享工程。右键重命名将本地记录的路径与发现的同名 XML 一起解析并在成功后更新映射。
+
+
+## 深色玻璃界面和护盾兼容
+
+- UI/MP_WindowGlass.cs：启用受系统支持的深色标题栏与 Desktop Acrylic 背景以及玻璃质感工具栏；保留系统窗口的最大化、拖动等原生行为。
+- Catalog/MP_ShieldRanges.cs：读取投射物拦截器及名称明确的 Shield/Barrier/ForceField 组件中的静态半径，由 CatalogItem.ShieldRadii、RuntimeCatalog 和画布的范围绘制使用，不修改游戏内部护盾功能。
+- 顶部重复结构库和关闭按钮已删；右上角新增殉爆、探测、护盾范围开关；Tab 负责切换编辑图层，文件关闭仍可使用 Ctrl+W 或文件菜单。
