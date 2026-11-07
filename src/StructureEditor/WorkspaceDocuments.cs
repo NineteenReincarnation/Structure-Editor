@@ -65,7 +65,9 @@ public partial class MainForm
                 .Where(p => p.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".json", StringComparison.OrdinalIgnoreCase))) files.Add(Path.GetFullPath(file));
         foreach (string file in files)
         {
-            if (file.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            try
+            {
+                if (file.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             {
                 using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));
                 if (json.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object || !json.RootElement.TryGetProperty("DefName", out _) || !json.RootElement.TryGetProperty("Items", out _)) continue;
@@ -80,6 +82,12 @@ public partial class MainForm
             {
                 string id = (string)def.Element("defName");
                 if (!string.IsNullOrWhiteSpace(id)) result.Add((file, id, (string)def.Element("label") ?? id));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Xml.XmlException
+                or System.Text.Json.JsonException or InvalidDataException or ArgumentException)
+            {
+                // A user may be saving an XML while the library is rescanned.
+                // Skip that file for now; Refresh will pick it up after saving.
             }
         }
         return result.DistinctBy(x => (Path.GetFullPath(x.File).ToUpperInvariant(), x.Id)).OrderBy(x => x.Label).ToList();
