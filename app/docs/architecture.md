@@ -70,3 +70,5 @@ Structure-Editor/
 ### 结构重命名
 
 `Core/MP_StructureRenamer.cs` 负责重命名预检查与文件操作，`UI/WorkspaceLibraryTree.cs` 在左侧树中提供「右键重命名 / F2」并更新工作栏。根据选中工程及关联的 XML 输出目录跟踪文件；只修改与原 DefName 匹配的 XML 节点，不覆盖其他结构定义。文件操作先备份，预检查目标路径冲突，失败尝试恢复。对应轻量回归在 `Validation/MP_StructureRenameChecks.cs`。
+
+手动指定的 XML 导出路径记录于本机 `StudioPaths.MP_XmlExportPaths`，由 `WorkspaceExport.MP_RecordExportTarget` 维护，避免将用户绝对路径写进仓库的共享工程。右键重命名将本地记录的路径与发现的同名 XML 一起解析并在成功后更新映射。
