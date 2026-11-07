@@ -33,6 +33,7 @@ internal static class StudioChecks
         new XDocument(new XElement("Defs",legacy.ToXml(true))).Save(legacyPath);
         Need(StructureDocument.Load(legacyPath).Items.Count==3,"Legacy XML import/export remains compatible");
         MP_StructureRenameChecks.Run(folder,Need);
+        MP_ShieldRangesChecks.Run(Need);
         Need(StructureStorage.ResolveTarget(legacyPath,legacy.DefName,legacy.DefName,folder,false)==Path.Combine(folder,legacy.DefName+".structure.json"),"Saving an imported XML creates a native project without overwriting the source");
         var common=catalog.Items.Where(i=>CatalogCollections.Matches(i,1,paths)).ToList();Need(common.Any(i=>i.DefName=="Wall")&&common.Any(i=>i.DefName=="Bed"),"Common assets span construction and furniture");
         var wall=catalog.Find("Building","Wall");var settings=new StudioPaths{Favorites=new(){CatalogCollections.Key(wall)},RecentAssets=new(){CatalogCollections.Key(wall)}};

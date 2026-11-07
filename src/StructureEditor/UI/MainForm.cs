@@ -18,7 +18,7 @@ public partial class MainForm : Form
     private readonly ListBox palette = new();
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Stack<StructureDocument> undo = new(), redo = new();
-    private readonly Color surface = Color.FromArgb(38, 44, 48), text = Color.FromArgb(224, 231, 232), muted = Color.FromArgb(152, 170, 176);
+    private readonly Color surface = Color.FromArgb(33, 43, 52), text = Color.FromArgb(224, 234, 240), muted = Color.FromArgb(156, 175, 188);
     private Catalog catalog;
     private StructureDocument document = new();
     private string currentFile;
@@ -53,6 +53,12 @@ public partial class MainForm : Form
         Load += (_, _) => { UpdatePaletteDensity(); FitWorkingArea(); };
         Shown += (_, _) => { if (Program.IsGame(Program.Paths.GameRoot)) LoadCatalog(); else { canvas.Document=document; RefreshMetadata(); status.Text="请在 编辑 → 首选项 中选择 RimWorld 游戏目录，加载本机素材。"; } };
     }
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        MP_WindowGlass.Apply(Handle);
+    }
+
     private void BuildUi() => BuildWorkspaceUi();
     private Button MakeButton(string caption, int x, int y, int width)
     {
@@ -97,7 +103,7 @@ public partial class MainForm : Form
         palette.BeginUpdate(); palette.Items.Clear();
         foreach (CatalogItem item in catalog.Query(FilterKind, pack, group, query, ClusterScope).Where(MatchesScope)
             .OrderBy(i => scopeBox.SelectedIndex == 3 ? Program.Paths.RecentAssets.IndexOf(CatalogCollections.Key(i)) : CatalogGrouping.Order(i.Group)).ThenBy(i => i.Pack == "Core" ? 0 : 1).ThenBy(i => i.Label)) palette.Items.Add(item);
-        palette.EndUpdate(); libraryInfo.Text = $"当前 {palette.Items.Count} 项"+(scopeBox.SelectedIndex==5?" · 玩家模组":ClusterScope?" · 机械集群":"")+"\n"+(catalog.RuntimeSnapshotUsed?"目录来源：游戏内实际加载的 Def":"目录来源：本机 XML 与素材");
+        palette.EndUpdate(); libraryInfo.Text = $"{palette.Items.Count} 个素材";
     }
     private void DrawPalette(object sender, DrawItemEventArgs e)
     {

@@ -36,6 +36,7 @@ public class CatalogItem
     public float? TurretExplosionRadius { get; set; }
     public float? ProximityTriggerRadius { get; set; }
     public float? DormantWakeRadius { get; set; }
+    public List<float> ShieldRadii { get; set; } = new();
     public List<string> MaterialCategories { get; set; } = new();
     public Color Color { get; set; } = Color.White;
     public override string ToString() => Label + "  [" + DefName + "]";
@@ -275,6 +276,7 @@ public class Catalog : IDisposable
         item.TurretExplosionRadius = ReadTurretExplosionRadius(def);
         item.ProximityTriggerRadius = ReadCompRadius(def, "CompProperties_SendSignalOnMotion", "radius");
         item.DormantWakeRadius = ReadCompRadius(def, "CompProperties_WakeUpDormant", "wakeUpCheckRadius", "wakeUpIfAnyTargetClose");
+        item.ShieldRadii = MP_ShieldRanges.FromDef(def);
         MechClusterCatalog.Assign(item, def);
         if (gun != null && raw.TryGetValue("ThingDef:" + gun, out XElement gunNode))
         {

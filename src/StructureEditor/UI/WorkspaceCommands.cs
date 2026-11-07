@@ -100,7 +100,14 @@ public partial class MainForm
         if (keyData == (Keys.Control | Keys.J)) { DuplicateObjects(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.A)) { canvas.ClearSelection(); return true; }
         if (keyData == Keys.Escape) { canvas.Cancel(); return true; }
-        if (keyData == Keys.Tab && canvas.Focused) { ToggleInspector(); return true; }
+        if ((keyData == Keys.Tab || keyData == (Keys.Shift | Keys.Tab))
+            && MP_editLayerSelector != null && !InputOwnsShortcut(input, keyData)
+            && input is not (ComboBox or TreeView or ListBox or ListView or Button or TextBoxBase or UpDownBase))
+        {
+            MP_CycleEditLayer(keyData == Keys.Tab ? 1 : -1);
+            canvas.Focus();
+            return true;
+        }
         Keys plainKey = keyData & Keys.KeyCode;
         if ((keyData & (Keys.Control | Keys.Alt)) == 0 && plainKey is Keys.Delete or Keys.Back or Keys.X)
         { canvas.DeleteSelected(); return true; }

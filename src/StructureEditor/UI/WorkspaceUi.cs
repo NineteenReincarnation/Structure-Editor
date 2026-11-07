@@ -7,6 +7,13 @@ public partial class MainForm
     private readonly Font smallFont = new("Microsoft YaHei UI", 8);
     private ToolStripStatusLabel selectionStatus;
     private SplitContainer librarySplit, inspectorSplit;
+    private ComboBox MP_editLayerSelector;
+    private void MP_CycleEditLayer(int step)
+    {
+        if (MP_editLayerSelector?.Items.Count is not > 0) return;
+        MP_editLayerSelector.SelectedIndex = (MP_editLayerSelector.SelectedIndex + step +
+            MP_editLayerSelector.Items.Count) % MP_editLayerSelector.Items.Count;
+    }
     private Label selectionCount;
     private void BuildWorkspaceUi()
     {
@@ -14,16 +21,40 @@ public partial class MainForm
         ToolStripManager.Renderer = new StudioRenderer();
         MenuStrip menu = BuildMenus(); MainMenuStrip = menu;
         void Menu(ToolStripDropDownItem parent,string title,Action action) => AddMenuAction(parent,title,action);
-        TableLayoutPanel heading = new() { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 3, BackColor = Color.FromArgb(23, 29, 33), Padding = new(12, 6, 10, 6) };
-        heading.ColumnStyles.Add(new(SizeType.Absolute, 58)); heading.ColumnStyles.Add(new(SizeType.Percent, 100)); heading.ColumnStyles.Add(new(SizeType.AutoSize));
-        ApplyBranding(); brandMark.Dock = DockStyle.Fill; brandMark.Margin = new(0, 0, 10, 0); brandMark.MinimumSize = new(48, 48); heading.Controls.Add(brandMark, 0, 0);
-        TableLayoutPanel headingTitle = new() { AutoSize = true, Dock = DockStyle.Fill, ColumnCount = 1, Margin = Padding.Empty };
-        headingTitle.ColumnStyles.Add(new(SizeType.Percent, 100));
-        headingTitle.Controls.Add(new Label { Text = "Structure Editor", Font = new Font(Font.FontFamily, 14, FontStyle.Bold), ForeColor = Color.FromArgb(205, 231, 225), AutoSize = true, Margin = Padding.Empty });
-        headingTitle.Controls.Add(new Label { Text = "结构工坊   /   布局 · 模板 · 场景", ForeColor = muted, AutoSize = true, Margin = Padding.Empty }); heading.Controls.Add(headingTitle, 1, 0);
-        ToolStrip actions = new() { Dock = DockStyle.Right, GripStyle = ToolStripGripStyle.Hidden, BackColor = heading.BackColor, Padding = new(8), LayoutStyle = ToolStripLayoutStyle.HorizontalStackWithOverflow };
-        AddTool(actions, "保存", () => SaveDocument(false)); AddTool(actions, "保存位置", SetSaveDirectory); AddTool(actions, "导出预览", ExportPreview);
-        heading.Controls.Add(actions, 2, 0);
+        // The native window caption already carries the product name/icon.
+        // Keep this row for actions only, not a second decorative title.
+        ApplyBranding();
+        MP_GlassLayout heading = new() { Dock = DockStyle.Fill, Height = 43,
+            ColumnCount = 2, RowCount = 1, Padding = new Padding(8, 4, 8, 4) };
+        heading.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        heading.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        ToolStrip actions = new()
+        {
+            Dock = DockStyle.Right, GripStyle = ToolStripGripStyle.Hidden,
+            BackColor = Color.FromArgb(27, 37, 45), Padding = new Padding(5, 2, 5, 2),
+            LayoutStyle = ToolStripLayoutStyle.HorizontalStackWithOverflow,
+            AutoSize = true
+        };
+        ToolStripButton MP_rangeToggle(string label, string name, bool initial, Action<bool> onChange)
+        {
+            ToolStripButton button = new(label)
+            {
+                Name = name, ForeColor = text, DisplayStyle = ToolStripItemDisplayStyle.Text,
+                CheckOnClick = true, Checked = initial, ToolTipText = $"显示或隐藏{label}"
+            };
+            button.CheckedChanged += (_, _) => onChange(button.Checked);
+            actions.Items.Add(button);
+            return button;
+        }
+        MP_rangeToggle("殉爆范围", "TurretExplosionRanges", false, SetTurretExplosionRanges);
+        MP_rangeToggle("探测范围", "ProximityRanges", true, enabled => canvas.ShowProximityRanges = enabled);
+        MP_rangeToggle("护盾范围", "ShieldRanges", false, enabled => canvas.ShowShieldRanges = enabled);
+        canvas.ShowProximityRanges = true;
+        actions.Items.Add(new ToolStripSeparator());
+        AddTool(actions, "保存", () => SaveDocument(false));
+        AddTool(actions, "保存位置", SetSaveDirectory);
+        AddTool(actions, "导出预览", ExportPreview);
+        heading.Controls.Add(actions, 1, 0);
 
         librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 6, SplitterDistance = 292, BackColor = Color.FromArgb(21, 27, 30) };
         inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 298), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 6, SplitterDistance = Math.Max(400, ClientSize.Width - 604), BackColor = librarySplit.BackColor };
@@ -45,7 +76,10 @@ public partial class MainForm
         MP_libraryTabs.DrawItem += (_, e) =>
         {
             bool active = e.Index == MP_libraryTabs.SelectedIndex;
-            using var fill = new SolidBrush(active ? Color.FromArgb(53, 86, 84) : surface);
+            using var fill = new System.Drawing.Drawing2D.LinearGradientBrush(e.Bounds,
+                active ? Color.FromArgb(86, 114, 129) : Color.FromArgb(49, 65, 77),
+                active ? Color.FromArgb(42, 70, 81) : Color.FromArgb(33, 45, 54),
+                System.Drawing.Drawing2D.LinearGradientMode.Vertical);
             e.Graphics.FillRectangle(fill, e.Bounds);
             TextRenderer.DrawText(e.Graphics, MP_libraryTabs.TabPages[e.Index].Text, Font,
                 e.Bounds, text, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
@@ -63,7 +97,7 @@ public partial class MainForm
         librarySplit.Panel1.Controls.Add(MP_libraryTabs);
 
         Panel viewport = new() { Dock = DockStyle.Fill };
-        ToolStrip editTools = new() { Dock = DockStyle.Top, Height = 38, AutoSize = false, GripStyle = ToolStripGripStyle.Hidden, BackColor = surface, Padding = new(4, 4, 0, 4) };
+        ToolStrip editTools = new() { Dock = DockStyle.Top, Height = 38, AutoSize = false, GripStyle = ToolStripGripStyle.Hidden, BackColor = Color.FromArgb(35, 46, 56), Padding = new(4, 4, 0, 4) };
         foreach (var (tool, title) in new[] { (CanvasTool.Select, "选择 V"), (CanvasTool.Place, "放置 B"), (CanvasTool.Rectangle, "矩形 M"), (CanvasTool.Erase, "擦除 E"), (CanvasTool.Hand, "平移 H"), (CanvasTool.Zoom, "缩放 Z") })
         {
             ToolStripButton button = new(title) { DisplayStyle = ToolStripItemDisplayStyle.Text, ForeColor = text, CheckOnClick = false };
@@ -82,27 +116,21 @@ public partial class MainForm
         }
         ToolStripMenuItem grid = new("显示网格 G") { Checked = true, CheckOnClick = true };
         grid.CheckedChanged += (_, _) => { canvas.ShowGrid = grid.Checked; canvas.Invalidate(); }; layers.DropDownItems.Add(grid); editTools.Items.Add(layers);
-        ToolStripButton explosionRanges = new("损毁爆炸范围") { Name = "TurretExplosionRanges", DisplayStyle = ToolStripItemDisplayStyle.Text, ForeColor = text, CheckOnClick = true,
-            ToolTipText = "显示炮塔损毁爆炸的标称半径；包含已放置对象、放置及粘贴预览。" };
-        explosionRanges.CheckedChanged += (_, _) => SetTurretExplosionRanges(explosionRanges.Checked);
-        editTools.Items.Add(explosionRanges);
-        ToolStripButton detectorRanges = new("探测范围") { Name = "ProximityRanges", DisplayStyle = ToolStripItemDisplayStyle.Text,
-            ForeColor = text, CheckOnClick = true, Checked = true,
-            ToolTipText = "显示探测激活器与休眠唤醒的真实 XML 半径；绘制已放置对象及放置预览。" };
-        detectorRanges.CheckedChanged += (_, _) => canvas.ShowProximityRanges = detectorRanges.Checked;
-        editTools.Items.Add(detectorRanges);
-        canvas.ShowProximityRanges = true;
-        TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(31, 39, 43), ColumnCount = 3 };
+        TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(37, 50, 60), ColumnCount = 3 };
         layerBar.ColumnStyles.Add(new(SizeType.AutoSize)); layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124)); layerBar.ColumnStyles.Add(new(SizeType.Percent, 100));
         layerBar.Controls.Add(new Label { Text = "编辑图层", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new(10, 0, 10, 0), ForeColor = muted }, 0, 0);
-        ComboBox editLayer = new() { Dock = DockStyle.Fill, Margin = new(0, 3, 0, 3), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = surface, ForeColor = text };
-        editLayer.Items.AddRange(new object[] { "全部", "建筑", "单位", "地形" }); editLayer.SelectedIndex = 0;
-        editLayer.SelectedIndexChanged += (_, _) => canvas.EditLayer = new[] { null, "Building", "Pawn", "Terrain" }[editLayer.SelectedIndex];
+        MP_editLayerSelector = new() { Dock = DockStyle.Fill, Margin = new(0, 3, 0, 3), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = surface, ForeColor = text };
+        MP_editLayerSelector.Items.AddRange(new object[] { "全部", "建筑", "单位", "地形" }); MP_editLayerSelector.SelectedIndex = 0;
+        MP_editLayerSelector.SelectedIndexChanged += (_, _) =>
+        {
+            canvas.EditLayer = new[] { null, "Building", "Pawn", "Terrain" }[MP_editLayerSelector.SelectedIndex];
+            selectionStatus.Text = "编辑图层：" + MP_editLayerSelector.Text;
+        };
         selectionCount = new() { Text = "未选择", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight, Padding = new(0, 0, 12, 0), ForeColor = muted };
-        layerBar.Controls.Add(editLayer, 1, 0); layerBar.Controls.Add(selectionCount, 2, 0);
+        layerBar.Controls.Add(MP_editLayerSelector, 1, 0); layerBar.Controls.Add(selectionCount, 2, 0);
         viewport.Controls.Add(canvas); viewport.Controls.Add(layerBar); viewport.Controls.Add(editTools); inspectorSplit.Panel1.Controls.Add(viewport);
 
-        TabControl tabs = new() { Dock = DockStyle.Fill, Padding = new(6, 7), DrawMode = TabDrawMode.OwnerDrawFixed };
+        TabControl tabs = new() { Dock = DockStyle.Fill, Padding = new(6, 7), DrawMode = TabDrawMode.OwnerDrawFixed, BackColor = surface };
         tabs.DrawItem += (_, e) =>
         {
             bool selected = e.Index == tabs.SelectedIndex;
@@ -165,10 +193,10 @@ public partial class MainForm
         Button chooseFolder = MakeButton("更改保存目录…", 0, 0, 230); chooseFolder.Click += (_, _) => Safe(SetSaveDirectory); Row(metadata, chooseFolder, 34);
         summary.ForeColor = muted; Row(metadata, summary, 62);
         Row(metadata, new Label { Text = "保存：JSON 工程及自动导出 XML。\n在“导出”页设置格式和 XML 目录。\n独立内容包自动声明所需模组。", ForeColor = muted }, 100);
-        Row(tips, new Label { Text = "V 选择 / B 放置 / M 矩形 / E 擦除\nI 吸取 / R 旋转 / H 平移 / Z 缩放\n\n双击对象：吸取并继续放置\nShift 拖动：追加框选\nCtrl 单击：增减选择\nDelete / Backspace：删除\n\n中键 / 空格+拖动：平移\n滚轮：以鼠标为中心缩放\n缩放工具：左键放大，Alt+左键缩小\n\nCtrl+N / O：新建 / 打开\nCtrl+S：保存；Ctrl+Shift+S：另存为\nCtrl+Z / Ctrl+Shift+Z：撤销 / 重做\nCtrl+C / X / V：复制 / 剪切 / 粘贴\nCtrl+J：复制为新对象\n粘贴预览：Q 逆时针 / E 顺时针旋转\nCtrl+A：全选；Ctrl+Shift+A：取消\nCtrl+0：适合窗口；Ctrl+1：实际大小\nCtrl+Home：居中所选；Tab：属性面板\n\n方向键：移动 1 格\nShift+方向键：移动 10 格\n\n布局素材来自本机游戏及添加的目录。", ForeColor = muted }, 700);
+        Row(tips, new Label { Text = "V 选择 / B 放置 / M 矩形 / E 擦除\nI 吸取 / R 旋转 / H 平移 / Z 缩放\n\n双击对象：吸取并继续放置\nShift 拖动：追加框选\nCtrl 单击：增减选择\nDelete / Backspace：删除\n\n中键 / 空格+拖动：平移\n滚轮：以鼠标为中心缩放\n缩放工具：左键放大，Alt+左键缩小\n\nCtrl+N / O：新建 / 打开\nCtrl+S：保存；Ctrl+Shift+S：另存为\nCtrl+Z / Ctrl+Shift+Z：撤销 / 重做\nCtrl+C / X / V：复制 / 剪切 / 粘贴\nCtrl+J：复制为新对象\n粘贴预览：Q 逆时针 / E 顺时针旋转\nCtrl+A：全选；Ctrl+Shift+A：取消\nCtrl+0：适合窗口；Ctrl+1：实际大小\nCtrl+Home：居中所选；Tab：切换编辑图层\n\n方向键：移动 1 格\nShift+方向键：移动 10 格\n\nTab / Shift+Tab：切换编辑图层", ForeColor = muted }, 700);
         inspectorSplit.Panel2.Controls.Add(tabs);
         foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, categoryBox, dormancyBox, profileBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
-        foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, editLayer, materialBox, rotationBox, categoryBox, dormancyBox, profileBox })
+        foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, categoryBox, dormancyBox, profileBox })
         {
             combo.FlatStyle = FlatStyle.Flat; combo.DrawMode = DrawMode.OwnerDrawFixed; combo.ItemHeight = Math.Max(22, Font.Height + 3);
             combo.DrawItem += (_, e) =>
@@ -232,6 +260,18 @@ public partial class MainForm
     private sealed class StudioRenderer : ToolStripProfessionalRenderer
     {
         public StudioRenderer() : base(new StudioColors()) { RoundedEdges = false; }
+        protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+        {
+            if (e.ToolStrip is ToolStripDropDown) { base.OnRenderToolStripBackground(e); return; }
+            Rectangle area = e.AffectedBounds;
+            if (area.Width <= 0 || area.Height <= 0) return;
+            using var fill = new System.Drawing.Drawing2D.LinearGradientBrush(area,
+                Color.FromArgb(59, 78, 91), Color.FromArgb(29, 41, 51),
+                System.Drawing.Drawing2D.LinearGradientMode.Vertical);
+            e.Graphics.FillRectangle(fill, area);
+            using var line = new Pen(Color.FromArgb(70, 103, 117));
+            e.Graphics.DrawLine(line, area.Left, area.Bottom - 1, area.Right, area.Bottom - 1);
+        }
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e) { e.TextColor = Color.FromArgb(224, 231, 232); base.OnRenderItemText(e); }
     }
     private sealed class StudioColors : ProfessionalColorTable

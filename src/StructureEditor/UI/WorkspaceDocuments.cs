@@ -26,9 +26,6 @@ public partial class MainForm
         documentBar = new() { Dock = DockStyle.Fill, GripStyle = ToolStripGripStyle.Hidden, BackColor = surface, Padding = new(6, 3, 6, 3), CanOverflow = true };
         AddTool(documentBar, "+ 新建", NewDocument);
         AddTool(documentBar, "打开…", OpenDocument);
-        AddTool(documentBar, "结构库", MP_ShowStructureLibrary);
-        AddTool(documentBar, "关闭 ×", CloseWorkspaceDocument);
-        documentBar.Items.Add(new ToolStripSeparator());
         return documentBar;
     }
 

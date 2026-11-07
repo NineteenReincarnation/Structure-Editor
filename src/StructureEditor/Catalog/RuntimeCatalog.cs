@@ -57,6 +57,8 @@ internal static class RuntimeCatalog
                 item.TurretExplosionRadius ??= previous?.TurretExplosionRadius;
                 item.ProximityTriggerRadius ??= previous?.ProximityTriggerRadius;
                 item.DormantWakeRadius ??= previous?.DormantWakeRadius;
+                if (item.ShieldRadii == null || item.ShieldRadii.Count == 0)
+                    item.ShieldRadii = previous?.ShieldRadii != null ? new(previous.ShieldRadii) : new();
                 item.Label??=item.DefName;item.CompClasses??=new();item.MaterialCategories??=new();item.LinkFlags??=new();
                 item.PackageId=source.PackageId;item.Pack=source.Display;item.IsMod=!source.Official;item.Color=Color.FromArgb(item.ColorArgb);
                 if(item.Kind=="Building")
