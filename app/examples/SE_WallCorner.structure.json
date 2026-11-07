@@ -1,0 +1,12 @@
+{
+  "FormatVersion": 1,
+  "DefName": "SE_WallCorner",
+  "Label": "钢墙转角",
+  "Category": "General",
+  "StartDormant": false,
+  "Items": [
+    { "Kind": "Building", "DefName": "Wall", "Stuff": "Steel", "X": 0, "Z": 0, "Rotation": 0, "StartDormant": null },
+    { "Kind": "Building", "DefName": "Wall", "Stuff": "Steel", "X": 1, "Z": 0, "Rotation": 0, "StartDormant": null },
+    { "Kind": "Building", "DefName": "Wall", "Stuff": "Steel", "X": 0, "Z": 1, "Rotation": 0, "StartDormant": null }
+  ]
+}
