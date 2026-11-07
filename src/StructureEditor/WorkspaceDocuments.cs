@@ -68,26 +68,32 @@ public partial class MainForm
             try
             {
                 if (file.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-            {
-                using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));
-                if (json.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object || !json.RootElement.TryGetProperty("DefName", out _) || !json.RootElement.TryGetProperty("Items", out _)) continue;
-                var doc = StructureDocument.Load(file);
-                result.Add((file, doc.DefName, doc.Label));
-                continue;
+                {
+                    using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));
+                    if (json.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object
+                        || !json.RootElement.TryGetProperty("DefName", out _)
+                        || !json.RootElement.TryGetProperty("Items", out _)) continue;
+                    var doc = StructureDocument.Load(file);
+                    result.Add((file, doc.DefName, doc.Label));
+                    continue;
+                }
+                var root = XDocument.Load(file).Root;
+                foreach (var def in (root?.Name.LocalName == "Defs" ? root.Elements()
+                    : root == null ? Enumerable.Empty<XElement>() : new[] { root })
+                    .Where(e => e.Name.LocalName is "MechProtocol.MP_StructureDef" or "StructureFramework.StructureDef"
+                        or "StructureEditor.StructureDef" or "PrefabDef")
+                    .Where(e => !string.Equals((string)e.Attribute("Abstract"), "true", StringComparison.OrdinalIgnoreCase)))
+                {
+                    string id = (string)def.Element("defName");
+                    if (!string.IsNullOrWhiteSpace(id))
+                        result.Add((file, id, (string)def.Element("label") ?? id));
+                }
             }
-            var root = XDocument.Load(file).Root;
-            foreach (var def in (root?.Name.LocalName == "Defs" ? root.Elements() : root == null ? Enumerable.Empty<XElement>() : new[] { root })
-                .Where(e => e.Name.LocalName is "MechProtocol.MP_StructureDef" or "StructureFramework.StructureDef" or "StructureEditor.StructureDef" or "PrefabDef")
-                .Where(e => !string.Equals((string)e.Attribute("Abstract"), "true", StringComparison.OrdinalIgnoreCase)))
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                or System.Xml.XmlException or System.Text.Json.JsonException
+                or InvalidDataException or ArgumentException)
             {
-                string id = (string)def.Element("defName");
-                if (!string.IsNullOrWhiteSpace(id)) result.Add((file, id, (string)def.Element("label") ?? id));
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Xml.XmlException
-                or System.Text.Json.JsonException or InvalidDataException or ArgumentException)
-            {
-                // A user may be saving an XML while the library is rescanned.
-                // Skip that file for now; Refresh will pick it up after saving.
+                // The next Refresh will retry XML files that were still being saved.
             }
         }
         return result.DistinctBy(x => (Path.GetFullPath(x.File).ToUpperInvariant(), x.Id)).OrderBy(x => x.Label).ToList();
