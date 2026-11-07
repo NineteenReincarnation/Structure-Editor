@@ -26,18 +26,7 @@ public partial class MainForm
         documentBar = new() { Dock = DockStyle.Fill, GripStyle = ToolStripGripStyle.Hidden, BackColor = surface, Padding = new(6, 3, 6, 3), CanOverflow = true };
         AddTool(documentBar, "+ 新建", NewDocument);
         AddTool(documentBar, "打开…", OpenDocument);
-        ToolStripDropDownButton library = new("结构库") { ForeColor = text };
-        library.DropDownOpening += (_, _) => Safe(() =>
-        {
-            library.DropDownItems.Clear();
-            foreach (var entry in LibraryDefinitions())
-            {
-                var captured = entry;
-                AddMenuAction(library, entry.Label, () => OpenWorkspaceFile(captured.File, captured.Id));
-            }
-            if (library.DropDownItems.Count == 0) library.DropDownItems.Add(new ToolStripMenuItem("暂无结构") { Enabled = false });
-        });
-        documentBar.Items.Add(library);
+        AddTool(documentBar, "结构库", MP_OpenStructureLibrary);
         AddTool(documentBar, "关闭 ×", CloseWorkspaceDocument);
         documentBar.Items.Add(new ToolStripSeparator());
         return documentBar;
