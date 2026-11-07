@@ -55,6 +55,8 @@ internal static class RuntimeCatalog
                 bool replace=itemPositions.TryGetValue((item.Kind,item.DefName),out int position);var previous=replace?items[position]:null;
                 item.LinkType ??= previous?.LinkType;
                 item.TurretExplosionRadius ??= previous?.TurretExplosionRadius;
+                item.ProximityTriggerRadius ??= previous?.ProximityTriggerRadius;
+                item.DormantWakeRadius ??= previous?.DormantWakeRadius;
                 item.Label??=item.DefName;item.CompClasses??=new();item.MaterialCategories??=new();item.LinkFlags??=new();
                 item.PackageId=source.PackageId;item.Pack=source.Display;item.IsMod=!source.Official;item.Color=Color.FromArgb(item.ColorArgb);
                 if(item.Kind=="Building")

@@ -26,18 +26,7 @@ public partial class MainForm
         documentBar = new() { Dock = DockStyle.Fill, GripStyle = ToolStripGripStyle.Hidden, BackColor = surface, Padding = new(6, 3, 6, 3), CanOverflow = true };
         AddTool(documentBar, "+ 新建", NewDocument);
         AddTool(documentBar, "打开…", OpenDocument);
-        ToolStripDropDownButton library = new("结构库") { ForeColor = text };
-        library.DropDownOpening += (_, _) => Safe(() =>
-        {
-            library.DropDownItems.Clear();
-            foreach (var entry in LibraryDefinitions())
-            {
-                var captured = entry;
-                AddMenuAction(library, entry.Label, () => OpenWorkspaceFile(captured.File, captured.Id));
-            }
-            if (library.DropDownItems.Count == 0) library.DropDownItems.Add(new ToolStripMenuItem("暂无结构") { Enabled = false });
-        });
-        documentBar.Items.Add(library);
+        AddTool(documentBar, "结构库", MP_OpenStructureLibrary);
         AddTool(documentBar, "关闭 ×", CloseWorkspaceDocument);
         documentBar.Items.Add(new ToolStripSeparator());
         return documentBar;
@@ -76,21 +65,35 @@ public partial class MainForm
                 .Where(p => p.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".json", StringComparison.OrdinalIgnoreCase))) files.Add(Path.GetFullPath(file));
         foreach (string file in files)
         {
-            if (file.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));
-                if (json.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object || !json.RootElement.TryGetProperty("DefName", out _) || !json.RootElement.TryGetProperty("Items", out _)) continue;
-                var doc = StructureDocument.Load(file);
-                result.Add((file, doc.DefName, doc.Label));
-                continue;
+                if (file.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                {
+                    using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));
+                    if (json.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object
+                        || !json.RootElement.TryGetProperty("DefName", out _)
+                        || !json.RootElement.TryGetProperty("Items", out _)) continue;
+                    var doc = StructureDocument.Load(file);
+                    result.Add((file, doc.DefName, doc.Label));
+                    continue;
+                }
+                var root = XDocument.Load(file).Root;
+                foreach (var def in (root?.Name.LocalName == "Defs" ? root.Elements()
+                    : root == null ? Enumerable.Empty<XElement>() : new[] { root })
+                    .Where(e => e.Name.LocalName is "MechProtocol.MP_StructureDef" or "StructureFramework.StructureDef"
+                        or "StructureEditor.StructureDef" or "PrefabDef")
+                    .Where(e => !string.Equals((string)e.Attribute("Abstract"), "true", StringComparison.OrdinalIgnoreCase)))
+                {
+                    string id = (string)def.Element("defName");
+                    if (!string.IsNullOrWhiteSpace(id))
+                        result.Add((file, id, (string)def.Element("label") ?? id));
+                }
             }
-            var root = XDocument.Load(file).Root;
-            foreach (var def in (root?.Name.LocalName == "Defs" ? root.Elements() : root == null ? Enumerable.Empty<XElement>() : new[] { root })
-                .Where(e => e.Name.LocalName is "MechProtocol.MP_StructureDef" or "StructureFramework.StructureDef" or "StructureEditor.StructureDef" or "PrefabDef")
-                .Where(e => !string.Equals((string)e.Attribute("Abstract"), "true", StringComparison.OrdinalIgnoreCase)))
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                or System.Xml.XmlException or System.Text.Json.JsonException
+                or InvalidDataException or ArgumentException)
             {
-                string id = (string)def.Element("defName");
-                if (!string.IsNullOrWhiteSpace(id)) result.Add((file, id, (string)def.Element("label") ?? id));
+                // The next Refresh will retry XML files that were still being saved.
             }
         }
         return result.DistinctBy(x => (Path.GetFullPath(x.File).ToUpperInvariant(), x.Id)).OrderBy(x => x.Label).ToList();

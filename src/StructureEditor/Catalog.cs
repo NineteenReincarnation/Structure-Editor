@@ -34,6 +34,8 @@ public class CatalogItem
     public List<string> LinkFlags { get; set; } = new();
     public bool CanBeDormant { get; set; }
     public float? TurretExplosionRadius { get; set; }
+    public float? ProximityTriggerRadius { get; set; }
+    public float? DormantWakeRadius { get; set; }
     public List<string> MaterialCategories { get; set; } = new();
     public Color Color { get; set; } = Color.White;
     public override string ToString() => Label + "  [" + DefName + "]";
@@ -271,6 +273,8 @@ public class Catalog : IDisposable
         string gun = (string)def.Element("building")?.Element("turretGunDef");
         item.Group = CatalogGrouping.Building(def);
         item.TurretExplosionRadius = ReadTurretExplosionRadius(def);
+        item.ProximityTriggerRadius = ReadCompRadius(def, "CompProperties_SendSignalOnMotion", "radius");
+        item.DormantWakeRadius = ReadCompRadius(def, "CompProperties_WakeUpDormant", "wakeUpCheckRadius", "wakeUpIfAnyTargetClose");
         MechClusterCatalog.Assign(item, def);
         if (gun != null && raw.TryGetValue("ThingDef:" + gun, out XElement gunNode))
         {
@@ -279,6 +283,14 @@ public class Catalog : IDisposable
             item.TopSize = (float?)def.Element("building")?.Element("turretTopDrawSize") ?? 1;
         }
         Items.Add(item);
+    }
+    private static float? ReadCompRadius(XElement def, string compClass, string radiusField, string enabledField = null)
+    {
+        XElement comp = def.Element("comps")?.Elements("li").FirstOrDefault(c =>
+            (((string)c.Attribute("Class")) ?? "").Split('.').Last() == compClass);
+        if (enabledField != null && !string.Equals((string)comp?.Element(enabledField), "true", StringComparison.OrdinalIgnoreCase)) return null;
+        return float.TryParse((string)comp?.Element(radiusField), NumberStyles.Float,
+            CultureInfo.InvariantCulture, out float radius) && float.IsFinite(radius) && radius > 0 ? radius : null;
     }
     internal static float? ReadTurretExplosionRadius(XElement def)
     {

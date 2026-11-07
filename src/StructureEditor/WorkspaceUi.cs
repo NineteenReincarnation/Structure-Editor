@@ -62,6 +62,12 @@ public partial class MainForm
             ToolTipText = "显示炮塔损毁爆炸的标称半径；包含已放置对象、放置及粘贴预览。" };
         explosionRanges.CheckedChanged += (_, _) => SetTurretExplosionRanges(explosionRanges.Checked);
         editTools.Items.Add(explosionRanges);
+        ToolStripButton detectorRanges = new("探测范围") { Name = "ProximityRanges", DisplayStyle = ToolStripItemDisplayStyle.Text,
+            ForeColor = text, CheckOnClick = true, Checked = true,
+            ToolTipText = "显示探测激活器与休眠唤醒的真实 XML 半径；绘制已放置对象及放置预览。" };
+        detectorRanges.CheckedChanged += (_, _) => canvas.ShowProximityRanges = detectorRanges.Checked;
+        editTools.Items.Add(detectorRanges);
+        canvas.ShowProximityRanges = true;
         TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(31, 39, 43), ColumnCount = 3 };
         layerBar.ColumnStyles.Add(new(SizeType.AutoSize)); layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124)); layerBar.ColumnStyles.Add(new(SizeType.Percent, 100));
         layerBar.Controls.Add(new Label { Text = "编辑图层", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new(10, 0, 10, 0), ForeColor = muted }, 0, 0);
