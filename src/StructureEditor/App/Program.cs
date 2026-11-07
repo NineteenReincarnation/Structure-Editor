@@ -108,4 +108,6 @@ public class StudioPaths
     public List<string> Favorites { get; set; } = new();
     public List<string> RecentAssets { get; set; } = new();
     public List<string> RecentDocuments { get; set; } = new();
+    // Local-only exact paths for manual XML exports. Do not embed machine paths in shared projects.
+    public Dictionary<string, string> MP_XmlExportPaths { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

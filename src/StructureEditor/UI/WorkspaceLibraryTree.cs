@@ -273,9 +273,19 @@ public partial class MainForm
         CaptureWorkspaceDocument();
 
         var allDefinitions = LibraryDefinitions();
+        // Combine discovered exports with the last exact output path stored
+        // locally for manually named or externally placed XML files.
+        IEnumerable<string> tracked = documents
+            .Where(s => s.Document.DefName == entry.Id && s.File != null && SamePath(s.File, entry.File))
+            .Select(s => s.LastXmlPath)
+            .Where(x => !string.IsNullOrWhiteSpace(x));
+        if (Program.Paths.MP_XmlExportPaths != null
+            && Program.Paths.MP_XmlExportPaths.TryGetValue(Path.GetFullPath(entry.File), out string localExport))
+            tracked = tracked.Append(localExport);
         string[] relatedXml = allDefinitions
             .Where(x => x.Id == entry.Id && x.File.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
-            .Select(x => x.File).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            .Select(x => x.File).Concat(tracked)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var original = MP_StructureRenamer.Prepare(entry.File, entry.Id, entry.Id, entry.Label, relatedXml);
 
         using Form dialog = new()
@@ -367,6 +377,13 @@ public partial class MainForm
         // rename, otherwise startup could re-open the old deleted filename.
         Program.Paths.RecentDocuments = Program.Paths.RecentDocuments
             .Select(plan.NewPathFor).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (Program.Paths.MP_XmlExportPaths != null)
+        {
+            var revisedLinks = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var pair in Program.Paths.MP_XmlExportPaths)
+                revisedLinks[plan.NewPathFor(pair.Key)] = plan.NewPathFor(pair.Value);
+            Program.Paths.MP_XmlExportPaths = revisedLinks;
+        }
         if (Program.Paths.LastDocument != null)
             Program.Paths.LastDocument = plan.NewPathFor(Program.Paths.LastDocument);
         foreach (WorkspaceReference reference in Program.Paths.OpenDocuments)

@@ -92,7 +92,7 @@ public partial class MainForm
         StructureStorage.CheckDuplicate(path,document.DefName,Path.GetDirectoryName(path)!);
         CheckWorkspaceSaveTarget(path);
         var result=StructureStorage.SaveProject(document,catalog,path);currentFile=path;saveLocationChanged=false;dirty=false;
-        activeDocument.LastSavedId=document.DefName;if(result.ExportError==null)activeDocument.LastXmlPath=result.XmlPath;
+        activeDocument.LastSavedId=document.DefName;if(result.ExportError==null){activeDocument.LastXmlPath=result.XmlPath;MP_RecordExportTarget(result.XmlPath);}
         Program.Paths.SaveDirectory=Path.GetDirectoryName(path);RememberDocument(path);PersistWorkspace();RefreshSaveLocation();UpdateTitle();
         if (MP_libraryLoaded) MP_ReloadLibrary();
         exportResult.Text=result.ExportError!=null?"工程已保存；XML 未更新：\n"+result.ExportError:result.XmlPath!=null?"XML 已更新：\n"+result.XmlPath:"工程已保存（自动导出已关闭）。";
@@ -114,6 +114,7 @@ public partial class MainForm
         if(dialog.ShowDialog(this)!=DialogResult.OK)return;
         CheckWorkspaceExportTarget(dialog.FileName);
         StructureStorage.ExportXml(document,catalog,dialog.FileName,profile);
+        MP_RecordExportTarget(dialog.FileName);
         status.Text="已导出布局："+dialog.FileName+(profile=="VanillaPrefab"&&(document.StartDormant||document.Items.Any(i=>i.StartDormant==true))?"（MP 休眠状态仅保留在工程中）":"");
     }
     private void ExportBundle()
