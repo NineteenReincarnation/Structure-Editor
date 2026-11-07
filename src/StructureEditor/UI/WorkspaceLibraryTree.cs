@@ -88,6 +88,22 @@ public partial class MainForm
 
         MP_librarySearch.TextChanged += (_, _) => { if (MP_libraryLoaded) MP_RebuildLibraryTree(); };
         refresh.Click += (_, _) => Safe(MP_ReloadLibrary);
+        var MP_renameContext = new ContextMenuStrip();
+        var MP_renameMenuItem = MP_renameContext.Items.Add("重命名…");
+        MP_renameContext.Opening += (_, e) =>
+        {
+            if (MP_libraryTree.SelectedNode?.Tag is not MP_LibraryEntry) e.Cancel = true;
+        };
+        MP_renameMenuItem.Click += (_, _) =>
+        {
+            if (MP_libraryTree.SelectedNode?.Tag is MP_LibraryEntry selected)
+                Safe(() => MP_RenameLibraryEntry(selected));
+        };
+        MP_libraryTree.ContextMenuStrip = MP_renameContext;
+        MP_libraryTree.NodeMouseClick += (_, e) =>
+        {
+            if (e.Button == MouseButtons.Right) MP_libraryTree.SelectedNode = e.Node;
+        };
         MP_libraryTree.AfterSelect += (_, e) => MP_ShowLibraryPreview(e.Node?.Tag as MP_LibraryEntry);
         MP_libraryTree.NodeMouseDoubleClick += (_, e) =>
         {
@@ -95,9 +111,17 @@ public partial class MainForm
         };
         MP_libraryTree.KeyDown += (_, e) =>
         {
-            if (e.KeyCode != Keys.Enter || MP_libraryTree.SelectedNode?.Tag is not MP_LibraryEntry entry) return;
-            e.Handled = true; e.SuppressKeyPress = true;
-            Safe(() => OpenWorkspaceFile(entry.File, entry.Id));
+            if (MP_libraryTree.SelectedNode?.Tag is not MP_LibraryEntry entry) return;
+            if (e.KeyCode == Keys.F2)
+            {
+                e.Handled = true; e.SuppressKeyPress = true;
+                Safe(() => MP_RenameLibraryEntry(entry));
+            }
+            else if (e.KeyCode == Keys.Enter)
+            {
+                e.Handled = true; e.SuppressKeyPress = true;
+                Safe(() => OpenWorkspaceFile(entry.File, entry.Id));
+            }
         };
         FormClosed += (_, _) => { MP_libraryPreview.Image?.Dispose(); MP_libraryPreview.Image = null; };
         return layout;
@@ -240,4 +264,155 @@ public partial class MainForm
             MP_libraryDetails.Text = $"{entry.Label}\n预览不可用：{ex.Message}";
         }
     }
+    private void MP_RenameLibraryEntry(MP_LibraryEntry entry)
+    {
+        namingSwitchDelay.Stop();
+        CommitInspectorEdit();
+        CommitMetadata();
+        EnsureWorkspaceDocument();
+        CaptureWorkspaceDocument();
+
+        var allDefinitions = LibraryDefinitions();
+        string[] relatedXml = allDefinitions
+            .Where(x => x.Id == entry.Id && x.File.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.File).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var original = MP_StructureRenamer.Prepare(entry.File, entry.Id, entry.Id, entry.Label, relatedXml);
+
+        using Form dialog = new()
+        {
+            Text = "重命名结构 · 同步关联 XML",
+            Font = Font, ForeColor = text, BackColor = surface,
+            Size = new Size(660, 390), MinimumSize = new Size(540, 330),
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.Sizable
+        };
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 7,
+            Padding = new Padding(14, 12, 14, 10)
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        foreach (int height in new[] { 24, 30, 24, 30, 34, 0, 42 })
+            layout.RowStyles.Add(height == 0 ? new RowStyle(SizeType.Percent, 100) : new RowStyle(SizeType.Absolute, height));
+
+        Label caption(string value) => new()
+        {
+            Text = value, Dock = DockStyle.Fill,
+            ForeColor = muted, TextAlign = ContentAlignment.MiddleLeft
+        };
+        TextBox field(string value) => new()
+        {
+            Text = value, Dock = DockStyle.Fill, BackColor = Color.FromArgb(49, 58, 64),
+            ForeColor = text, BorderStyle = BorderStyle.FixedSingle
+        };
+
+        var nameField = field(entry.Label);
+        var idField = field(entry.Id);
+        layout.Controls.Add(caption("显示名称（结构库中的名称及 XML label）"), 0, 0);
+        layout.Controls.Add(nameField, 0, 1);
+        layout.Controls.Add(caption("结构标识 DefName（同时更新 JSON/XML 及对应文件名）"), 0, 2);
+        layout.Controls.Add(idField, 0, 3);
+        layout.Controls.Add(caption($"关联 XML（找到 {original.XmlPaths.Count} 份，将逐个修改其中的目标 DefName）"), 0, 4);
+        var paths = new TextBox
+        {
+            Dock = DockStyle.Fill, Multiline = true, ReadOnly = true,
+            ScrollBars = ScrollBars.Vertical, BackColor = Color.FromArgb(29, 35, 39),
+            ForeColor = muted, Text = original.XmlPaths.Count == 0
+                ? "尚未找到已导出的 XML。重命名 JSON 后，下次保存仍使用配置的 XML 输出目录。"
+                : string.Join(Environment.NewLine, original.XmlPaths)
+        };
+        layout.Controls.Add(paths, 0, 5);
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false, Padding = new Padding(0, 5, 0, 0)
+        };
+        Button confirm = MakeButton("同步重命名", 0, 0, 112);
+        Button cancel = MakeButton("取消", 0, 0, 80);
+        confirm.DialogResult = DialogResult.OK;
+        cancel.DialogResult = DialogResult.Cancel;
+        buttons.Controls.Add(confirm); buttons.Controls.Add(cancel);
+        layout.Controls.Add(buttons, 0, 6);
+        dialog.Controls.Add(layout);
+        dialog.AcceptButton = confirm; dialog.CancelButton = cancel;
+        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+
+        string nextId = idField.Text.Trim();
+        string nextLabel = nameField.Text.Trim();
+        if (nextId == entry.Id && nextLabel == entry.Label) return;
+        if (nextId != entry.Id && allDefinitions.Any(x => x.Id.Equals(nextId, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("结构库已经存在该 DefName，不能覆盖现有结构：" + nextId);
+
+        var plan = MP_StructureRenamer.Prepare(entry.File, entry.Id, nextId, nextLabel, relatedXml);
+        var touched = documents.Where(s => s.File != null
+            && plan.Changes.Any(c => SamePath(c.OldPath, s.File))).ToList();
+        if (touched.Any(s => s.Dirty || s == activeDocument && dirty))
+            throw new InvalidOperationException("关联文件正在工作栏中编辑且尚未保存，请先保存后再重命名。");
+        var impacted = touched.Where(s => s.Document.DefName == entry.Id).ToList();
+
+        string backup = MP_StructureRenamer.Apply(plan);
+        foreach (WorkspaceDocument session in impacted)
+        {
+            session.Document.DefName = nextId;
+            session.Document.Label = nextLabel;
+            session.File = plan.NewPathFor(session.File);
+            if (session.SourceFile != null) session.SourceFile = plan.NewPathFor(session.SourceFile);
+            if (session.LastXmlPath != null) session.LastXmlPath = plan.NewPathFor(session.LastXmlPath);
+            session.SourceId = nextId;
+            session.LastSavedId = nextId;
+            session.Undo = Array.Empty<StructureDocument>();
+            session.Redo = Array.Empty<StructureDocument>();
+        }
+        // All paths in the Recent and Open Documents settings must follow the
+        // rename, otherwise startup could re-open the old deleted filename.
+        Program.Paths.RecentDocuments = Program.Paths.RecentDocuments
+            .Select(plan.NewPathFor).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (Program.Paths.LastDocument != null)
+            Program.Paths.LastDocument = plan.NewPathFor(Program.Paths.LastDocument);
+        foreach (WorkspaceReference reference in Program.Paths.OpenDocuments)
+        {
+            reference.File = plan.NewPathFor(reference.File);
+            if (reference.Definition == entry.Id
+                && impacted.Any(s => SamePath(s.File, reference.File)))
+                reference.Definition = nextId;
+        }
+
+        if (impacted.Contains(activeDocument))
+        {
+            currentFile = activeDocument.File;
+            document = activeDocument.Document;
+            dirty = false;
+            undo.Clear(); redo.Clear();
+            RefreshMetadata();
+            canvas.Invalidate();
+        }
+        RefreshDocumentTabs();
+        PersistWorkspace();
+
+        MP_librarySearch.Clear();
+        MP_ReloadLibrary();
+        MP_SelectRenamedEntry(nextId);
+        status.Text = $"已重命名 {entry.Id} → {nextId} · 同步 XML {plan.XmlPaths.Count} 份（原文件已备份）";
+    }
+
+    private void MP_SelectRenamedEntry(string id)
+    {
+        TreeNode find(TreeNodeCollection nodes)
+        {
+            foreach (TreeNode node in nodes)
+            {
+                if (node.Tag is MP_LibraryEntry entry && entry.Id == id) return node;
+                TreeNode nested = find(node.Nodes);
+                if (nested != null) return nested;
+            }
+            return null;
+        }
+        TreeNode selected = find(MP_libraryTree.Nodes);
+        if (selected != null)
+        {
+            selected.EnsureVisible();
+            MP_libraryTree.SelectedNode = selected;
+        }
+    }
+
 }

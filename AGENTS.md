@@ -12,3 +12,5 @@
 
 - User-authored structure JSON and XML files live under root `structures/`; this is the first library source, paired by DefName. Keep user source documents editable and avoid machine-specific absolute XML export paths.
 - Left library UI uses integrated tabs and PNG preview; do not re-introduce a modal structure picker or a redundant DefName expansion level.
+
+- Renaming a library structure must update editable JSON, its linked XML output (including separate configured export directories), matching preview PNGs, and open/recent-document paths. Only edit matching XML Defs; back up sources and never overwrite unrelated files. Keep the `MP_` prefix for newly renamed DefNames.
