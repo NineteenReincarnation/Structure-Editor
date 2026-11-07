@@ -6,6 +6,22 @@ namespace StructureEditor;
 public partial class StructureCanvas
 {
     private bool showTurretExplosionRanges;
+    private bool showProximityRanges;
+    private readonly System.Windows.Forms.Timer MP_rangePulseTimer = new() { Interval = 100 };
+    private bool MP_rangePulseBound;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowProximityRanges
+    {
+        get => showProximityRanges;
+        set
+        {
+            if (showProximityRanges == value) return;
+            showProximityRanges = value;
+            if (!MP_rangePulseBound) { MP_rangePulseTimer.Tick += (_, _) => Invalidate(); MP_rangePulseBound = true; }
+            if (value) MP_rangePulseTimer.Start(); else MP_rangePulseTimer.Stop();
+            Invalidate();
+        }
+    }
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public bool ShowTurretExplosionRanges
     {
@@ -56,6 +72,9 @@ public partial class StructureCanvas
         if (ShowTurretExplosionRanges && VisibleLayers.Contains("Building"))
             foreach (var item in solids)
                 if (!removals.Contains(item)) DrawTurretExplosionRange(g, item, e.ClipRectangle);
+        if (VisibleLayers.Contains("Building"))
+            foreach (var item in ShowProximityRanges ? solids.Where(i => !removals.Contains(i)) : selection)
+                DrawProximityRange(g, item, e.ClipRectangle);
         if (selection.Count > 0)
         {
             using Pen highlight = new(Color.FromArgb(255, 211, 115), 2);
@@ -85,6 +104,8 @@ public partial class StructureCanvas
                 DrawPasteContents(g, p, e.ClipRectangle);
                 if (ShowTurretExplosionRanges && VisibleLayers.Contains("Building"))
                     foreach (var item in items) DrawTurretExplosionRange(g, item, e.ClipRectangle, preview: true);
+                if (VisibleLayers.Contains("Building"))
+                    foreach (var item in items) DrawProximityRange(g, item, e.ClipRectangle, preview: true);
                 using Pen edge = new(valid ? Color.LightGreen : Color.IndianRed, 2);
                 var box = ScreenRect(BoundsFor(items)); g.DrawRectangle(edge, box.X, box.Y, box.Width, box.Height);
                 TextRenderer.DrawText(g, $"粘贴 {items.Count} 项 · Q/E 旋转", Font,
@@ -98,6 +119,7 @@ public partial class StructureCanvas
                 using SolidBrush tint = new(Color.FromArgb(55, CanPlace(ghost) ? Color.LightGreen : Color.IndianRed));
                 g.FillRectangle(tint, r); DrawItem(g, ghost, .45f);
                 if (ShowTurretExplosionRanges) DrawTurretExplosionRange(g, ghost, e.ClipRectangle, preview: true);
+                DrawProximityRange(g, ghost, e.ClipRectangle, preview: true);
             }
         }
     }
@@ -123,6 +145,41 @@ public partial class StructureCanvas
         if (cellSize >= 12 && viewport.Contains(center))
             TextRenderer.DrawText(g, $"损毁爆炸 R {radius:0.##} 格", Font,
                 Point.Round(new(center.X + 8, center.Y + 8)), color, Color.FromArgb(29, 34, 37));
+    }
+    private void DrawProximityRange(Graphics g, PlacedItem item, RectangleF viewport, bool preview = false)
+    {
+        if (item.Kind != "Building") return;
+        CatalogItem entry = Catalog.Find(item.Kind, item.DefName);
+        if (entry == null) return;
+        PointF center = Screen(item.X, item.Z);
+        var ranges = new (float Radius, Color Color, string Label)[]
+        {
+            (entry.ProximityTriggerRadius ?? 0, Color.FromArgb(81, 202, 218), "探测"),
+            (entry.DormantWakeRadius ?? 0, Color.FromArgb(239, 171, 90), "唤醒")
+        };
+        float pulse = (float)(0.65 + 0.35 * Math.Sin(Environment.TickCount64 / 400d));
+        foreach (var range in ranges)
+        {
+            if (!float.IsFinite(range.Radius) || range.Radius <= 0) continue;
+            float pixels = range.Radius * cellSize;
+            RectangleF area = new(center.X - pixels, center.Y - pixels, pixels * 2, pixels * 2);
+            if (!area.IntersectsWith(viewport)) continue;
+            var state = g.Save();
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            int alpha = (int)(190 * pulse);
+            using SolidBrush fill = new(Color.FromArgb(preview ? 12 : 9, range.Color));
+            using Pen edge = new(Color.FromArgb(alpha, range.Color), 1.6f)
+            {
+                DashStyle = preview ? DashStyle.Dash : DashStyle.Solid
+            };
+            g.FillEllipse(fill, area);
+            g.DrawEllipse(edge, area);
+            g.Restore(state);
+            if (cellSize >= 14 && viewport.Contains(center))
+                TextRenderer.DrawText(g, $"{range.Label} R {range.Radius:0.##} 格", Font,
+                    new Point((int)center.X + 8, (int)center.Y + (range.Label == "探测" ? 11 : 29)),
+                    range.Color, Color.FromArgb(29, 34, 37));
+        }
     }
     private Bitmap TerrainChunk(Point chunk)
     {
@@ -275,5 +332,5 @@ public partial class StructureCanvas
         finally { exportingPreview = false; cellSize = savedSize; origin = savedOrigin; ClearTerrainCache(); }
         return output;
     }
-    protected override void Dispose(bool disposing) { if (disposing) { ClearTerrainCache(); ClearPastePreview(); } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { MP_rangePulseTimer.Dispose(); ClearTerrainCache(); ClearPastePreview(); } base.Dispose(disposing); }
 }
