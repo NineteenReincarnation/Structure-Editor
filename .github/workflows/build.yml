@@ -1,23 +1,69 @@
 name: Windows build
+
 on:
   push:
+    branches: [main]
+    paths-ignore:
+      - 'app/**'
   pull_request:
   workflow_dispatch:
+
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: editor-build-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
-      - name: Build portable Windows package
+
+      - name: Build portable self-contained package
         shell: pwsh
         run: ./scripts/build.ps1 -SelfContained
+
       - uses: actions/upload-artifact@v7
         with:
           name: StructureEditor-win-x64
-          path: dist/*.zip
+          path: dist/*-standalone.zip
           if-no-files-found: error
+
+      # Keep a small .NET Desktop Runtime dependent app/ tracked in Git.
+      # This makes a normal GitHub Desktop Pull update StructureEditor.exe.
+      - name: Build application files for Git pull
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        shell: pwsh
+        run: ./scripts/build.ps1
+
+      - name: Commit app files to main and legacy default branch
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f -A -- app/
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 1) {
+            git commit -m "build: sync StructureEditor app files [skip ci]"
+            if ($LASTEXITCODE -ne 0) { throw "Failed to commit app output" }
+            git push origin HEAD:main
+            if ($LASTEXITCODE -ne 0) { throw "Failed to update main with app output" }
+            # The repository still has codex/structure-editor as its web default.
+            # Fast-forward it only; never force-reset active work.
+            git push origin HEAD:codex/structure-editor
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "Legacy branch did not fast-forward; switch GitHub Desktop to main."
+            }
+          }
+          elseif ($LASTEXITCODE -ne 0) {
+            throw "Cannot check staged app changes"
+          }

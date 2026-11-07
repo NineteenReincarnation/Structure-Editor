@@ -1,6 +1,8 @@
 **/bin/
 **/obj/
 .vs/
+# app/ is intentionally ignored for manual git add, but the CI force-adds its executable package.
+# Tracked files under app/ still update through a regular Git pull.
 app/
 dist/
 migration/

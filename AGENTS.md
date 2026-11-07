@@ -5,7 +5,7 @@
 - Prioritize complete, user-visible functionality over repeated cosmetic changes and unnecessary refactors.
 - Independent Windows editor: never edit MechProtocol to implement an editor feature. Generic flows remain independent; Mod-specific rules stay in `src/StructureEditor/Compatibility/`.
 - The C# source is grouped under `src/StructureEditor/{App,Canvas,Catalog,Core,Formats,UI,Validation,Compatibility}/`. Preserve the `StructureEditor` namespaces and `partial MainForm`/canvas composition unless explicitly changing architecture.
-- Never commit game assets or DLLs, local settings, absolute paths, generated binaries, migration backups, or third-party resources without suitable permission.
+- Do not commit game assets or DLLs, local settings, absolute paths, migration backups, or unlicensed third-party resources. The only allowed generated binary exception is the CI-produced `app/` runtime package, tracked by the Windows build workflow so GitHub Desktop pull refreshes the app. Do not hand-edit or manually stage `app/`.
 - Build with `dotnet build src/StructureEditor/StructureEditor.csproj`; textures are loaded from the user's game at runtime.
 - Preserve document compatibility. Newly placed assets default to awake when supported; picked or copied assets keep their original state.
 - Keep README.md and README.en.md as the marketing landing pages; put engineering details in `docs/`.

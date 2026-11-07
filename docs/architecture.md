@@ -46,7 +46,9 @@ Structure-Editor/
 
 - 目标平台：Windows x64、.NET 10、WinForms；RimWorld 1.7 的素材在运行时从用户的本机安装读取。
 - 固定构建入口：`dotnet build src/StructureEditor/StructureEditor.csproj`。
-- 发布打包：`./scripts/build.ps1 -SelfContained`；产物为 `app/` 和 `dist/`，不提交生成文件。
+- 发布打包：`./scripts/build.ps1 -SelfContained` 生成完整独立安装包，CI 上传到 Artifacts。
+- **Git 拉取即可运行**：每次 `main` 有新提交，Windows CI 另行生成精简的、依赖 .NET 10 Windows Desktop Runtime 的 `app/`，将程序文件版本化提交回 `main`（当前也同步到旧默认分支 `codex/structure-editor`）。用户在 GitHub Desktop 拉取后即可运行 `app/StructureEditor.exe`，不必亲自编译。
+- `app/` 是唯一允许由 CI 自动纳入版本控制的生成目录；`dist/`、`bin/`、`obj/` 仍不提交。首次从旧的忽略目录迁移时，请先关闭程序并移走本地未被追踪的旧 `app/`，避免 Git 无法覆盖未跟踪文件。
 - 已有内部验证由 `Program --self-test` 入口运行；`Validation/` 中的检查继续随主程序集编译，以避免改变现有验证行为。
 - 不提交 RimWorld 游戏贴图、DLL、个人路径或配置、迁移备份。第三方资源许可见 `THIRD_PARTY_NOTICES.md`。
 - 修改默认工程格式时保持旧版文件可读取；遇到不支持的数据要明确报错，不能静默丢失布局信息。
