@@ -246,6 +246,16 @@ public partial class MainForm : Form
         }
         finally { updating = false; }
     }
+    private static void MP_FitInspectorLabel(Label label, int minimumHeight)
+    {
+        if (label.Width < 40 || label.IsDisposed) return;
+        int measured = TextRenderer.MeasureText(label.Text, label.Font,
+            new Size(Math.Max(40, label.ClientSize.Width - 6), 10000),
+            TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
+        int required = Math.Max(minimumHeight, measured + 6);
+        if (label.Height != required) label.Height = required;
+    }
+
     private void CommitInspectorEdit()
     {
         if (updating) return;

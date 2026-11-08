@@ -41,7 +41,17 @@ internal static class StudioStartupChecks
                 var control = (Control)typeof(MainForm).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(layout);
                 need(control.Width > 80 && control.Parent.ClientRectangle.Contains(control.Bounds), name + ": " + field + " must remain completely inside its responsive filter row");
             }
+            var rightPane = (SplitContainer)typeof(MainForm).GetField("inspectorSplit",
+                BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(layout)!;
+            need(rightPane.Panel2.ClientSize.Width >= 280,
+                name + ": inspector must retain sufficient usable width");
+            var material = (ComboBox)typeof(MainForm).GetField("materialBox",
+                BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(layout)!;
+            need(material.ClientSize.Width >= 180 && material.Right <= material.Parent.ClientSize.Width + 1,
+                name + ": material picker must fit inside its inspector column");
         }
+        need(MP_DarkComboBox.MP_ArrowOverlayWidth(300) >= SystemInformation.VerticalScrollBarWidth + 8,
+            "Dark dropdown must cover the full native arrow well at this DPI");
         using TextureLibrary preview = new(); preview.AddArchive(Path.Combine(paths.GameRoot, "Assets.zip"));
         using ManualResetEventSlim ready = new(); preview.TextureReady += () => ready.Set();
         string texture = source.Find("Building", "Wall").Texture;

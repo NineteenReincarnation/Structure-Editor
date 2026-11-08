@@ -81,7 +81,7 @@ public partial class MainForm
         inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 284), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 3, SplitterDistance = Math.Max(330, ClientSize.Width - 638), BackColor = librarySplit.BackColor };
         librarySplit.Panel2.Controls.Add(inspectorSplit);
         librarySplit.Panel1MinSize = 235; librarySplit.Panel2MinSize = 540;
-        inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 300;
+        inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 320;
 
         Panel library = new() { Dock = DockStyle.Fill, BackColor = surface, Padding = new(10) };
         TableLayoutPanel filters = BuildLibraryFilters();
@@ -197,9 +197,13 @@ public partial class MainForm
         TableLayoutPanel Page(string title)
         {
             TabPage tab = new(title) { BackColor = surface, ForeColor = text, Padding = new(9), AutoScroll = true };
-            MP_SmoothLayout layout = new() { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 1, Padding = new(3), Margin = Padding.Empty };
+            MP_SmoothLayout layout = new() { Dock = DockStyle.Top, AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1,
+                Padding = new(3), Margin = Padding.Empty };
             layout.ColumnStyles.Add(new(SizeType.Percent, 100));
-            layout.SizeChanged += (_, _) => { var extent = new Size(0, layout.Height + tab.Padding.Vertical); if (tab.AutoScrollMinSize != extent) tab.AutoScrollMinSize = extent; };
+            // AutoScroll already measures the docked child. Manually writing
+            // AutoScrollMinSize on every SizeChanged causes repeated relayout
+            // (and clipped controls) when the page width/scrollbar changes.
             tab.Controls.Add(layout); tabs.AddPage(tab); return layout;
         }
         void Row(TableLayoutPanel panel, Control control, int height = 0)
@@ -215,8 +219,15 @@ public partial class MainForm
         TableLayoutPanel objects = Page("对象"), metadata = Page("工程");
         TableLayoutPanel exports = metadata;
         selectedName.Font = new(Font, FontStyle.Bold);
+        // Content may wrap to three lines for long DefNames at 125/150% DPI.
+        // Re-measure when text or available width changes instead of
+        // clipping it into a fixed 49/40px label row.
+        selectedName.TextChanged += (_, _) => MP_FitInspectorLabel(selectedName, 49);
+        selectedName.SizeChanged += (_, _) => MP_FitInspectorLabel(selectedName, 49);
         Row(objects, selectedName, 49);
         selectedInfo.ForeColor = muted;
+        selectedInfo.TextChanged += (_, _) => MP_FitInspectorLabel(selectedInfo, 40);
+        selectedInfo.SizeChanged += (_, _) => MP_FitInspectorLabel(selectedInfo, 40);
         Row(objects, selectedInfo, 40);
         materialBox.DropDownStyle = rotationBox.DropDownStyle = ComboBoxStyle.DropDownList;
         MP_materialLabel = new Label { Text = "材质", ForeColor = muted, AutoSize = true };

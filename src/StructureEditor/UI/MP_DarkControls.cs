@@ -6,16 +6,24 @@ namespace StructureEditor;
 // Cover only the arrow button after the OS has drawn the editable area.
 internal sealed class MP_DarkComboBox : ComboBox
 {
+    // Native themed dropdowns reserve a wider arrow well than 23px at
+    // some DPI/theme combinations. Painting only the last 23px left an
+    // exposed bright seam (the vertical white bar in the inspector).
+    internal static int MP_ArrowOverlayWidth(int clientWidth) =>
+        Math.Min(Math.Max(30, SystemInformation.VerticalScrollBarWidth + 10),
+            Math.Max(18, clientWidth / 3));
+
     protected override void WndProc(ref Message m)
     {
         base.WndProc(ref m);
         if (m.Msg != 0x000F || !IsHandleCreated ||
             DropDownStyle != ComboBoxStyle.DropDownList || ClientSize.Width < 26) return;
         using Graphics g = Graphics.FromHwnd(Handle);
-        int width = Math.Min(23, ClientSize.Width / 3), x = ClientSize.Width - width;
+        int width = MP_ArrowOverlayWidth(ClientSize.Width);
+        int x = ClientSize.Width - width;
         Color bg = Enabled ? Color.FromArgb(48, 65, 76) : Color.FromArgb(40, 50, 58);
         using var brush = new SolidBrush(bg);
-        g.FillRectangle(brush, x, 1, width - 1, ClientSize.Height - 2);
+        g.FillRectangle(brush, x, 1, width, ClientSize.Height - 2);
         using var separator = new Pen(Color.FromArgb(65, 84, 96));
         g.DrawLine(separator, x, 3, x, ClientSize.Height - 4);
         int cx = x + width / 2, cy = ClientSize.Height / 2;
