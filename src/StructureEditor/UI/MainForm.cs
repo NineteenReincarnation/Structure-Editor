@@ -175,8 +175,8 @@ public partial class MainForm : Form
         else if (canvas.Brush != null) ShowItem(canvas.Brush, null);
         else
         {
-            selectedName.Text = "未选择对象";
-            selectedInfo.Text = "";
+            if (selectedName.Text != "未选择对象") selectedName.Text = "未选择对象";
+            if (selectedInfo.Text.Length != 0) selectedInfo.Text = "";
             MP_materialLabel.Visible = materialBox.Visible = false;
             MP_rotationLabel.Visible = rotationBox.Visible = false;
             MP_dormancyLabel.Visible = dormancyBox.Visible = dormancyInfo.Visible = false;
@@ -195,8 +195,10 @@ public partial class MainForm : Form
         updating = true;
         try
         {
-            selectedName.Text = item.Label + "\n" + item.DefName;
-            selectedInfo.Text = $"来源：{item.Pack}\n占地 {item.Width} × {item.Height}  ·  {(placed == null ? "当前笔刷" : $"已选 {canvas.Selection.Count} 个对象")}";
+            string name = item.Label + "\n" + item.DefName;
+            if (selectedName.Text != name) selectedName.Text = name;
+            string info = $"来源：{item.Pack}\n占地 {item.Width} × {item.Height}  ·  {(placed == null ? "当前笔刷" : $"已选 {canvas.Selection.Count} 个对象")}";
+            if (selectedInfo.Text != info) selectedInfo.Text = info;
             if (shownItem != item)
             {
                 materialBox.BeginUpdate(); materialBox.Items.Clear();
@@ -204,7 +206,12 @@ public partial class MainForm : Form
                 materialBox.EndUpdate(); shownItem = item;
             }
             MaterialItem preferred = materialBox.Items.Cast<MaterialItem>().FirstOrDefault(m => m.DefName == (placed?.Stuff ?? canvas.BrushStuff));
-            if (materialBox.Items.Count > 0) materialBox.SelectedItem = preferred ?? materialBox.Items[0];
+            if (materialBox.Items.Count > 0)
+            {
+                object nextMaterial = preferred ?? materialBox.Items[0];
+                if (!ReferenceEquals(materialBox.SelectedItem, nextMaterial))
+                    materialBox.SelectedItem = nextMaterial;
+            }
             bool hasMaterial = materialBox.Items.Count > 0;
             MP_materialLabel.Visible = materialBox.Visible = hasMaterial;
             materialBox.Enabled = hasMaterial;
@@ -215,7 +222,11 @@ public partial class MainForm : Form
                 : item.Rotatable;
             MP_rotationLabel.Visible = rotationBox.Visible = canRotate;
             rotationBox.Enabled = canRotate;
-            if (canRotate) rotationBox.SelectedIndex = placed?.Rotation ?? canvas.BrushRotation;
+            if (canRotate)
+            {
+                int rotation = placed?.Rotation ?? canvas.BrushRotation;
+                if (rotationBox.SelectedIndex != rotation) rotationBox.SelectedIndex = rotation;
+            }
             var supported = placed == null ? new List<PlacedItem>() : canvas.Selection.Where(i => catalog.Find(i.Kind, i.DefName)?.CanBeDormant == true).ToList();
             bool mp = document.ExportProfile == "MechProtocol"
                 || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal") && document.EnableMPCompatibility);
@@ -225,7 +236,9 @@ public partial class MainForm : Form
             dormancyBox.Enabled = showDormancy;
             var states = supported.Select(i => i.StartDormant).Distinct().ToList();
             bool? setting = placed == null ? canvas.BrushDormant : supported.FirstOrDefault()?.StartDormant;
-            dormancyBox.SelectedIndex = states.Count > 1 ? 3 : setting == true ? 1 : setting == false ? 2 : 0;
+            int nextDormancy = states.Count > 1 ? 3 : setting == true ? 1 : setting == false ? 2 : 0;
+            if (dormancyBox.SelectedIndex != nextDormancy)
+                dormancyBox.SelectedIndex = nextDormancy;
             dormancyInfo.Text = ""; dormancyInfo.Visible = false;
         }
         finally { updating = false; }

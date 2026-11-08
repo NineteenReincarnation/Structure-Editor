@@ -17,6 +17,10 @@ public partial class MainForm
     private List<MP_LibraryEntry> MP_libraryEntries = new();
     private bool MP_libraryLoaded;
     private bool MP_libraryTreeInitialized;
+    private readonly System.Windows.Forms.Timer MP_libraryFilterDelay = new() { Interval = 170 };
+    private readonly System.Windows.Forms.Timer MP_libraryPreviewDelay = new() { Interval = 130 };
+    private MP_LibraryEntry MP_pendingLibraryPreview;
+    private Font MP_libraryFolderFont;
 
     // This panel is docked into the existing LEFT library column. No extra
     // dialog and no extra per-Def tree level: double-click a leaf to open it.
@@ -67,6 +71,7 @@ public partial class MainForm
             DrawMode = TreeViewDrawMode.OwnerDrawText, HotTracking = false,
             Indent = 13, ItemHeight = 29
         };
+        MP_libraryFolderFont = new Font(MP_libraryTree.Font, FontStyle.Bold);
         MP_libraryTree.DrawNode += (_, e) =>
         {
             if (e.Node == null || e.Bounds.Height <= 0) return;
@@ -81,9 +86,8 @@ public partial class MainForm
             Color fg = selected ? Color.FromArgb(243, 249, 249)
                 : leaf ? Color.FromArgb(223, 234, 239)
                 : Color.FromArgb(156, 191, 204);
-            using Font folderFont = new(MP_libraryTree.Font,
-                leaf ? FontStyle.Regular : FontStyle.Bold);
-            TextRenderer.DrawText(e.Graphics, e.Node.Text, folderFont,
+            Font labelFont = leaf ? MP_libraryTree.Font : MP_libraryFolderFont;
+            TextRenderer.DrawText(e.Graphics, e.Node.Text, labelFont,
                 new Rectangle(e.Bounds.Left + 3, e.Bounds.Top, Math.Max(8,
                     MP_libraryTree.ClientSize.Width - e.Bounds.Left - 8), e.Bounds.Height),
                 fg, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
@@ -111,7 +115,22 @@ public partial class MainForm
         };
         layout.Controls.Add(MP_libraryDetails, 0, 4);
 
-        MP_librarySearch.TextChanged += (_, _) => { if (MP_libraryLoaded) MP_RebuildLibraryTree(); };
+        MP_libraryFilterDelay.Tick += (_, _) =>
+        {
+            MP_libraryFilterDelay.Stop();
+            if (MP_libraryLoaded && !IsDisposed && !Disposing) MP_RebuildLibraryTree();
+        };
+        MP_libraryPreviewDelay.Tick += (_, _) =>
+        {
+            MP_libraryPreviewDelay.Stop();
+            if (!IsDisposed && !Disposing) MP_ShowLibraryPreview(MP_pendingLibraryPreview);
+        };
+        MP_librarySearch.TextChanged += (_, _) =>
+        {
+            if (!MP_libraryLoaded) return;
+            MP_libraryFilterDelay.Stop();
+            MP_libraryFilterDelay.Start();
+        };
         refresh.Click += (_, _) => Safe(MP_ReloadLibrary);
         var MP_renameContext = new ContextMenuStrip();
         var MP_renameMenuItem = MP_renameContext.Items.Add("重命名…");
@@ -129,7 +148,12 @@ public partial class MainForm
         {
             if (e.Button == MouseButtons.Right) MP_libraryTree.SelectedNode = e.Node;
         };
-        MP_libraryTree.AfterSelect += (_, e) => MP_ShowLibraryPreview(e.Node?.Tag as MP_LibraryEntry);
+        MP_libraryTree.AfterSelect += (_, e) =>
+        {
+            MP_pendingLibraryPreview = e.Node?.Tag as MP_LibraryEntry;
+            MP_libraryPreviewDelay.Stop();
+            MP_libraryPreviewDelay.Start();
+        };
         MP_libraryTree.NodeMouseDoubleClick += (_, e) =>
         {
             if (e.Node?.Tag is MP_LibraryEntry entry) Safe(() => OpenWorkspaceFile(entry.File, entry.Id));
@@ -148,7 +172,14 @@ public partial class MainForm
                 Safe(() => OpenWorkspaceFile(entry.File, entry.Id));
             }
         };
-        FormClosed += (_, _) => { MP_libraryPreview.Image?.Dispose(); MP_libraryPreview.Image = null; };
+        // Also runs for forms disposed directly by validation without Show().
+        Disposed += (_, _) =>
+        {
+            MP_libraryFilterDelay.Stop(); MP_libraryFilterDelay.Dispose();
+            MP_libraryPreviewDelay.Stop(); MP_libraryPreviewDelay.Dispose();
+            MP_libraryFolderFont?.Dispose();
+            MP_libraryPreview.Image?.Dispose(); MP_libraryPreview.Image = null;
+        };
         return layout;
     }
 
@@ -168,6 +199,8 @@ public partial class MainForm
 
     private void MP_ReloadLibrary()
     {
+        // A manual refresh supersedes any pending keystroke rebuild.
+        MP_libraryFilterDelay.Stop();
         var all = LibraryDefinitions();
         // A JSON project is the editable source of truth when its XML export
         // is present. Keep one leaf per DefName instead of two clickable files.
@@ -206,12 +239,17 @@ public partial class MainForm
         }
         Capture(MP_libraryTree.Nodes);
         string previous = (MP_libraryTree.SelectedNode?.Tag as MP_LibraryEntry)?.Id;
+        MP_libraryPreviewDelay.Stop();
+        MP_pendingLibraryPreview = null;
         MP_libraryTree.BeginUpdate();
         try
         {
             MP_libraryTree.Nodes.Clear();
             var projectRoot = new TreeNode("项目结构") { Name = "project" };
             var otherRoot = new TreeNode("其他位置") { Name = "other" };
+            // Folder lookup is O(1) rather than repeatedly scanning siblings
+            // when a collection contains hundreds of structures.
+            var folders = new Dictionary<(TreeNode Parent, string Name), TreeNode>();
             foreach (MP_LibraryEntry entry in visible)
             {
                 bool project = MP_IsProjectStructure(entry.File);
@@ -222,11 +260,12 @@ public partial class MainForm
                 foreach (string segment in relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                     .Where(s => !string.IsNullOrWhiteSpace(s) && s != "."))
                 {
-                    TreeNode existing = parent.Nodes.Cast<TreeNode>().FirstOrDefault(n => n.Name == "dir:" + segment);
-                    if (existing == null)
+                    var key = (parent, segment);
+                    if (!folders.TryGetValue(key, out TreeNode existing))
                     {
                         existing = new TreeNode(segment) { Name = "dir:" + segment };
                         parent.Nodes.Add(existing);
+                        folders.Add(key, existing);
                     }
                     parent = existing;
                 }

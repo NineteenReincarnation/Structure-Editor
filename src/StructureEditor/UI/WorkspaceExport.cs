@@ -34,28 +34,38 @@ public partial class MainForm
         if (IsDisposed || Disposing) return;
         MP_exportReviewTimer.Stop();
         var review = MP_ExportReview.Inspect(document, catalog, document.ExportProfile);
-        MP_exportReviewStatus.Text = review.Summary;
+        if (MP_exportReviewStatus.Text != review.Summary)
+            MP_exportReviewStatus.Text = review.Summary;
         MP_exportReviewStatus.ForeColor = review.Errors > 0 ? Color.FromArgb(239, 151, 139)
             : review.Warnings > 0 ? Color.FromArgb(218, 185, 120) : Color.FromArgb(129, 206, 166);
-        MP_exportDependencySummary.Text = review.Dependencies.Count == 0
+        string dependencies = review.Dependencies.Count == 0
             ? "依赖：仅原版基础内容"
             : "依赖：" + string.Join("、", review.Dependencies.Select(x => x.Name ?? x.PackageId).Take(5))
                 + (review.Dependencies.Count > 5 ? $" 等 {review.Dependencies.Count} 项" : "");
-        MP_exportReviewDetails.Text = string.Join(Environment.NewLine,
+        if (MP_exportDependencySummary.Text != dependencies)
+            MP_exportDependencySummary.Text = dependencies;
+        string details = string.Join(Environment.NewLine,
             review.Issues.Select(x => (x.IsError ? "[错误] " : "[提醒] ") + x.Message));
+        if (MP_exportReviewDetails.Text != details)
+            MP_exportReviewDetails.Text = details;
         MP_exportReviewDetails.Visible = review.Issues.Count != 0;
         MP_exportPrimary.Enabled = review.CanExport;
-        MP_compatRecommendation.Visible = false;
 
         if (document.ExportProfile is "Framework" or "Universal")
         {
             bool recommended = MP_ExportReview.MP_CanRecommendDormancy(document, catalog);
-            MP_compatRecommendation.Text = document.EnableMPCompatibility
+            string message = document.EnableMPCompatibility
                 ? "休眠拓展已启用"
                 : recommended ? "检测到可休眠对象" : "";
+            if (MP_compatRecommendation.Text != message)
+                MP_compatRecommendation.Text = message;
             MP_compatRecommendation.Visible = recommended && !document.EnableMPCompatibility;
         }
-        else MP_compatRecommendation.Text = "";
+        else
+        {
+            if (MP_compatRecommendation.Text.Length != 0) MP_compatRecommendation.Text = "";
+            MP_compatRecommendation.Visible = false;
+        }
     }
 
     private void MP_RecordExportTarget(string path)
@@ -69,7 +79,9 @@ public partial class MainForm
 
     private void RefreshExportLocation()
     {
-        xmlPathBox.Text = StructureStorage.XmlTarget(document, saveLocationChanged ? null : currentFile, OutputFolder);
+        string nextPath = StructureStorage.XmlTarget(document,
+            saveLocationChanged ? null : currentFile, OutputFolder);
+        if (xmlPathBox.Text != nextPath) xmlPathBox.Text = nextPath;
         MP_ScheduleExportReview();
     }
     private void SetXmlDirectory()
