@@ -6,7 +6,7 @@ internal static class MechClusterCatalog
 {
     public const string SourceUrl = "https://rimworld.huijiwiki.com/wiki/%E6%9C%BA%E6%A2%B0%E9%9B%86%E7%BE%A4";
     // Wiki building-type headings; names are aliases, while graphics/DefNames come from installed 1.7.
-    public static readonly string[] Groups = { "杂项", "控制器", "炮塔" };
+    public static readonly string[] Groups = { "防御设施", "杂项", "控制器", "炮塔" };
     public static readonly IReadOnlyDictionary<string, (string Group, string Name)> Entries = new Dictionary<string, (string, string)>
     {
         ["MechCapsule"] = ("杂项", "机械舱"), ["MechAssembler"] = ("杂项", "机械装配器"),
@@ -22,8 +22,23 @@ internal static class MechClusterCatalog
         ["Turret_AutoMortar"] = ("炮塔", "自动迫击炮"), ["Turret_AutoInferno"] = ("炮塔", "自动地狱火加农炮"),
         ["Turret_AutoChargeBlaster"] = ("炮塔", "自动电荷冲击炮塔"), ["Turret_AutoMiniTurret"] = ("炮塔", "小型冲击炮塔")
     };
+    private static readonly IReadOnlyDictionary<string, string> Defensive = new Dictionary<string, string>
+    {
+        ["Wall"] = "墙",
+        ["Barricade"] = "路障"
+    };
     public static void Assign(CatalogItem item, XElement def)
     {
+        // The 22 dedicated Royalty machinery types remain distinct from
+        // shared Core defenses which mech clusters also construct.
+        if (Defensive.TryGetValue(item.DefName, out string defensiveName)
+            && !item.IsMod && item.Kind == "Building")
+        {
+            item.ClusterGroup = "防御设施";
+            item.ClusterWikiName = defensiveName;
+            item.ClusterWikiEntry = false;
+            return;
+        }
         if (Entries.TryGetValue(item.DefName, out var entry))
         {
             item.ClusterGroup = entry.Group; item.ClusterWikiName = entry.Name; item.ClusterWikiEntry = true; return;

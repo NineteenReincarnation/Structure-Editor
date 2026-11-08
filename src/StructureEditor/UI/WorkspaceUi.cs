@@ -214,41 +214,47 @@ public partial class MainForm
         }
         TableLayoutPanel objects = Page("对象"), metadata = Page("工程");
         TableLayoutPanel exports = metadata;
-        selectedName.Font = new(Font, FontStyle.Bold); Row(objects, selectedName, 65); selectedInfo.ForeColor = muted; Row(objects, selectedInfo, 62);
+        selectedName.Font = new(Font, FontStyle.Bold);
+        Row(objects, selectedName, 49);
+        selectedInfo.ForeColor = muted;
+        Row(objects, selectedInfo, 40);
         materialBox.DropDownStyle = rotationBox.DropDownStyle = ComboBoxStyle.DropDownList;
         MP_materialLabel = new Label { Text = "材质", ForeColor = muted, AutoSize = true };
         Row(objects, MP_materialLabel);
-        Row(objects, materialBox, 29);
-        rotationBox.Items.AddRange(new object[] { "北 / North", "东 / East", "南 / South", "西 / West" }); rotationBox.SelectedIndex = 0;
+        Row(objects, materialBox, 35);
+        rotationBox.Items.AddRange(new object[] { "北 / North", "东 / East", "南 / South", "西 / West" });
+        rotationBox.SelectedIndex = 0;
         MP_rotationLabel = new Label { Text = "方向", ForeColor = muted, AutoSize = true };
         Row(objects, MP_rotationLabel);
         Row(objects, rotationBox, 29);
         dormancyBox.DropDownStyle = ComboBoxStyle.DropDownList;
-        dormancyBox.Items.AddRange(new object[] { "跟随结构默认", "初始休眠", "初始唤醒", "保持各自设置（混合）" }); dormancyBox.SelectedIndex = 0;
-        MP_dormancyLabel = new Label { Text = "初始状态（MP 专用）",
-            ForeColor = muted, AutoSize = true };
+        dormancyBox.Items.AddRange(new object[] { "跟随结构默认", "初始休眠", "初始唤醒", "保持各自设置（混合）" });
+        dormancyBox.SelectedIndex = 0;
+        MP_dormancyLabel = new Label { Text = "初始状态", ForeColor = muted, AutoSize = true };
         Row(objects, MP_dormancyLabel);
         Row(objects, dormancyBox, 29);
-        dormancyInfo.ForeColor = muted; Row(objects, dormancyInfo, 47);
-        // Structure owns structure identity and game-facing properties only.
-        Row(metadata, new Label { Text = "基本信息", Font = new(Font, FontStyle.Bold),
+        dormancyInfo.Visible = false;
+
+        Row(metadata, new Label { Text = "结构", Font = new(Font, FontStyle.Bold),
             ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
         Row(metadata, BuildClusterNamingPanel());
-        structureLabelTitle = new() { Text = "结构名称", ForeColor = muted, AutoSize = true };
-        Row(metadata, structureLabelTitle); Row(metadata, labelBox, 29);
+        structureLabelTitle = new() { Text = "名称", ForeColor = muted, AutoSize = true };
+        Row(metadata, structureLabelTitle);
+        Row(metadata, labelBox, 29);
         structureIdTitle = new() { Text = "DefName", ForeColor = muted, AutoSize = true };
-        Row(metadata, structureIdTitle); Row(metadata, idBox, 29);
+        Row(metadata, structureIdTitle);
+        Row(metadata, idBox, 29);
         categoryBox.DropDownStyle = ComboBoxStyle.DropDownList;
         categoryBox.Items.AddRange(new object[] { "机械集群", "通用结构" });
         categoryBox.SelectedIndex = 1;
-        Field(metadata, "结构类别", categoryBox);
-        dormant.Text = "默认休眠（MP）"; dormant.AutoSize = true;
+        Field(metadata, "类别", categoryBox);
+        dormant.Text = "默认休眠"; dormant.AutoSize = true;
         Row(metadata, dormant);
-        Row(metadata, new Label { Text = "结构概览", ForeColor = muted, AutoSize = true });
-        summary.ForeColor = muted; Row(metadata, summary, 62);
+        // A compact diagram makes object composition and occupied footprint
+        // visible without adding a separate statistics page or toolbar.
+        Row(metadata, MP_structureOverview, 146);
 
-        // Export target, optional compatibility and checks live in one page.
-        Row(exports, new Label { Text = "导出配置", Font = new(Font, FontStyle.Bold),
+        Row(metadata, new Label { Text = "XML 导出", Font = new(Font, FontStyle.Bold),
             ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
         profileBox.DropDownStyle = ComboBoxStyle.DropDownList;
         profileBox.Items.AddRange(new object[]
@@ -259,43 +265,76 @@ public partial class MainForm
             "原版基础 + 条件拓展"
         });
         profileBox.SelectedIndex = 1;
-        Field(exports, "XML 目标格式", profileBox);
-        Row(exports, new Label { Text = "兼容拓展", Font = new(Font, FontStyle.Bold),
-            ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
+        Field(metadata, "目标格式", profileBox);
         mpCompatibility.Text = "MechProtocol · 逐对象休眠";
         mpCompatibility.AutoSize = true;
-        Row(exports, mpCompatibility);
+        Row(metadata, mpCompatibility);
         MP_compatRecommendation.ForeColor = muted;
-        Row(exports, MP_compatRecommendation);
-        Row(exports, autoExport);
-        Row(exports, new Label { Text = "XML 输出文件", ForeColor = muted, AutoSize = true });
-        Row(exports, xmlPathBox, 65);
-        xmlPathBox.BackColor = Color.FromArgb(42, 55, 64); xmlPathBox.ForeColor = text;
-        Button MP_exportDirectory = MakeButton("更改 XML 目录…", 0, 0, 230);
-        MP_exportDirectory.Click += (_, _) => Safe(SetXmlDirectory);
-        Row(exports, MP_exportDirectory, 32);
-        Row(exports, new Label { Text = "JSON 工程目录", ForeColor = muted, AutoSize = true });
-        Row(exports, saveFolderBox, 55);
-        saveFolderBox.BackColor = Color.FromArgb(42, 55, 64); saveFolderBox.ForeColor = text;
-        Button MP_projectDirectory = MakeButton("更改工程目录…", 0, 0, 230);
-        MP_projectDirectory.Click += (_, _) => Safe(SetSaveDirectory);
-        Row(exports, MP_projectDirectory, 32);
-
-        Row(exports, new Label { Text = "依赖与导出检查", Font = new(Font, FontStyle.Bold),
-            ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
+        Row(metadata, MP_compatRecommendation);
+        Row(metadata, autoExport);
+        Panel reviewRow = new()
+        {
+            Height = 27, BackColor = surface, Margin = Padding.Empty
+        };
+        MP_exportStatusDot.Location = new Point(1, 3);
         MP_exportReviewStatus.ForeColor = muted;
-        Row(exports, MP_exportReviewStatus);
-        MP_exportDependencySummary.ForeColor = muted;
-        Row(exports, MP_exportDependencySummary);
+        MP_exportReviewStatus.Location = new Point(24, 2);
+        MP_exportReviewStatus.Margin = Padding.Empty;
+        reviewRow.Controls.Add(MP_exportStatusDot);
+        reviewRow.Controls.Add(MP_exportReviewStatus);
+        Row(metadata, reviewRow, 27);
         MP_exportReviewDetails.BackColor = Color.FromArgb(36, 48, 57);
         MP_exportReviewDetails.ForeColor = text;
-        MP_exportReviewDetails.BorderStyle = BorderStyle.FixedSingle;
-        Row(exports, MP_exportReviewDetails, 103);
+        MP_exportReviewDetails.BorderStyle = BorderStyle.None;
+        Row(metadata, MP_exportReviewDetails, 72);
         MP_exportReviewDetails.Visible = false;
 
         MP_exportPrimary = MakeButton("立即导出 XML", 0, 0, 230);
         MP_exportPrimary.Click += (_, _) => Safe(ExportToConfiguredLocation);
-        Row(exports, MP_exportPrimary, 36);
+        Row(metadata, MP_exportPrimary, 36);
+        exportResult.ForeColor = muted;
+        Row(metadata, exportResult, 34);
+        exportResult.Visible = false;
+
+        Button advancedToggle = MakeButton("高级设置  ▸", 0, 0, 230);
+        Row(metadata, advancedToggle, 33);
+        TableLayoutPanel advanced = new()
+        {
+            AutoSize = true, Dock = DockStyle.Top,
+            BackColor = surface, ColumnCount = 1, Visible = false,
+            Padding = Padding.Empty, Margin = Padding.Empty
+        };
+        advanced.ColumnStyles.Add(new(SizeType.Percent, 100));
+        Row(metadata, advanced);
+        advancedToggle.Click += (_, _) =>
+        {
+            advanced.Visible = !advanced.Visible;
+            advancedToggle.Text = advanced.Visible ? "高级设置  ▾" : "高级设置  ▸";
+        };
+        Row(advanced, new Label { Text = "XML 输出位置", ForeColor = muted, AutoSize = true });
+        xmlPathBox.Multiline = false;
+        xmlPathBox.ScrollBars = ScrollBars.None;
+        xmlPathBox.BorderStyle = BorderStyle.None;
+        xmlPathBox.BackColor = Color.FromArgb(42, 55, 64);
+        xmlPathBox.ForeColor = text;
+        Row(advanced, xmlPathBox, 28);
+        Button exportFolder = MakeButton("更改 XML 目录…", 0, 0, 230);
+        exportFolder.Click += (_, _) => Safe(SetXmlDirectory);
+        Row(advanced, exportFolder, 31);
+
+        Row(advanced, new Label { Text = "工程目录", ForeColor = muted, AutoSize = true });
+        saveFolderBox.Multiline = false;
+        saveFolderBox.ScrollBars = ScrollBars.None;
+        saveFolderBox.BorderStyle = BorderStyle.None;
+        saveFolderBox.BackColor = Color.FromArgb(42, 55, 64);
+        saveFolderBox.ForeColor = text;
+        Row(advanced, saveFolderBox, 28);
+        Button projectFolder = MakeButton("更改工程目录…", 0, 0, 230);
+        projectFolder.Click += (_, _) => Safe(SetSaveDirectory);
+        Row(advanced, projectFolder, 31);
+
+        MP_exportDependencySummary.ForeColor = muted;
+        Row(advanced, MP_exportDependencySummary);
         Button moreExport = MakeButton("更多导出方式 ▾", 0, 0, 230);
         ContextMenuStrip moreMenu = new() { BackColor = Color.FromArgb(39, 52, 62),
             ForeColor = text, ShowImageMargin = false };
@@ -309,21 +348,49 @@ public partial class MainForm
         More("导出完整 Mod 内容包…", ExportBundle);
         More("导出 PNG 预览…", ExportPreview);
         moreExport.Click += (_, _) => moreMenu.Show(moreExport, new Point(0, moreExport.Height));
-        Row(exports, moreExport, 32);
-        exportResult.ForeColor = muted;
-        Row(exports, exportResult, 65);
+        Row(advanced, moreExport, 32);
         MP_exportReviewTimer.Tick += (_, _) => MP_RefreshExportReview();
         inspectorSplit.Panel2.Controls.Add(tabs);
         foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, categoryBox, dormancyBox, profileBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
         foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, categoryBox, dormancyBox, profileBox })
         {
-            combo.FlatStyle = FlatStyle.Flat; combo.DrawMode = DrawMode.OwnerDrawFixed; combo.ItemHeight = Math.Max(22, Font.Height + 3);
+            combo.FlatStyle = FlatStyle.Flat; combo.DrawMode = DrawMode.OwnerDrawFixed;
+            combo.ItemHeight = combo == materialBox ? Math.Max(32, Font.Height + 14)
+                : Math.Max(22, Font.Height + 3);
             combo.DrawItem += (_, e) =>
             {
                 bool selected = (e.State & DrawItemState.Selected) != 0;
-                using SolidBrush background = new(selected ? Color.FromArgb(57, 91, 93) : Color.FromArgb(49, 58, 64)); e.Graphics.FillRectangle(background, e.Bounds);
+                using SolidBrush background = new(selected ? Color.FromArgb(57, 91, 93) : Color.FromArgb(49, 58, 64));
+                e.Graphics.FillRectangle(background, e.Bounds);
+                Rectangle textBounds = new(e.Bounds.X + 5, e.Bounds.Y, Math.Max(0, e.Bounds.Width - 8), e.Bounds.Height);
+                if (combo == materialBox && e.Index >= 0 &&
+                    combo.Items[e.Index] is MaterialItem material)
+                {
+                    int iconSize = Math.Min(27, Math.Max(12, e.Bounds.Height - 6));
+                    Rectangle iconRect = new(e.Bounds.X + 5,
+                        e.Bounds.Y + (e.Bounds.Height - iconSize) / 2, iconSize, iconSize);
+                    Bitmap sprite = catalog?.Textures?.Request(material.Texture);
+                    if (sprite != null)
+                    {
+                        float scale = Math.Min(iconSize / (float)sprite.Width, iconSize / (float)sprite.Height);
+                        int w = Math.Max(1, (int)Math.Round(sprite.Width * scale));
+                        int h = Math.Max(1, (int)Math.Round(sprite.Height * scale));
+                        e.Graphics.DrawImage(sprite, new Rectangle(iconRect.X + (iconSize - w) / 2,
+                            iconRect.Y + (iconSize - h) / 2, w, h));
+                    }
+                    else
+                    {
+                        using SolidBrush swatch = new(material.Color);
+                        e.Graphics.FillRectangle(swatch, iconRect);
+                    }
+                    using Pen border = new(Color.FromArgb(95, 122, 132));
+                    e.Graphics.DrawRectangle(border, iconRect);
+                    textBounds = new Rectangle(iconRect.Right + 9, e.Bounds.Y,
+                        Math.Max(0, e.Bounds.Right - iconRect.Right - 13), e.Bounds.Height);
+                }
                 string label = e.Index >= 0 ? combo.Items[e.Index]?.ToString() : combo.Text;
-                TextRenderer.DrawText(e.Graphics, label, Font, e.Bounds, text, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                TextRenderer.DrawText(e.Graphics, label, Font, textBounds, text,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
             };
         }
         search.TextChanged += (_, _) => { searchDelay.Stop(); searchDelay.Start(); };

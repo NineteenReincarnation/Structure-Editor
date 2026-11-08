@@ -13,7 +13,6 @@ Structure-Editor/
 │  ├─ project-format.md        # JSON / XML 结构协议
 │  ├─ 使用说明.md               # 用户操作说明
 │  └─ changelog/               # 历史版本记录
-├─ examples/                   # 可复用的无游戏资源结构工程
 ├─ structures/                 # 用户维护的结构工程库，优先读取，JSON/XML 成对保存
 ├─ scripts/                    # 构建、打包、验证入口
 ├─ app/                        # CI 更新的精简运行程序（不再复制数据/文档）
@@ -126,10 +125,10 @@ Structure-Editor/
 ## 根目录与生成文件整洁约定
 
 - 仓库**唯一启动目标**是 `app/StructureEditor.exe`。移除旧根目录 `启动结构工坊.cmd`；如果旧的个人 Windows 快捷方式原先指向该 CMD，请把目标改成 `app/StructureEditor.exe`。
-- **运行时 app/** 是最小可拉取程序：仅 exe/dll/运行配置及生成标记。删去原先重复的 `app/docs/`、`app/structures/`、`app/examples/`、多余 README 和帮助文档副本。
-- **独立 standalone.zip** 必须保留其自带的 `structures/`、`examples/`、使用说明和项目 `LICENSE`；它属于离线发行件，不是仓库内部第二份可编辑源文件。
+- **运行时 app/** 是最小可拉取程序：仅 exe/dll/运行配置及生成标记。不再复制根目录数据和文档，避免重复文件。
+- **独立 standalone.zip** 保留其自带的 `structures/`、使用说明和项目 `LICENSE`；它属于离线发行件，不是仓库内部第二份可编辑源文件。
 - 原 `Tools/Tests/TurretExplosionChecks.cs` 移到 `src/StructureEditor/Validation/TurretExplosionChecks.cs`，删除 .csproj 手工链入路径，恢复单一的验证代码归属。
-- `dist/`、`migration/`、`branding/`、`Directory.Build.props`、`*.lnk` 已被 Git 忽略，本地旧文件不会因 Git Pull 自动消失；不要自动删除可能含有数据和配置的本地目录。
+- `dist/`、`branding/`、`Directory.Build.props`、`*.lnk` 及历史迁移目录由 Git 忽略；Git Pull 不会替用户清理本地文件。
 
 ## 启动崩溃防回归检查
 
@@ -161,8 +160,25 @@ Structure-Editor/
 - 对象属性的「材质」标题和下拉框只在当前对象 `Catalog.MaterialsFor(item)` 存在可用选项时显示；无对象时也隐藏。方向、MP 休眠初态各自按对象能力及导出兼容状态显隐，避免无意义的空输入框。删除右上角与底部重复的「未选择」提示。
 - Windows 启动检查会验证新建快捷动作没有混入居中的结构标签条，其他对应的布局和素材选择回归检查位于 `Validation/StudioUsabilityChecks.cs`。
 
-## 许可与本地迁移文件
+## 许可与目录清理
 
 - 项目不再另设 `THIRD_PARTY_NOTICES.md`。原内容仅是资源来源说明，不是第三方许可证的全文，也不属于程序运行依赖；本项目的 MIT `LICENSE` 必须保留，独立发布包同样带上。
-- 根目录 `migration/` 已通过 `.gitignore` 排除，只保存开发过程的旧文件、迁移报告、品牌图和原始代码。它不参与当前启动、编译或正式结构读写；未经备份不要自动删除用户本地该目录。
-- `examples/SE_WallCorner.structure.json` 是一个最小 JSON 示例，不是运行必须加载的工程或游戏素材；它独立于作为正式项目库的 `structures/`。
+- 旧版 `migration/` 不受版本控制，也不参与启动、编译或结构读写；确认不需要历史备份后，可以由用户在本机删除。
+- 示例结构目录已从仓库移除；正式结构工程仅保存在 `structures/`，独立发行包也不再复制示例目录。
+
+## 2026-11-08 结构与材质可用性精简
+
+- `MaterialItem.Texture` 由素材 XML 的 `graphicData/texPath`（必要时回退 `uiIconPath`）解析；材质下拉项同时展示按需解码的小贴图和中英名称，未提供或暂未读出的纹理用该材料的真实 `Color` 色块代替；贴图到达后刷新该下拉控件，避免同步解码阻塞。
+- `MechClusterCatalog` 新增「防御设施」类别：原版 `Wall` 和 `Barricade`，同时继续保留单独统计的 22 种 Royalty 机械集群专用建筑；不将普通门/家具混入机械集群。缓存 schema 从 2 升到 3，避免旧缓存保留旧分组和缺失材质缩略图字段。
+- 结构库树改为紧凑深色绘制、无多余 Unicode 前缀，避免原生白色边框；重新筛选保留已展开目录及可保留的选中项。未选择文件时不显示说明段落，单选预览、双击打开、右键/ F2 重命名逻辑保持不变。
+- 工程页保留名称、DefName、类别、适用的休眠选项、XML 目标、自动导出、检查状态和主要导出按钮。两个路径、依赖详细信息及其他导出操作全部折叠到「高级设置」；导出错误时仍直接提示，错误未修复则禁止 XML 导出，不会抹除 JSON 工程。
+- 未选择对象时清空属性解释文字；无兼容状态时隐藏扩展说明，默认不显示自动导出的历史路径。帮助/关于子窗口统一支持 `Esc` 关闭。
+
+## 工程概览与渲染开销优化
+
+- 工程页以 `MP_StructureOverview` 替代重复的文字数量摘要：显示建筑、单位、地板的三色对象比例条和按实际旋转占地绘制的微型俯视布局；小图由坐标和占地尺寸直接绘制，不进行贴图解码，不修改 JSON，也不冒充游戏内最终生成结果。建筑占地使用 `StructureDocument.Footprint`，地形为底层、建筑居中、单位在上层。
+- `MP_ExportIndicator` 在已有导出检查文字旁用小型颜色状态标识呈现可导出/提醒/阻断；实际检查仍完全由 `MP_ExportReview` 决定，不将警告当作错误。
+- 工程概览采用双缓冲绘制，绘制阶段只读取预计算的矩形和计数。画布连续编辑的刷新请求用短时防抖合并，切换工程或重新加载素材时会立即更新。
+- 主窗口标题没有变化时不再重排全部已打开的结构标签；命名预览仍在调用时按实际文件状态计算，但只更新发生变化的控件，避免绘制/拖动期间反复布局。
+- 结构库搜索和 PNG 预览继续沿用前一轮的输入防抖、预览防抖及文件夹节点索引；不会为微型布局创建第二套 PNG 缓存。
+- 此轮仅提交源码，不运行 Windows 编译与运行测试；EXE 在下一次正式构建同步前仍为上一个已验证版本。

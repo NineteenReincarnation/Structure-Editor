@@ -53,6 +53,7 @@ public partial class StructureCanvas : Control
     public IReadOnlyCollection<PlacedItem> Selection => selection;
     public bool HasStamp => stamp?.Count > 0;
     public event Action BeforeChange, Changed, SelectionChanged, ToolChanged;
+    public event Action MP_ViewChanged;
     public event Action<string> Hint;
     protected virtual Keys InputModifiers => ModifierKeys;
 
@@ -64,7 +65,7 @@ public partial class StructureCanvas : Control
         {
             if (origin == PointF.Empty) CenterView();
             else if (!previousViewSize.IsEmpty) origin = new(origin.X + (Width - previousViewSize.Width) / 2f, origin.Y + (Height - previousViewSize.Height) / 2f);
-            previousViewSize = ClientSize; Invalidate();
+            previousViewSize = ClientSize; MP_NotifyViewChanged();
         };
     }
     private void RebuildIndex()
@@ -74,10 +75,20 @@ public partial class StructureCanvas : Control
         removals.Clear(); solidDirty = true; ClearTerrainCache(); ClearPastePreview(); Invalidate();
     }
     internal (PointF Origin, float Scale) CaptureView() => (origin, cellSize);
-    internal void RestoreView(PointF position, float scale) { origin = position; cellSize = scale; Invalidate(); }
+    internal RectangleF MP_VisibleCells => cellSize > 0
+        ? new RectangleF(-origin.X / cellSize, (origin.Y - Height) / cellSize,
+            Math.Max(0, Width) / cellSize, Math.Max(0, Height) / cellSize)
+        : RectangleF.Empty;
+    private void MP_NotifyViewChanged() { MP_ViewChanged?.Invoke(); Invalidate(); }
+    internal void MP_CenterOnGrid(PointF cell)
+    {
+        origin = new(Width / 2f - cell.X * cellSize, Height / 2f + cell.Y * cellSize);
+        MP_NotifyViewChanged();
+    }
+    internal void RestoreView(PointF position, float scale) { origin = position; cellSize = scale; MP_NotifyViewChanged(); }
     public void CenterView() => CenterItems(Document?.Items.Where(i => VisibleLayers.Contains(i.Kind)));
     public void CenterSelection() => CenterItems(selection.Count > 0 ? selection : Document?.Items.Where(i => VisibleLayers.Contains(i.Kind)));
-    public void GoToOrigin() { origin = new(Width / 2f, Height / 2f); Invalidate(); }
+    public void GoToOrigin() { origin = new(Width / 2f, Height / 2f); MP_NotifyViewChanged(); }
     private void CenterItems(IEnumerable<PlacedItem> items)
     {
         var visible = items?.ToList();
@@ -89,7 +100,7 @@ public partial class StructureCanvas : Control
             origin = new(Width / 2f - (bounds.Left + bounds.Width / 2) * cellSize, Height / 2f + (bounds.Top + bounds.Height / 2) * cellSize);
         }
         else origin = new(Width / 2f, Height / 2f);
-        Invalidate();
+        MP_NotifyViewChanged();
     }
     private RectangleF VisualBounds(PlacedItem item)
     {
@@ -268,7 +279,7 @@ public partial class StructureCanvas : Control
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e); lastMouse = e.Location;
-        if (panning) { origin = new(panOrigin.X + e.X - panStart.X, panOrigin.Y + e.Y - panStart.Y); Invalidate(); return; }
+        if (panning) { origin = new(panOrigin.X + e.X - panStart.X, panOrigin.Y + e.Y - panStart.Y); MP_NotifyViewChanged(); return; }
         if (Catalog == null || Document == null) return;
         Point grid = Grid(e.Location);
         if (grid == lastGrid) return;
@@ -302,7 +313,7 @@ public partial class StructureCanvas : Control
     private void ZoomAt(Point position, float factor)
     {
         float old = cellSize; cellSize = Math.Clamp(cellSize * factor, 1, 112);
-        origin = new(position.X + (origin.X - position.X) * cellSize / old, position.Y + (origin.Y - position.Y) * cellSize / old); Invalidate();
+        origin = new(position.X + (origin.X - position.X) * cellSize / old, position.Y + (origin.Y - position.Y) * cellSize / old); MP_NotifyViewChanged();
     }
     public void ZoomAtCenter(float factor, bool actualSize = false) => ZoomAt(new(Width / 2, Height / 2), actualSize ? 44 / cellSize : factor);
     protected override void OnKeyDown(KeyEventArgs e) { if (e.KeyCode == Keys.Space) { spaceHeld = true; Cursor = Cursors.Hand; e.Handled = true; } base.OnKeyDown(e); }

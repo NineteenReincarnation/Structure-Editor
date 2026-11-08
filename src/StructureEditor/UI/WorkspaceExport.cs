@@ -34,30 +34,39 @@ public partial class MainForm
         if (IsDisposed || Disposing) return;
         MP_exportReviewTimer.Stop();
         var review = MP_ExportReview.Inspect(document, catalog, document.ExportProfile);
-        MP_exportReviewStatus.Text = review.Summary;
+        if (MP_exportReviewStatus.Text != review.Summary)
+            MP_exportReviewStatus.Text = review.Summary;
         MP_exportReviewStatus.ForeColor = review.Errors > 0 ? Color.FromArgb(239, 151, 139)
             : review.Warnings > 0 ? Color.FromArgb(218, 185, 120) : Color.FromArgb(129, 206, 166);
-        MP_exportDependencySummary.Text = review.Dependencies.Count == 0
+        MP_exportStatusDot.SetState(review.Errors, review.Warnings);
+        string dependencies = review.Dependencies.Count == 0
             ? "依赖：仅原版基础内容"
             : "依赖：" + string.Join("、", review.Dependencies.Select(x => x.Name ?? x.PackageId).Take(5))
                 + (review.Dependencies.Count > 5 ? $" 等 {review.Dependencies.Count} 项" : "");
-        MP_exportReviewDetails.Text = string.Join(Environment.NewLine,
+        if (MP_exportDependencySummary.Text != dependencies)
+            MP_exportDependencySummary.Text = dependencies;
+        string details = string.Join(Environment.NewLine,
             review.Issues.Select(x => (x.IsError ? "[错误] " : "[提醒] ") + x.Message));
+        if (MP_exportReviewDetails.Text != details)
+            MP_exportReviewDetails.Text = details;
         MP_exportReviewDetails.Visible = review.Issues.Count != 0;
         MP_exportPrimary.Enabled = review.CanExport;
 
         if (document.ExportProfile is "Framework" or "Universal")
         {
             bool recommended = MP_ExportReview.MP_CanRecommendDormancy(document, catalog);
-            MP_compatRecommendation.Text = document.EnableMPCompatibility
-                ? "已启用 · 仅在目标格式支持时生成休眠拓展"
-                : recommended ? "已发现可休眠对象 · 可按需要启用"
-                : "没有发现需要休眠拓展的对象";
+            string message = document.EnableMPCompatibility
+                ? "休眠拓展已启用"
+                : recommended ? "检测到可休眠对象" : "";
+            if (MP_compatRecommendation.Text != message)
+                MP_compatRecommendation.Text = message;
+            MP_compatRecommendation.Visible = recommended && !document.EnableMPCompatibility;
         }
-        else if (document.ExportProfile == "MechProtocol")
-            MP_compatRecommendation.Text = "MP 原生格式已包含对应能力，无需单独启用拓展";
         else
-            MP_compatRecommendation.Text = "原版不支持此拓展，相关启用配置已清除";
+        {
+            if (MP_compatRecommendation.Text.Length != 0) MP_compatRecommendation.Text = "";
+            MP_compatRecommendation.Visible = false;
+        }
     }
 
     private void MP_RecordExportTarget(string path)
@@ -71,7 +80,9 @@ public partial class MainForm
 
     private void RefreshExportLocation()
     {
-        xmlPathBox.Text = StructureStorage.XmlTarget(document, saveLocationChanged ? null : currentFile, OutputFolder);
+        string nextPath = StructureStorage.XmlTarget(document,
+            saveLocationChanged ? null : currentFile, OutputFolder);
+        if (xmlPathBox.Text != nextPath) xmlPathBox.Text = nextPath;
         MP_ScheduleExportReview();
     }
     private void SetXmlDirectory()
@@ -80,7 +91,7 @@ public partial class MainForm
         using FolderBrowserDialog dialog = new() { Description = "选择 XML 导出目录", SelectedPath = Path.GetDirectoryName(StructureStorage.XmlTarget(document, currentFile, OutputFolder)), UseDescriptionForTitle = true };
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         Snapshot(); document.XmlExportDirectory = dialog.SelectedPath; dirty = true; UpdateTitle(); RefreshExportLocation();
-        exportResult.Text = "下次保存时将更新以上 XML 文件。";
+        exportResult.Text = "XML 输出目录已更新。"; exportResult.Visible = true;
     }
     private void ExportToConfiguredLocation()
     {
@@ -90,7 +101,7 @@ public partial class MainForm
         CheckWorkspaceExportTarget(path);
         StructureStorage.ExportXml(document, catalog, path, document.ExportProfile);
         MP_RecordExportTarget(path);
-        exportResult.ForeColor = muted; exportResult.Text = "XML 已更新：\n" + path; status.Text = "已导出布局：" + path;
+        exportResult.ForeColor = muted; exportResult.Text = "XML 已导出"; exportResult.Visible = true; status.Text = "已导出布局：" + path;
         RefreshExportLocation();
     }
 }

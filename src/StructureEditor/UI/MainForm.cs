@@ -17,11 +17,14 @@ public partial class MainForm : Form
     private readonly CheckBox dormant = new();
     private readonly ComboBox profileBox = new MP_DarkComboBox();
     private readonly CheckBox mpCompatibility = new();
-    private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new(), summary = new();
+    private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new();
+    private readonly MP_StructureOverview MP_structureOverview = new();
+    private readonly MP_ExportIndicator MP_exportStatusDot = new();
+    private readonly System.Windows.Forms.Timer MP_overviewDelay = new() { Interval = 110 };
     private Label MP_rotationLabel, MP_materialLabel, MP_dormancyLabel;
     private StructureDocument MP_summaryDocument;
+    private Catalog MP_summaryCatalog;
     private int MP_summaryCount = -1;
-    private string MP_summaryText;
     private readonly ListBox palette = new();
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Stack<StructureDocument> undo = new(), redo = new();
@@ -44,6 +47,9 @@ public partial class MainForm : Form
         AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
         MinimumSize = new Size(1000, 640); KeyPreview = true;
         BuildUi();
+        MP_structureOverview.MP_NavigateRequested += canvas.MP_CenterOnGrid;
+        canvas.MP_ViewChanged += () => MP_structureOverview.MP_SetView(canvas.MP_VisibleCells);
+        MP_structureOverview.MP_SetView(canvas.MP_VisibleCells);
         RefreshMetadata(); ShowSelection();
         InitializeBackgroundLoading();
         KeyDown += (_, e) =>
@@ -54,11 +60,28 @@ public partial class MainForm : Form
             { e.Handled = true; e.SuppressKeyPress = true; }
         };
         canvas.BeforeChange += Snapshot;
-        canvas.Changed += () => { MP_summaryDocument = null; dirty = true; UpdateTitle(); UpdateSummary(); MP_ScheduleExportReview(); };
+        MP_overviewDelay.Tick += (_, _) =>
+        {
+            MP_overviewDelay.Stop();
+            if (!IsDisposed && !Disposing) UpdateSummary();
+        };
+        canvas.Changed += () =>
+        {
+            MP_summaryDocument = null;
+            dirty = true;
+            UpdateTitle();
+            MP_overviewDelay.Stop();
+            MP_overviewDelay.Start();
+            MP_ScheduleExportReview();
+        };
         canvas.SelectionChanged += ShowSelection;
         canvas.Hint += message => status.Text = message;
         FormClosing += (_, e) => { try { if (!AskSaveWorkspace()) e.Cancel = true; } catch (Exception ex) { e.Cancel = true; MessageBox.Show(this, ex.Message); } };
-        FormClosed += (_, _) => { MP_exportReviewTimer.Stop(); MP_exportReviewTimer.Dispose(); };
+        Disposed += (_, _) =>
+        {
+            MP_exportReviewTimer.Stop(); MP_exportReviewTimer.Dispose();
+            MP_overviewDelay.Stop(); MP_overviewDelay.Dispose();
+        };
         Load += (_, _) => { UpdatePaletteDensity(); FitWorkingArea(); };
         Shown += (_, _) => { if (Program.IsGame(Program.Paths.GameRoot)) LoadCatalog(); else { canvas.Document=document; RefreshMetadata(); status.Text="请在 编辑 → 首选项 中选择 RimWorld 游戏目录，加载本机素材。"; } };
     }
@@ -175,8 +198,8 @@ public partial class MainForm : Form
         else if (canvas.Brush != null) ShowItem(canvas.Brush, null);
         else
         {
-            selectedName.Text = "未选择对象";
-            selectedInfo.Text = "选择素材或画布中的对象。";
+            if (selectedName.Text != "未选择对象") selectedName.Text = "未选择对象";
+            if (selectedInfo.Text.Length != 0) selectedInfo.Text = "";
             MP_materialLabel.Visible = materialBox.Visible = false;
             MP_rotationLabel.Visible = rotationBox.Visible = false;
             MP_dormancyLabel.Visible = dormancyBox.Visible = dormancyInfo.Visible = false;
@@ -195,8 +218,10 @@ public partial class MainForm : Form
         updating = true;
         try
         {
-            selectedName.Text = item.Label + "\n" + item.DefName;
-            selectedInfo.Text = $"来源：{item.Pack}\n占地 {item.Width} × {item.Height}  ·  {(placed == null ? "当前笔刷" : $"已选 {canvas.Selection.Count} 个对象")}";
+            string name = item.Label + "\n" + item.DefName;
+            if (selectedName.Text != name) selectedName.Text = name;
+            string info = $"来源：{item.Pack}\n占地 {item.Width} × {item.Height}  ·  {(placed == null ? "当前笔刷" : $"已选 {canvas.Selection.Count} 个对象")}";
+            if (selectedInfo.Text != info) selectedInfo.Text = info;
             if (shownItem != item)
             {
                 materialBox.BeginUpdate(); materialBox.Items.Clear();
@@ -204,7 +229,12 @@ public partial class MainForm : Form
                 materialBox.EndUpdate(); shownItem = item;
             }
             MaterialItem preferred = materialBox.Items.Cast<MaterialItem>().FirstOrDefault(m => m.DefName == (placed?.Stuff ?? canvas.BrushStuff));
-            if (materialBox.Items.Count > 0) materialBox.SelectedItem = preferred ?? materialBox.Items[0];
+            if (materialBox.Items.Count > 0)
+            {
+                object nextMaterial = preferred ?? materialBox.Items[0];
+                if (!ReferenceEquals(materialBox.SelectedItem, nextMaterial))
+                    materialBox.SelectedItem = nextMaterial;
+            }
             bool hasMaterial = materialBox.Items.Count > 0;
             MP_materialLabel.Visible = materialBox.Visible = hasMaterial;
             materialBox.Enabled = hasMaterial;
@@ -215,7 +245,11 @@ public partial class MainForm : Form
                 : item.Rotatable;
             MP_rotationLabel.Visible = rotationBox.Visible = canRotate;
             rotationBox.Enabled = canRotate;
-            if (canRotate) rotationBox.SelectedIndex = placed?.Rotation ?? canvas.BrushRotation;
+            if (canRotate)
+            {
+                int rotation = placed?.Rotation ?? canvas.BrushRotation;
+                if (rotationBox.SelectedIndex != rotation) rotationBox.SelectedIndex = rotation;
+            }
             var supported = placed == null ? new List<PlacedItem>() : canvas.Selection.Where(i => catalog.Find(i.Kind, i.DefName)?.CanBeDormant == true).ToList();
             bool mp = document.ExportProfile == "MechProtocol"
                 || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal") && document.EnableMPCompatibility);
@@ -225,8 +259,10 @@ public partial class MainForm : Form
             dormancyBox.Enabled = showDormancy;
             var states = supported.Select(i => i.StartDormant).Distinct().ToList();
             bool? setting = placed == null ? canvas.BrushDormant : supported.FirstOrDefault()?.StartDormant;
-            dormancyBox.SelectedIndex = states.Count > 1 ? 3 : setting == true ? 1 : setting == false ? 2 : 0;
-            dormancyInfo.Text = "MP 休眠初态；受攻击或触发器影响仍会唤醒。";
+            int nextDormancy = states.Count > 1 ? 3 : setting == true ? 1 : setting == false ? 2 : 0;
+            if (dormancyBox.SelectedIndex != nextDormancy)
+                dormancyBox.SelectedIndex = nextDormancy;
+            dormancyInfo.Text = ""; dormancyInfo.Visible = false;
         }
         finally { updating = false; }
     }
@@ -256,10 +292,16 @@ public partial class MainForm : Form
             "Universal" => 3, _ => 0
         };
         mpCompatibility.Checked = document.EnableMPCompatibility;
-        mpCompatibility.Enabled = document.ExportProfile is "Framework" or "Universal";
-        autoExport.Checked = document.AutoExportOnSave; exportResult.Text = "";
+        bool supportsExtension = document.ExportProfile is "Framework" or "Universal";
+        mpCompatibility.Enabled = supportsExtension;
+        mpCompatibility.Visible = supportsExtension;
+        autoExport.Checked = document.AutoExportOnSave;
+        exportResult.Text = "";
+        exportResult.Visible = false;
         dormant.Enabled = document.ExportProfile == "MechProtocol"
-            || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal") && document.EnableMPCompatibility);
+            || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal")
+                && document.EnableMPCompatibility);
+        dormant.Visible = dormant.Enabled;
         updating = false;
         UpdateTitle(); UpdateSummary();
         RefreshSaveLocation(); LoadNamingFields();
@@ -289,23 +331,29 @@ public partial class MainForm : Form
         dirty = true; UpdateTitle(); canvas.Invalidate(); RefreshMetadata(); ShowSelection();
         MP_ScheduleExportReview();
     }
-    private void UpdateTitle() { Text = "Structure Editor · 结构工坊 — " + document.Label + (dirty ? " *" : ""); RefreshDocumentTabs(); RefreshNamingPreview(); }
+    private void UpdateTitle()
+    {
+        string next = "Structure Editor · 结构工坊 — " + document.Label + (dirty ? " *" : "");
+        // Moving one item can generate many canvas change notifications.
+        // Tab layout and naming preview only need refreshing on a title change.
+        if (Text != next)
+        {
+            Text = next;
+            RefreshDocumentTabs();
+        }
+        // The naming preview also depends on the current file location, not
+        // only the visible title (for example after saving a clean document).
+        RefreshNamingPreview();
+    }
     private void UpdateSummary()
     {
-        if (!ReferenceEquals(MP_summaryDocument, document) || MP_summaryCount != document.Items.Count)
-        {
-            int buildings = 0, pawns = 0, terrain = 0;
-            foreach (PlacedItem item in document.Items)
-            {
-                if (item.Kind == "Building") buildings++;
-                else if (item.Kind == "Pawn") pawns++;
-                else if (item.Kind == "Terrain") terrain++;
-            }
-            MP_summaryText = $"建筑 {buildings}   单位 {pawns}\n地板 {terrain}   总计 {document.Items.Count}";
-            MP_summaryDocument = document;
-            MP_summaryCount = document.Items.Count;
-        }
-        if (summary.Text != MP_summaryText) summary.Text = MP_summaryText;
+        if (ReferenceEquals(MP_summaryDocument, document)
+            && ReferenceEquals(MP_summaryCatalog, catalog)
+            && MP_summaryCount == document.Items.Count) return;
+        MP_structureOverview.SetDocument(document, catalog);
+        MP_summaryDocument = document;
+        MP_summaryCatalog = catalog;
+        MP_summaryCount = document.Items.Count;
     }
     private bool AskSave()
     {

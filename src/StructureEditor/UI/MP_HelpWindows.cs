@@ -31,6 +31,12 @@ internal static class MP_HelpWindows
             MinimumSize = new(Math.Min(530, Size.Width), Math.Min(360, Size.Height));
         }
 
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == System.Windows.Forms.Keys.Escape) { Close(); return true; }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);

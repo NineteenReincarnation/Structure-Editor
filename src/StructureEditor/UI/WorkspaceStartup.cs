@@ -32,7 +32,7 @@ public partial class MainForm
         bool restore = canvas.Document == null && currentFile == null && !dirty;
         string initial = Program.Paths.LastDocument;
         IsLoadingCatalog = true; palette.Enabled = false; if (libraryFilters != null) libraryFilters.Enabled = false;
-        libraryInfo.Text = "正在加载素材…\n窗口可以正常移动和调整大小。";
+        libraryInfo.Text = "正在加载素材…";
         status.Text = "正在后台读取本机素材…";
         var timer = Stopwatch.StartNew();
         IProgress<string> progress = new Progress<string>(message => { if (!IsDisposed && !Disposing && !cancellation.IsCancellationRequested) status.Text = message; });

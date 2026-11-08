@@ -12,7 +12,7 @@ namespace StructureEditor;
 // A missing or corrupt cache simply falls back to the normal XML loader.
 internal static class MP_CatalogSnapshotCache
 {
-    private const int Schema = 2;
+    private const int Schema = 3;
     private static readonly JsonSerializerOptions Json = CreateOptions();
 
     internal sealed class Snapshot
