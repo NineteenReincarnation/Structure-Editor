@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!--Requires: Anno.MechProtocol, brrainz.harmony, ludeon.rimworld.royalty, nineteenreincarnation.structureframework-->
 <Defs>
   <StructureFramework.StructureDef>
@@ -52,11 +52,6 @@
             <dormant>false</dormant>
           </li>
         </modifiers>
-      </li>
-      <li>
-        <thingDef>ShieldGeneratorBullets</thingDef>
-        <position>(0,0,0)</position>
-        <rotation>0</rotation>
       </li>
       <li>
         <thingDef>Turret_AutoChargeBlaster</thingDef>
@@ -854,6 +849,11 @@
       <li>
         <thingDef>ActivatorCountdown</thingDef>
         <position>(5,0,-1)</position>
+        <rotation>0</rotation>
+      </li>
+      <li>
+        <thingDef>ShieldGeneratorMortar</thingDef>
+        <position>(0,0,0)</position>
         <rotation>0</rotation>
       </li>
     </things>

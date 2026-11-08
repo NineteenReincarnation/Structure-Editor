@@ -58,16 +58,6 @@
     },
     {
       "Kind": "Building",
-      "DefName": "ShieldGeneratorBullets",
-      "Stuff": null,
-      "X": 0,
-      "Z": 0,
-      "Rotation": 0,
-      "StartDormant": null,
-      "FrameworkModifiers": []
-    },
-    {
-      "Kind": "Building",
       "DefName": "Turret_AutoChargeBlaster",
       "Stuff": null,
       "X": -8,
@@ -997,7 +987,8 @@
       "FrameworkModifiers": []
     },
     {
-      "Kind": "Building",      "DefName": "Barricade",
+      "Kind": "Building",
+      "DefName": "Barricade",
       "Stuff": "Steel",
       "X": -13,
       "Z": 0,
@@ -1441,6 +1432,16 @@
       "Stuff": null,
       "X": 5,
       "Z": -1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "ShieldGeneratorMortar",
+      "Stuff": null,
+      "X": 0,
+      "Z": 0,
       "Rotation": 0,
       "StartDormant": null,
       "FrameworkModifiers": []
