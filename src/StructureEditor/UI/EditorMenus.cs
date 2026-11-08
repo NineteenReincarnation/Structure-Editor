@@ -74,8 +74,8 @@ public partial class MainForm
     }
     private sealed class EditorMenuColors : ProfessionalColorTable
     {
-        private static Color Surface => Color.FromArgb(36, 44, 49);
-        private static Color Highlight => Color.FromArgb(57, 91, 93);
+        private static Color Surface => Color.FromArgb(39, 52, 62);
+        private static Color Highlight => Color.FromArgb(51, 87, 94);
         public override Color ToolStripDropDownBackground => Surface;
         public override Color ImageMarginGradientBegin => Surface;
         public override Color ImageMarginGradientMiddle => Surface;

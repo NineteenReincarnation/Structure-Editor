@@ -27,7 +27,7 @@ internal sealed class MP_SectionTabs : UserControl
             for (int i = 0; i < pages.Count; i++)
             {
                 pages[i].Button.BackColor = i == value
-                    ? Color.FromArgb(54, 84, 99) : Color.FromArgb(37, 50, 59);
+                    ? Color.FromArgb(51, 87, 94) : Color.FromArgb(37, 50, 59);
                 pages[i].Button.ForeColor = i == value
                     ? Color.FromArgb(243, 247, 249) : Color.FromArgb(170, 193, 205);
             }

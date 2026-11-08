@@ -7,6 +7,12 @@ namespace StructureEditor;
 // are available as tooltips) and request Explorer's dark scrollbar theme.
 internal sealed class MP_DarkTreeView : TreeView
 {
+    internal MP_DarkTreeView()
+    {
+        DoubleBuffered = true;
+        SetStyle(ControlStyles.AllPaintingInWmPaint
+            | ControlStyles.OptimizedDoubleBuffer, true);
+    }
     private const int TVS_NOHSCROLL = 0x8000;
     [DllImport("uxtheme.dll", CharSet = CharSet.Unicode)]
     private static extern int SetWindowTheme(IntPtr handle, string subAppName, string subIdList);

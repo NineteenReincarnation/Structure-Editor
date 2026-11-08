@@ -21,12 +21,14 @@ public partial class MainForm
     private readonly System.Windows.Forms.Timer MP_libraryPreviewDelay = new() { Interval = 130 };
     private MP_LibraryEntry MP_pendingLibraryPreview;
     private Font MP_libraryFolderFont;
+    private ToolTip MP_libraryToolTip;
+    private string MP_libraryTipText = "";
 
     // This panel is docked into the existing LEFT library column. No extra
     // dialog and no extra per-Def tree level: double-click a leaf to open it.
     private Control MP_CreateStructureLibraryPanel()
     {
-        var layout = new TableLayoutPanel
+        var layout = new MP_SmoothLayout
         {
             Dock = DockStyle.Fill, BackColor = surface, ForeColor = text,
             ColumnCount = 1, RowCount = 5, Padding = new Padding(4)
@@ -38,7 +40,7 @@ public partial class MainForm
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 155));
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
 
-        var row = new Panel { Dock = DockStyle.Fill };
+        var row = new Panel { Dock = DockStyle.Fill, BackColor = surface };
         MP_librarySearch = new TextBox
         {
             Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle,
@@ -48,9 +50,11 @@ public partial class MainForm
         var refresh = new Button
         {
             Dock = DockStyle.Right, Width = 54, Text = "刷新",
-            BackColor = Color.FromArgb(52, 64, 69), ForeColor = text,
-            FlatStyle = FlatStyle.Flat
+            BackColor = Color.FromArgb(49, 65, 76), ForeColor = text,
+            FlatStyle = FlatStyle.Flat, UseVisualStyleBackColor = false
         };
+        refresh.FlatAppearance.BorderSize = 0;
+        refresh.FlatAppearance.MouseOverBackColor = Color.FromArgb(61, 84, 96);
         row.Controls.Add(MP_librarySearch);
         row.Controls.Add(refresh);
         layout.Controls.Add(row, 0, 0);
@@ -66,9 +70,9 @@ public partial class MainForm
         {
             Dock = DockStyle.Fill, BackColor = Color.FromArgb(33, 44, 53),
             ForeColor = text, BorderStyle = BorderStyle.None,
-            HideSelection = false, FullRowSelect = true, ShowNodeToolTips = true,
+            HideSelection = false, FullRowSelect = true, ShowNodeToolTips = false,
             ShowLines = false, ShowRootLines = false, ShowPlusMinus = true,
-            DrawMode = TreeViewDrawMode.OwnerDrawText, HotTracking = false,
+            DrawMode = TreeViewDrawMode.OwnerDrawAll, HotTracking = false,
             Indent = 13, ItemHeight = 29
         };
         MP_libraryFolderFont = new Font(MP_libraryTree.Font, FontStyle.Bold);
@@ -77,33 +81,89 @@ public partial class MainForm
             if (e.Node == null || e.Bounds.Height <= 0) return;
             bool selected = e.Node == MP_libraryTree.SelectedNode;
             bool leaf = e.Node.Tag is MP_LibraryEntry;
-            using SolidBrush bg = new(selected
-                ? Color.FromArgb(51, 87, 94) : MP_libraryTree.BackColor);
-            Rectangle rowRect = new(e.Bounds.X, e.Bounds.Y,
-                Math.Max(e.Bounds.Width, MP_libraryTree.ClientSize.Width - e.Bounds.X),
-                e.Bounds.Height);
-            e.Graphics.FillRectangle(bg, rowRect);
+            Rectangle rowRect = new(0, e.Bounds.Top,
+                MP_libraryTree.ClientSize.Width, e.Bounds.Height);
+            using SolidBrush rowBrush = new(selected ? Color.FromArgb(51, 87, 94)
+                : MP_libraryTree.BackColor);
+            e.Graphics.FillRectangle(rowBrush, rowRect);
+            if (selected)
+            {
+                using SolidBrush stripe = new(Color.FromArgb(145, 197, 209));
+                e.Graphics.FillRectangle(stripe, 0, rowRect.Top, 3, rowRect.Height);
+            }
+            int labelX = Math.Max(18, e.Node.Bounds.Left + 3);
+            if (e.Node.Nodes.Count > 0)
+            {
+                int x = Math.Max(9, e.Node.Bounds.Left - 12);
+                int y = rowRect.Top + rowRect.Height / 2;
+                using SolidBrush arrowBrush = new(Color.FromArgb(155, 190, 202));
+                Point[] arrow = e.Node.IsExpanded
+                    ? new[] { new Point(x - 4, y - 2), new Point(x + 4, y - 2),
+                        new Point(x, y + 3) }
+                    : new[] { new Point(x - 2, y - 4), new Point(x + 3, y),
+                        new Point(x - 2, y + 4) };
+                e.Graphics.FillPolygon(arrowBrush, arrow);
+            }
             Color fg = selected ? Color.FromArgb(243, 249, 249)
                 : leaf ? Color.FromArgb(223, 234, 239)
                 : Color.FromArgb(156, 191, 204);
-            Font labelFont = leaf ? MP_libraryTree.Font : MP_libraryFolderFont;
-            TextRenderer.DrawText(e.Graphics, e.Node.Text, labelFont,
-                new Rectangle(e.Bounds.Left + 3, e.Bounds.Top, Math.Max(8,
-                    MP_libraryTree.ClientSize.Width - e.Bounds.Left - 8), e.Bounds.Height),
+            Font font = leaf ? MP_libraryTree.Font : MP_libraryFolderFont;
+            TextRenderer.DrawText(e.Graphics, e.Node.Text, font,
+                new Rectangle(labelX, rowRect.Top,
+                    Math.Max(8, rowRect.Width - labelX - 7), rowRect.Height),
                 fg, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
-                    | TextFormatFlags.NoPrefix);
+                    | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
         };
         layout.Controls.Add(MP_libraryTree, 0, 2);
+        MP_libraryToolTip = new ToolTip
+        {
+            OwnerDraw = true, InitialDelay = 550, ReshowDelay = 180,
+            AutoPopDelay = 6000, ShowAlways = false
+        };
+        MP_libraryToolTip.Popup += (_, e) =>
+        {
+            if (MP_libraryTipText.Length == 0) { e.Cancel = true; return; }
+            int width = Math.Min(570, TextRenderer.MeasureText(
+                MP_libraryTipText, MP_libraryTree.Font).Width + 18);
+            e.ToolTipSize = new Size(Math.Max(100, width), 30);
+        };
+        MP_libraryToolTip.Draw += (_, e) =>
+        {
+            using SolidBrush fill = new(Color.FromArgb(39, 52, 62));
+            using Pen border = new(Color.FromArgb(72, 100, 113));
+            e.Graphics.FillRectangle(fill, e.Bounds);
+            e.Graphics.DrawRectangle(border, 0, 0, e.Bounds.Width - 1, e.Bounds.Height - 1);
+            TextRenderer.DrawText(e.Graphics, MP_libraryTipText, MP_libraryTree.Font,
+                new Rectangle(8, 0, e.Bounds.Width - 14, e.Bounds.Height),
+                text, TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine
+                    | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+        };
+        MP_libraryTree.MouseMove += (_, e) =>
+        {
+            TreeNode node = MP_libraryTree.GetNodeAt(e.Location);
+            string next = node != null && node.Tag is MP_LibraryEntry
+                && TextRenderer.MeasureText(node.Text, MP_libraryTree.Font).Width
+                    > MP_libraryTree.ClientSize.Width - node.Bounds.Left - 10
+                ? node.ToolTipText : "";
+            if (next == MP_libraryTipText) return;
+            MP_libraryTipText = next;
+            MP_libraryToolTip.SetToolTip(MP_libraryTree, next);
+        };
+        MP_libraryTree.MouseLeave += (_, _) =>
+        {
+            MP_libraryTipText = "";
+            MP_libraryToolTip.SetToolTip(MP_libraryTree, "");
+        };
 
         var previewPanel = new Panel
         {
             Dock = DockStyle.Fill, Padding = new Padding(2, 8, 2, 4),
-            BackColor = Color.FromArgb(29, 35, 39)
+            BackColor = surface
         };
         MP_libraryPreview = new PictureBox
         {
             Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom,
-            BackColor = Color.FromArgb(42, 48, 51)
+            BackColor = Color.FromArgb(29, 35, 39)
         };
         previewPanel.Controls.Add(MP_libraryPreview);
         layout.Controls.Add(previewPanel, 0, 3);
@@ -132,8 +192,13 @@ public partial class MainForm
             MP_libraryFilterDelay.Start();
         };
         refresh.Click += (_, _) => Safe(MP_ReloadLibrary);
-        var MP_renameContext = new ContextMenuStrip();
+        var MP_renameContext = new ContextMenuStrip
+        {
+            BackColor = Color.FromArgb(39, 52, 62),
+            ForeColor = text, ShowImageMargin = false, Renderer = new StudioRenderer()
+        };
         var MP_renameMenuItem = MP_renameContext.Items.Add("重命名…");
+        MP_renameMenuItem.ForeColor = text;
         MP_renameContext.Opening += (_, e) =>
         {
             if (MP_libraryTree.SelectedNode?.Tag is not MP_LibraryEntry) e.Cancel = true;
@@ -178,6 +243,7 @@ public partial class MainForm
             MP_libraryFilterDelay.Stop(); MP_libraryFilterDelay.Dispose();
             MP_libraryPreviewDelay.Stop(); MP_libraryPreviewDelay.Dispose();
             MP_libraryFolderFont?.Dispose();
+            MP_libraryToolTip?.Dispose();
             MP_libraryPreview.Image?.Dispose(); MP_libraryPreview.Image = null;
         };
         return layout;
