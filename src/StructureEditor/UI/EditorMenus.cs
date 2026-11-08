@@ -44,10 +44,10 @@ public partial class MainForm
             detectorRanges.Checked = canvas.ShowProximityRanges;
             shieldRanges.Checked = canvas.ShowShieldRanges;
         };
-        AddMenuAction(help, "使用说明", () => Process.Start(new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "使用说明.md")) { UseShellExecute = true }));
-        AddMenuAction(help, "键盘快捷键", () => MessageBox.Show(this, "V 选择 / B 放置 / M 矩形 / E 擦除\nI 吸取 / R 旋转 / H 平移 / Z 缩放\n空格+拖动：临时平移；滚轮：缩放\nCtrl+0 适合窗口 / Ctrl+1 实际大小\nCtrl+D 复制为新对象 / Ctrl+Shift+Z 重做\nCtrl+G 殉爆范围 / Ctrl+H 探测范围 / Ctrl+J 护盾范围\nTab 切换编辑图层；Shift+Tab 反向切换\n粘贴预览：Q 逆时针 / E 顺时针旋转\nShift 框选 / Ctrl 单击增减选择\nDelete / Backspace 删除；Esc 取消", "键盘快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information));
-        AddMenuAction(help, "项目主页", () => Process.Start(new ProcessStartInfo("https://github.com/NineteenReincarnation") { UseShellExecute = true }));
-        AddMenuAction(help, "关于 Structure Editor", () => MessageBox.Show(this, "Structure Editor · 结构工坊\n版本 " + Application.ProductVersion + "\nRimWorld 结构布局编辑器\n作者：NineteenReincarnation\n素材从本机游戏及额外来源读取。", "关于 Structure Editor", MessageBoxButtons.OK, MessageBoxIcon.Information));
+        AddMenuAction(help, "使用说明", () => MP_HelpWindows.Documentation(this));
+        AddMenuAction(help, "键盘快捷键", () => MP_HelpWindows.Shortcuts(this));
+        AddMenuAction(help, "项目主页", MP_HelpWindows.Project);
+        AddMenuAction(help, "关于 Structure Editor", () => MP_HelpWindows.About(this));
         var headings = new ToolStripMenuItem[] { file, edit, objects, view, window, help };
         foreach (var heading in headings) heading.ForeColor = text;
         menu.Items.AddRange(headings); return menu;

@@ -143,3 +143,13 @@ Structure-Editor/
 - `WorkspaceStartup`：仍在后台加载，不阻塞 UI 线程；`%LOCALAPPDATA%/StructureEditor/startup.log` 记录缓存命中、指纹检查、贴图索引、Def 解析及端到端加载耗时。
 - `--catalog-cache-test`：无需真实游戏安装，验证冷/热启动、修改 XML 自动失效、重新命中以及贴图 ZIP 偏移懒加载，Windows CI 必须通过后才能同步 `app/`。
 - JSON 结构工程、输出 XML、已安装 Mod 和本机设置均不写入该缓存，也不会因缓存失效被修改或清理。
+
+## 2026-11-08 UI 可用性修正
+
+- 主画布操作只保留热键：移除原「选择 / 放置 / 矩形 / 擦除 / 平移 / 缩放 / 旋转 / 居中」整排按钮，保留层级选择及范围控制。工具切换由 `ProcessCmdKey` 和画布事件控制，不改变操作语义。
+- 右侧「结构」「导出」合并为单一「工程」页，内部连续显示结构信息、XML 导出、兼容检查；删除独立「操作」页，帮助菜单中的深色键盘模拟窗集中展示快捷键。
+- 帮助窗口与关于页面使用 `MP_HelpWindows`，替代白色 MessageBox；项目主页链接是 `https://github.com/NineteenReincarnation/Structure-Editor`，不是作者个人主页。窗口尺寸受当前显示器工作区约束，内容可滚动。
+- `MP_BorderlessTabHost` 保持 TabPage 合法托管于 TabControl，重写显示区域和 `TCM_ADJUSTRECT` 以消除默认浅色边框，不再将 TabPage 放到 Panel（之前曾导致启动崩溃）。
+- 素材列表使用带深色覆盖滚动条的裁剪容器；`MP_DarkTreeView` 禁止原生水平滚动条并请求 Windows 深色主题，避免长文件名引入大片白色滑块。
+- 画布的 `SceneTexture` 按需加载期间返回 null 时，绘制纯色低细节几何占位而不是对象 Label 或 DefName。贴图到达后原有 `TextureReady` 触发重绘，避免拖动/缩放瞬间出现“文字化单位”。
+- `--ui-smoke-test` 检查工作区总共四个 TabPage（左右各二），全部由 TabControl 承载，确认「工程」页存在且不再构建「操作 / 结构 / 导出」三页。

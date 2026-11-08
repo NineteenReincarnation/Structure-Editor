@@ -78,10 +78,12 @@ internal static class Program
                     }
                 }
                 var pages = Descendants(form).OfType<TabPage>().ToArray();
-                if (pages.Length < 6 || pages.Any(page => page.Parent is not TabControl))
+                if (pages.Length != 4 || pages.Any(page => page.Parent is not TabControl))
                     throw new InvalidOperationException("Workspace tab pages were not attached to TabControls.");
                 var tabs = Descendants(form).OfType<MP_SectionTabs>().ToArray();
-                if (tabs.Length != 2 || tabs.Any(tab => tab.SelectedIndex < 0))
+                if (tabs.Length != 2 || tabs.Any(tab => tab.SelectedIndex < 0)
+                    || !pages.Any(page => page.Text == "工程")
+                    || pages.Any(page => page.Text is "导出" or "结构" or "操作"))
                     throw new InvalidOperationException("Workspace section tabs failed to initialize.");
                 return;
             }

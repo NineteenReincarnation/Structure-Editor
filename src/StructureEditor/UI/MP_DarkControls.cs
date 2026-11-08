@@ -26,6 +26,10 @@ internal sealed class MP_DarkComboBox : ComboBox
             new Point(cx - 4, cy - 2), new Point(cx + 4, cy - 2),
             new Point(cx, cy + 3)
         });
+        // The stock FlatStyle still leaves a bright 1px border under some
+        // Windows themes. Paint a restrained frame with the same palette.
+        using var frame = new Pen(Color.FromArgb(74, 98, 110));
+        g.DrawRectangle(frame, 0, 0, ClientSize.Width - 1, ClientSize.Height - 1);
     }
 }
 

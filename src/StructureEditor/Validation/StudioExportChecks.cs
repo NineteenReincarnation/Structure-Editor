@@ -21,9 +21,9 @@ internal static class StudioExportChecks
             typeof(MainForm).GetField("currentFile", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(form, project);
             bool Save() => (bool)typeof(MainForm).GetMethod("SaveDocument", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(form, new object[] { false })!;
             IEnumerable<Control> Children(Control control) { foreach (Control child in control.Controls) { yield return child; foreach (Control nested in Children(child)) yield return nested; } }
-            var tabs = Children(form).OfType<MP_SectionTabs>().Single(t => Children(t).OfType<TabPage>().Any(p => p.Text == "导出"));
-            var exportPage = Children(tabs).OfType<TabPage>().Single(p => p.Text == "导出");
-            need(tabs.SelectPage(exportPage), "Export tab remains accessible with the custom dark tab bar");
+            var tabs = Children(form).OfType<MP_SectionTabs>().Single(t => Children(t).OfType<TabPage>().Any(p => p.Text == "工程"));
+            var exportPage = Children(tabs).OfType<TabPage>().Single(p => p.Text == "工程");
+            need(tabs.SelectPage(exportPage), "Merged project/export tab remains accessible with the dark tab bar");
             var profile = (ComboBox)Field("profileBox"); var auto = (CheckBox)Field("autoExport");
             need(Children(exportPage).Contains(profile) && auto.Checked && profile.SelectedIndex == 1,
                 "New projects default to the original PrefabDef XML and automatic save-time export");

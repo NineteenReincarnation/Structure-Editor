@@ -57,7 +57,7 @@ public partial class MainForm
         };
         layout.Controls.Add(MP_libraryCount, 0, 1);
 
-        MP_libraryTree = new TreeView
+        MP_libraryTree = new MP_DarkTreeView
         {
             Dock = DockStyle.Fill, BackColor = Color.FromArgb(29, 35, 39),
             ForeColor = text, BorderStyle = BorderStyle.FixedSingle,

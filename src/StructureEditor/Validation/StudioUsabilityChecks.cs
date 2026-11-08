@@ -63,7 +63,7 @@ internal static class StudioUsabilityChecks
         var buttons = controls.OfType<ToolStrip>().SelectMany(s => s.Items.Cast<ToolStripItem>()).ToList();
         need(buttons.Any(b => b.Text == "保存") && buttons.Any(b => b.Text == "保存位置") && !buttons.Any(b => b.Text.Contains("设为协议")), "The main toolbar must offer Save and output location without the protocol binding action");
         bool InObjectPage(Control c) { for (Control p = c.Parent; p != null; p = p.Parent) if (p is TabPage page) return page.Text == "对象"; return false; }
-        need(!controls.OfType<NumericUpDown>().Any(InObjectPage) && controls.OfType<Label>().Any(c => c.Text.Contains("双击吸取")), "Coordinate editors must be removed from object properties and double-click pickup explained");
+        need(!controls.OfType<NumericUpDown>().Any(InObjectPage) && !controls.OfType<Label>().Any(c => c.Text.Contains("双击吸取")), "Object properties must not contain coordinate editors or generic shortcut/help paragraphs");
         need(MechClusterCatalog.Entries.Count == 22 && MechClusterCatalog.Entries.All(e => catalog.Find("Building", e.Key)?.ClusterWikiEntry == true && catalog.Find("Building", e.Key).ClusterGroup == e.Value.Group), "All 22 Wiki building types must map to installed game Defs");
         var wikiItems = catalog.Query(null, null, null, null, true).Where(i => i.ClusterWikiEntry).ToList();
         need(wikiItems.Count(i => i.ClusterGroup == "杂项") == 9 && wikiItems.Count(i => i.ClusterGroup == "控制器") == 9 && wikiItems.Count(i => i.ClusterGroup == "炮塔") == 4, "Wiki taxonomy must preserve its 9 miscellaneous, 9 controller and 4 turret entries");

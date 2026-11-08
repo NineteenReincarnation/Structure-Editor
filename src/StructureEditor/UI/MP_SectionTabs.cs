@@ -1,11 +1,12 @@
 namespace StructureEditor;
 
-// Simple dark tab header + content switcher. Native TabControl otherwise paints
-// a white unused header strip even when pages and selected tabs are owner-drawn.
+// Dark button tabs backed by a real WinForms TabControl. The native host must
+// remain the parent of TabPage, but its unwanted light tab strip and border are
+// suppressed so the page flows to the edges of the dark surface.
 internal sealed class MP_SectionTabs : UserControl
 {
     private readonly FlowLayoutPanel header;
-    private readonly TabControl content;
+    private readonly MP_BorderlessTabHost content;
     private readonly List<(TabPage Page, Button Button)> pages = new();
     private int selection = -1;
 
@@ -37,7 +38,7 @@ internal sealed class MP_SectionTabs : UserControl
     internal MP_SectionTabs()
     {
         BackColor = Color.FromArgb(33, 43, 52);
-        content = new TabControl
+        content = new MP_BorderlessTabHost
         {
             Dock = DockStyle.Fill,
             BackColor = BackColor,
@@ -95,5 +96,28 @@ internal sealed class MP_SectionTabs : UserControl
         content.TabPages.Add(page);
         header.Controls.Add(button);
         if (selection == -1) SelectedIndex = 0;
+    }
+}
+
+internal sealed class MP_BorderlessTabHost : TabControl
+{
+    // TabControl normally reserves a light 2px frame and native tab header even
+    // when the header items are tiny. Our visible header is the dark button row.
+    public override Rectangle DisplayRectangle => ClientRectangle;
+
+    protected override void WndProc(ref Message m)
+    {
+        // TCM_ADJUSTRECT (Win32): leave the client rect unchanged so TabPages
+        // occupy the full inner surface instead of displaying native light gaps.
+        if (m.Msg == 0x1328 && m.LParam != IntPtr.Zero)
+        {
+            System.Runtime.InteropServices.Marshal.WriteInt32(m.LParam, 0, 0);
+            System.Runtime.InteropServices.Marshal.WriteInt32(m.LParam, 4, 0);
+            System.Runtime.InteropServices.Marshal.WriteInt32(m.LParam, 8, ClientSize.Width);
+            System.Runtime.InteropServices.Marshal.WriteInt32(m.LParam, 12, ClientSize.Height);
+            m.Result = IntPtr.Zero;
+            return;
+        }
+        base.WndProc(ref m);
     }
 }

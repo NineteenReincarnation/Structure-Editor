@@ -320,16 +320,38 @@ public partial class StructureCanvas
         PointF center = Screen(rect.Left + (rect.Width - 1) / 2f, rect.Top + (rect.Height - 1) / 2f);
         if (entry == null)
         {
-            using Pen bad = new(Color.IndianRed, 2); var r = ScreenRect(rect); g.DrawRectangle(bad, r.X, r.Y, r.Width, r.Height);
-            TextRenderer.DrawText(g, item.DefName, Font, Point.Round(center), Color.Salmon); return;
+            // Unknown defs are marked by a compact graphic instead of a large
+            // DefName overlay that looks like the sprite has turned into text.
+            RectangleF unknown = ScreenRect(rect);
+            using Pen bad = new(Color.FromArgb(216, 117, 105), Math.Max(1f, cellSize / 12f));
+            using SolidBrush tint = new(Color.FromArgb(90, 139, 68, 64));
+            g.FillRectangle(tint, unknown);
+            g.DrawRectangle(bad, unknown.X, unknown.Y, unknown.Width, unknown.Height);
+            if (unknown.Width > 9 && unknown.Height > 9)
+            {
+                g.DrawLine(bad, unknown.Left + 3, unknown.Top + 3, unknown.Right - 3, unknown.Bottom - 3);
+                g.DrawLine(bad, unknown.Right - 3, unknown.Top + 3, unknown.Left + 3, unknown.Bottom - 3);
+            }
+            return;
         }
         string texturePath = Catalog.TextureFor(entry, item.Stuff);
         Bitmap texture = SceneTexture(texturePath, item.Rotation);
         Color color = item.Stuff == null ? entry.Color : Catalog.MaterialColor(item.Stuff, entry.Color);
         if (texture == null)
         {
-            using SolidBrush fallback = new(Color.FromArgb((int)(alpha * 140), color)); g.FillRectangle(fallback, ScreenRect(rect));
-            TextRenderer.DrawText(g, entry.Label, Font, Rectangle.Round(ScreenRect(rect)), Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis); return;
+            // Request() returns null while a texture is being decoded in the
+            // background. Never swap the mechanoid for an oversized text label:
+            // leave a quiet geometric silhouette until the sprite arrives.
+            RectangleF footprint = ScreenRect(rect);
+            using SolidBrush fallback = new(Color.FromArgb(
+                Math.Clamp((int)(alpha * 170), 0, 255), color));
+            using Pen outline = new(Color.FromArgb(
+                Math.Clamp((int)(alpha * 150), 0, 255), 24, 34, 39), 1);
+            g.FillRectangle(fallback, footprint);
+            if (footprint.Width >= 3 && footprint.Height >= 3)
+                g.DrawRectangle(outline, footprint.X, footprint.Y,
+                    footprint.Width, footprint.Height);
+            return;
         }
         Rectangle source = new(0, 0, texture.Width, texture.Height);
         if (entry.Linked && texture.Width >= 4 && texture.Height >= 4)

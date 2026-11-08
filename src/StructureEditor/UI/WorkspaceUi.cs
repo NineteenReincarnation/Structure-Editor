@@ -26,7 +26,6 @@ public partial class MainForm
         SuspendLayout();
         ToolStripManager.Renderer = new StudioRenderer();
         MenuStrip menu = BuildMenus(); MainMenuStrip = menu;
-        void Menu(ToolStripDropDownItem parent,string title,Action action) => AddMenuAction(parent,title,action);
         ApplyBranding();
         // A single continuous row: documents on the left, preview and save
         // actions on the right. Keep the action width reserved as tabs overflow.
@@ -210,8 +209,6 @@ public partial class MainForm
         dormancyBox.Items.AddRange(new object[] { "跟随结构默认", "初始休眠", "初始唤醒", "保持各自设置（混合）" }); dormancyBox.SelectedIndex = 0;
         Field(objects, "初始状态（MP 专用）", dormancyBox);
         dormancyInfo.ForeColor = muted; Row(objects, dormancyInfo, 58);
-        Row(objects, new Label { Text = "修改直接生效 · Ctrl+Z 撤销", ForeColor = muted }, 29);
-        Label groupTip = new() { Text = "双击吸取并切换到放置。\n拖动移动，方向键微调。\nShift 框选，Ctrl 增减选择。", ForeColor = muted }; Row(objects, groupTip, 90);
         // Structure owns structure identity and game-facing properties only.
         Row(metadata, new Label { Text = "基本信息", Font = new(Font, FontStyle.Bold),
             ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
@@ -357,7 +354,7 @@ public partial class MainForm
     {
         foreach (var pair in toolButtons) pair.Value.Checked = pair.Key == canvas.Tool;
         if (selectionStatus != null) selectionStatus.Text = canvas.HasStamp ? "整组粘贴 · Q/E 旋转 · 左键放置 / Esc 取消" : canvas.Tool switch
-        { CanvasTool.Select => "选择 · Shift 框选", CanvasTool.Rectangle => "矩形铺地 · 左键拖动", CanvasTool.Erase => "擦除 · 左键拖动", CanvasTool.Hand => "平移 · 拖动视图", CanvasTool.Zoom => "缩放 · Alt 缩小", _ => "放置 · B" };
+        { CanvasTool.Select => "选择 · Shift 框选", CanvasTool.Rectangle => "矩形铺地 · 左键拖动", CanvasTool.Erase => "擦除 · 左键拖动", CanvasTool.Hand => "平移 · 拖动视图", CanvasTool.Zoom => "缩放 · Alt 缩小", _ => "放置" };
     }
     private void ToggleInspector() => inspectorSplit.Panel2Collapsed = !inspectorSplit.Panel2Collapsed;
     private sealed class StudioRenderer : ToolStripProfessionalRenderer
