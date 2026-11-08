@@ -14,7 +14,7 @@ internal static class StudioDormancyAndWallsChecks
             need(texturePath.EndsWith("Wall_Atlas_" + appearance, StringComparison.OrdinalIgnoreCase), "Wall selects native material appearance for " + stuff);
             var atlas = catalog.Textures.Get(texturePath);
             need(atlas != null && atlas.Width == atlas.Height && atlas.Width >= 128, "Wall resolves an actual16-state atlas for " + stuff + "; " + texturePath + " " + atlas?.Size + (atlas == null ? string.Join("\n", catalog.Textures.Errors) : ""));
-            StructureDocument walls = new() { Category = "General" };
+            StructureDocument walls = new() {};
             for (int mask = 0; mask < 16; mask++)
             {
                 Point p = new(mask % 4 * 5, mask / 4 * 5);
@@ -55,13 +55,13 @@ internal static class StudioDormancyAndWallsChecks
             Rectangle tile = LinkedGraphics.Source(1024, 1024, mask);
             need(tile.Width == 192 && tile.Height == 192 && tile.X % 256 == 32 && tile.Y % 256 == 32, "Atlas tile excludes game padding: " + mask);
         }
-        StructureDocument preview = new() { Category = "General" };
+        StructureDocument preview = new() {};
         foreach (var p in new[] { new Point(-4, -1), new(-4, 0), new(-4, 1), new(-1, 0), new(0, 0), new(1, 0), new(1, 1), new(4, 0), new(4, 1), new(4, -1), new(3, 0), new(5, 0) })
             preview.Items.Add(new() { Kind = "Building", DefName = "Barricade", Stuff = "Steel", X = p.X, Z = p.Y });
         using (StructureCanvas canvas = new() { Catalog = catalog, Document = preview })
         using (Bitmap image = canvas.ExportPreview()) image.Save(Path.Combine(folder, "linked-walls.png"));
 
-        StructureDocument doc = new() { DefName = "MP_DormancyVerification", Category = "General", StartDormant = true, ExportProfile = "MechProtocol", EnableMPCompatibility = true };
+        StructureDocument doc = new() { DefName = "MP_DormancyVerification", StartDormant = true, ExportProfile = "MechProtocol", EnableMPCompatibility = true };
         doc.Items.Add(new() { Kind = "Building", DefName = "Barricade", Stuff = "Steel", X = -3 });
         doc.Items.Add(new() { Kind = "Pawn", DefName = "Mech_Scyther", StartDormant = true });
         doc.Items.Add(new() { Kind = "Pawn", DefName = "Mech_Scyther", X = 2, StartDormant = false });

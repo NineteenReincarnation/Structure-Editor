@@ -248,6 +248,7 @@ public partial class MainForm
 
         Row(metadata, new Label { Text = "结构", Font = new(Font, FontStyle.Bold),
             ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
+        Row(metadata, BuildClusterNamingToggle(), 29);
         Row(metadata, BuildClusterNamingPanel());
         structureLabelTitle = new() { Text = "名称", ForeColor = muted, AutoSize = true };
         Row(metadata, structureLabelTitle);
@@ -255,10 +256,6 @@ public partial class MainForm
         structureIdTitle = new() { Text = "DefName", ForeColor = muted, AutoSize = true };
         Row(metadata, structureIdTitle);
         Row(metadata, idBox, 29);
-        categoryBox.DropDownStyle = ComboBoxStyle.DropDownList;
-        categoryBox.Items.AddRange(new object[] { "机械集群", "通用结构" });
-        categoryBox.SelectedIndex = 1;
-        Field(metadata, "类别", categoryBox);
         dormant.Text = "默认休眠"; dormant.AutoSize = true;
         Row(metadata, dormant);
         Row(metadata, new Label { Text = "XML 导出", Font = new(Font, FontStyle.Bold),
@@ -345,8 +342,8 @@ public partial class MainForm
         Row(advanced, moreExport, 32);
         MP_exportReviewTimer.Tick += (_, _) => MP_RefreshExportReview();
         inspectorSplit.Panel2.Controls.Add(tabs);
-        foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, categoryBox, dormancyBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
-        foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, categoryBox, dormancyBox })
+        foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, dormancyBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
+        foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, dormancyBox })
         {
             combo.FlatStyle = FlatStyle.Flat; combo.DrawMode = DrawMode.OwnerDrawFixed;
             combo.ItemHeight = combo == materialBox ? Math.Max(32, Font.Height + 14)
@@ -416,7 +413,7 @@ public partial class MainForm
             canvas.BrushDormant = dormancyBox.SelectedIndex == 1 ? true : dormancyBox.SelectedIndex == 2 ? false : null;
             canvas.SetSelectionDormancy(canvas.BrushDormant);
         };
-        foreach (Control c in new Control[] { idBox, labelBox, categoryBox, dormant }) c.Leave += (_, _) => CommitMetadata();
+        foreach (Control c in new Control[] { idBox, labelBox, dormant }) c.Leave += (_, _) => CommitMetadata();
         autoExport.CheckedChanged+=(_,_)=>{if(!updating)CommitMetadata();};
         canvas.ToolChanged += RefreshToolDisplay;
         StatusStrip strip = new() { BackColor = Color.FromArgb(23, 29, 33), ForeColor = text, SizingGrip = false };

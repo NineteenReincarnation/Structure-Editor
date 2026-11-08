@@ -12,7 +12,7 @@ public partial class MainForm : Form
     private readonly ComboBox kindBox = new MP_DarkComboBox(), packBox = new MP_DarkComboBox(),
         groupBox = new MP_DarkComboBox(), scopeBox = new MP_DarkComboBox(),
         materialBox = new MP_DarkComboBox(), rotationBox = new MP_DarkComboBox(),
-        categoryBox = new MP_DarkComboBox(), dormancyBox = new MP_DarkComboBox();
+        dormancyBox = new MP_DarkComboBox();
     private readonly Label dormancyInfo = new();
     private readonly CheckBox dormant = new();
     private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new();
@@ -90,7 +90,6 @@ public partial class MainForm : Form
     private async void LoadCatalog() => await LoadCatalogAsync();
     private string StructuresFolder => Directory.Exists(Program.StructureLibraryFolder) ? Program.StructureLibraryFolder : Program.DefaultProjects;
     private string OutputFolder => string.IsNullOrWhiteSpace(Program.Paths.SaveDirectory) ? StructuresFolder : Program.Paths.SaveDirectory;
-    private string SelectedCategory => categoryBox.SelectedIndex == 0 ? "MechCluster" : "General";
     private string FilterKind => kindBox.SelectedIndex is >= 0 and <= 2 ? new[] { "Building", "Pawn", "Terrain" }[kindBox.SelectedIndex] : null;
     private bool ClusterScope => scopeBox.SelectedIndex == 4;
     private void RefreshGroups()
@@ -275,7 +274,7 @@ public partial class MainForm : Form
     private void RestoreDocument() { canvas.Document = document; canvas.ClearSelection(); dirty = true; RefreshMetadata(); canvas.Invalidate(); }
     private void RefreshMetadata()
     {
-        updating = true; idBox.Text = document.DefName; labelBox.Text = document.Label; categoryBox.SelectedIndex = document.Category == "MechCluster" ? 0 : 1; dormant.Checked = document.StartDormant;
+        updating = true; idBox.Text = document.DefName; labelBox.Text = document.Label; dormant.Checked = document.StartDormant;
         document.ExportProfile = "Framework";
         autoExport.Checked = document.AutoExportOnSave;
         exportResult.Text = "";
@@ -290,12 +289,11 @@ public partial class MainForm : Form
         if (updating) return;
         // XML output is fixed to Structure Framework.
         if (document.DefName == idBox.Text && document.Label == labelBox.Text
-            && document.Category == SelectedCategory
             && document.StartDormant == dormant.Checked && document.ExportProfile == "Framework"
             && document.AutoExportOnSave == autoExport.Checked) return;
         Snapshot();
         document.DefName = idBox.Text.Trim(); document.Label = labelBox.Text.Trim();
-        document.Category = SelectedCategory; document.StartDormant = dormant.Checked;
+        document.StartDormant = dormant.Checked;
         document.ExportProfile = "Framework";
         document.AutoExportOnSave = autoExport.Checked;
         dirty = true; UpdateTitle(); canvas.Invalidate(); RefreshMetadata(); ShowSelection();

@@ -10,6 +10,20 @@ public partial class MainForm
     private Label namingStatus;
     private Button applyNaming;
     private GroupBox namingPanel;
+    private Button MP_clusterNamingToggle;
+    private bool? MP_clusterNamingExpanded;
+
+    private Control BuildClusterNamingToggle()
+    {
+        MP_clusterNamingToggle = MakeButton("集群命名工具 ▸", 0, 0, 140);
+        MP_clusterNamingToggle.Dock = DockStyle.Top;
+        MP_clusterNamingToggle.Click += (_, _) =>
+        {
+            MP_clusterNamingExpanded = !namingPanel.Visible;
+            LoadNamingFields();
+        };
+        return MP_clusterNamingToggle;
+    }
     private Label structureIdTitle, structureLabelTitle;
     private bool loadingNaming;
     private readonly System.Windows.Forms.Timer namingSwitchDelay = new() { Interval = 220 };
@@ -57,12 +71,15 @@ public partial class MainForm
     {
         if (namingPanel == null) return;
         namingSwitchDelay.Stop();
-        bool mp = document.Category == "MechCluster";
-        namingPanel.Visible = mp;
-        idBox.ReadOnly = labelBox.ReadOnly = mp && document.Category == "MechCluster" && MPClusterPresets.All.Any(p => document.DefName.StartsWith("MP_Cluster_" + p.Core + "_", StringComparison.Ordinal));
+        bool isNamedCluster = MP_ClusterNaming.TryParse(document.DefName, out _, out _, out _);
+        namingPanel.Visible = MP_clusterNamingExpanded ?? isNamedCluster;
+        if (MP_clusterNamingToggle != null)
+            MP_clusterNamingToggle.Text = namingPanel.Visible ? "集群命名工具 ▾" : "集群命名工具 ▸";
+        idBox.ReadOnly = labelBox.ReadOnly = isNamedCluster
+            && MPClusterPresets.All.Any(p => document.DefName.StartsWith("MP_Cluster_" + p.Core + "_", StringComparison.Ordinal));
         if (structureIdTitle != null)
         { structureIdTitle.Visible = structureLabelTitle.Visible = idBox.Visible = labelBox.Visible = !idBox.ReadOnly; }
-        if (!mp) return;
+        if (!namingPanel.Visible) return;
         loadingNaming = true;
         try
         {
@@ -138,7 +155,7 @@ public partial class MainForm
         AddWorkspaceDocument(new()
         {
             DefName = id, Label = MP_ClusterNaming.Label(preset.Label, tier, variant),
-            Category = "MechCluster", ExportProfile = "Framework", XmlExportDirectory = xmlFolder
+            ExportProfile = "Framework", XmlExportDirectory = xmlFolder
         }, prepared: true);
         status.Text = "空草稿 · 保存后创建文件";
     }
@@ -149,10 +166,10 @@ public partial class MainForm
             throw new InvalidOperationException("工作栏已有同名结构，请切换到对应文档，或分配新编号。");
         if (File.Exists(path) && !SamePath(path, currentFile) && path.EndsWith(".json", StringComparison.OrdinalIgnoreCase) && StructureDocument.Load(path).DefName != document.DefName)
             throw new InvalidOperationException("目标工程属于另一份结构，请更换文件。");
-        if (document.Category != "MechCluster") return;
-        if (!document.DefName.StartsWith("MP_",StringComparison.Ordinal))
-            throw new InvalidOperationException("机械集群 DefName 必须以 MP_ 开头。");
-        string error = document.Category == "MechCluster" ? MPClusterPresets.Validate(document.DefName, document.Label) : null;
+        // A naming tool is not a document category. Only generated cluster
+        // identities use their preset naming/uniqueness constraints.
+        if (!document.DefName.StartsWith("MP_Cluster_", StringComparison.Ordinal)) return;
+        string error = MPClusterPresets.Validate(document.DefName, document.Label);
         if (error != null) throw new InvalidOperationException(error);
         string xmlTarget = StructureStorage.XmlTarget(document, path, OutputFolder);
         foreach (var entry in LibraryDefinitions().Where(e => e.Id == document.DefName))

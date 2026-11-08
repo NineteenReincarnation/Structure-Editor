@@ -14,7 +14,7 @@ internal static class FrameworkCodec
     public static XElement Export(StructureDocument document, Catalog catalog)
     {
         _ = document.ToXml();
-        var root = new XElement("StructureFramework.StructureDef", new XElement("defName",document.DefName),new XElement("label",document.Label),new XElement("description",document.Description??""),new XElement("schemaVersion",1),new XElement("category",document.Category));
+        var root = new XElement("StructureFramework.StructureDef", new XElement("defName",document.DefName),new XElement("label",document.Label),new XElement("description",document.Description??""),new XElement("schemaVersion",1));
         if(!string.IsNullOrEmpty(document.FrameworkPlacement))root.Add(new XElement("placement",document.FrameworkPlacement));
         if(document.FrameworkTags?.Count>0)root.Add(new XElement("tags",document.FrameworkTags.Select(t=>new XElement("li",t))));
         var requirements = ExportDependencies.Resolve(document,catalog,"Framework").Where(s=>!s.PackageId.Equals(PackageId,StringComparison.OrdinalIgnoreCase)).ToList();
@@ -40,7 +40,7 @@ internal static class FrameworkCodec
     public static StructureDocument Import(XElement root,Catalog catalog=null,XElement fileRoot=null)
     {
         if((int?)root.Element("schemaVersion") is int version&&version!=1)throw new InvalidDataException("不支持的框架结构版本："+version);
-        var document=new StructureDocument{DefName=(string)root.Element("defName"),Label=(string)root.Element("label")??(string)root.Element("defName"),Description=(string)root.Element("description")??"",Category=(string)root.Element("category")??"General",ExportProfile="Framework"};
+        var document=new StructureDocument{DefName=(string)root.Element("defName"),Label=(string)root.Element("label")??(string)root.Element("defName"),Description=(string)root.Element("description")??"",ExportProfile="Framework"};
         document.RequiredPackages=root.Element("requiredPackages")?.Elements("li").Select(e=>e.Value).ToList()??new();
         document.FrameworkPlacement=(string)root.Element("placement");document.FrameworkTags=root.Element("tags")?.Elements("li").Select(e=>e.Value).ToList()??new();
         var path = new HashSet<string>();

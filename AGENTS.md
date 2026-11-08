@@ -23,3 +23,5 @@
 - **Canonical XML format:** Structure Framework only (`StructureFramework.StructureDef`). Normalize legacy profiles on load; do not reintroduce export format selection or separate MP dormancy toggles. Old PrefabDef and MechProtocol XML remain importable. Generate dormancy modifiers and dependencies automatically for explicit supported states. Keep MP cluster naming independent of export profile.
 
 - Branch cleanup: keep development and CI commits on `main` only; do not push, synchronize, delete, or rename any other branch. The repository owner handles other branches manually.
+
+- Do not reintroduce the obsolete document category selector. New JSON and Framework XML omit Category/category/structureCategory; legacy files containing them remain readable. MP cluster naming is a collapsible optional tool recognized from the MP_Cluster_ DefName prefix, not a general document type.

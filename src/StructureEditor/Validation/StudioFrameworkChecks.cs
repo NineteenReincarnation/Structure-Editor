@@ -13,7 +13,10 @@ internal static class StudioFrameworkChecks
         room.Items.Add(new(){Kind="Building",DefName="Door",Stuff="Steel",X=1,Z=-1,Rotation=1});
         room.Items.Add(new(){Kind="Terrain",DefName="Concrete",X=0,Z=0});
         var frame=ExportDependencies.Xml(room,catalog,"Framework");string frameFile=Path.Combine(folder,room.DefName+".xml");frame.Save(frameFile);
-        need(frame.Root.Element("StructureFramework.StructureDef")!=null&&!frame.ToString().Contains("MechProtocol"),"Default framework export must not depend on MP");
+        need(frame.Root.Element("StructureFramework.StructureDef")!=null
+            && frame.Root.Element("StructureFramework.StructureDef")!.Element("category")==null
+            && !frame.ToString().Contains("MechProtocol"),
+            "Framework XML has no category and no unnecessary MP dependency");
         var restored=StructureDocument.Load(frameFile,catalog);
         need(restored.Items.Count==3&&restored.Items[1].Rotation==1&&restored.Items[0].X==-1,"Framework XML must roundtrip exact object coordinates and rotations");
         var deps=ExportDependencies.Resolve(room,catalog,"Framework");

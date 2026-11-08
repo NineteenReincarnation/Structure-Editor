@@ -49,6 +49,8 @@ internal static class StudioExportChecks
                 && !Children(projectPage).OfType<ComboBox>().Any(c=>c.Items.Cast<object>()
                     .Any(item=>(item?.ToString()??"").Contains("PrefabDef"))),
                 "Project panel exposes one standard and no format switcher");
+            need(!Children(projectPage).OfType<Label>().Any(l=>l.Text=="类别"),
+                "Document category selector is gone");
             var auto=(CheckBox)Field("autoExport");
             need(auto.Checked&&Save()&&File.Exists(xmlFile),
                 "New projects save JSON and canonical XML together");
@@ -58,8 +60,9 @@ internal static class StudioExportChecks
                 && written.Root.Element("PrefabDef")==null
                 && written.Root.Elements().Any(e=>(string)e.Element("defName")=="MP_KeepOther"),
                 "Legacy XML is replaced in-place without touching unrelated definitions");
-            need(StructureDocument.Load(project).ExportProfile=="Framework",
-                "Saved project uses Framework");
+            need(StructureDocument.Load(project).ExportProfile=="Framework"
+                && written.Root!.Element("StructureFramework.StructureDef")!.Element("category")==null,
+                "Saved JSON and Framework XML contain no structure category");
             string before=File.ReadAllText(xmlFile);
             auto.Checked=false;
             ((TextBox)Field("labelBox")).Text="只保存 JSON";
@@ -95,6 +98,13 @@ internal static class StudioExportChecks
             File.WriteAllText(oldProject,"{\"FormatVersion\":1,\"DefName\":\"MP_Old\",\"ExportProfile\":\"Universal\",\"Items\":[]}");
             need(StructureDocument.Load(oldProject).ExportProfile=="Framework",
                 "Old saved export profiles normalize to Framework on load");
+            string categoryProject=Path.Combine(root,"OldCategory.structure.json");
+            File.WriteAllText(categoryProject,
+                @"{""DefName"":""MP_Cluster_MilitorForge_T01_V01"",""Label"":""小镰铸巢·I-A"",""Category"":""MechCluster"",""Items"":[]}");
+            var upgraded=StructureDocument.Load(categoryProject);
+            need(upgraded.DefName=="MP_Cluster_MilitorForge_T01_V01"
+                && !System.Text.Json.JsonSerializer.Serialize(upgraded).Contains("\"Category\""),
+                "Old category property is tolerated and not persisted");
             string pref=Path.Combine(root,"Old.xml");
             new XDocument(new XElement("Defs",PrefabCodec.Export(doc,catalog))).Save(pref);
             need(StructureDocument.Load(pref,catalog).ExportProfile=="Framework",

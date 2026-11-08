@@ -39,7 +39,7 @@ internal static class StudioWorkspaceChecks
             need(sessions.Count == count && ((StructureDocument)Field("document")).DefName == first.DefName, "Repeated file and definition selects its tab while a shared XML can open two definitions");
             need(Program.Paths.OpenDocuments.Count(r => r.File == shared) == 2, "Workspace persistence records the selected definition within shared XML files");
             string occupied = Path.Combine(root, "MP_Cluster_MilitorForge_T01_V01.xml");
-            var militor = new StructureDocument { DefName = "MP_Cluster_MilitorForge_T01_V01", Label = "小镰铸巢·I-A", Category = "MechCluster", ExportProfile = "MechProtocol" };
+            var militor = new StructureDocument { DefName = "MP_Cluster_MilitorForge_T01_V01", Label = "小镰铸巢·I-A", ExportProfile = "MechProtocol" };
             new XDocument(new XElement("Defs", militor.ToXml(true))).Save(occupied);
             form.OpenWorkspaceFile(occupied, militor.DefName);
             var militorDocument = (StructureDocument)Field("document");
@@ -69,7 +69,7 @@ internal static class StudioWorkspaceChecks
             var clone = militor.Copy(); clone.Label = "小镰铸巢·I-B"; clone.DefName = "MP_Cluster_MilitorForge_T01_V02";
             form.AddWorkspaceDocument(clone); variant.Value = 1; Call("ActivateNamedCluster");
             need(ReferenceEquals(Field("document"), militorDocument) && clone.DefName.EndsWith("V02"), "Occupied identifiers navigate to the existing structure without changing the outgoing document");
-            var paired = new StructureDocument { DefName = "MP_Cluster_MilitorForge_T05_V87", Label = "小镰铸巢·V-CI", Category = "MechCluster", ExportProfile = "MechProtocol", XmlExportDirectory = root,
+            var paired = new StructureDocument { DefName = "MP_Cluster_MilitorForge_T05_V87", Label = "小镰铸巢·V-CI", ExportProfile = "MechProtocol", XmlExportDirectory = root,
                 Items = new() { new() { Kind = "Building", DefName = "Wall", Stuff = "Steel" } } };
             paired.Label = MP_ClusterNaming.Label("小镰铸巢", 5, 87);
             string pairedXml = Path.Combine(root, paired.DefName + ".xml"), pairedJson = Path.Combine(root, "renamed-project.json");

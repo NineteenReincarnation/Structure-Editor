@@ -25,7 +25,6 @@ public class StructureDocument
     public string DefName { get; set; } = "SE_NewStructure";
     public string Label { get; set; } = "新结构";
     public string Description { get; set; } = "使用 Structure Editor 创建的结构布局。";
-    public string Category { get; set; } = "General";
     public bool StartDormant { get; set; }
     public string ExportProfile { get; set; } = "Framework";
     public bool AutoExportOnSave { get; set; } = true;
@@ -40,7 +39,7 @@ public class StructureDocument
     public List<PlacedItem> Items { get; set; } = new();
     public StructureDocument Copy() => new()
     {
-        FormatVersion = FormatVersion, DefName = DefName, Label = Label, Description = Description, Category = Category, StartDormant = StartDormant, ExportProfile = ExportProfile, EnableMPCompatibility = EnableMPCompatibility, TemplateBounds = TemplateBounds, PrefabRotations = PrefabRotations, PrefabEdgeOnly = PrefabEdgeOnly,
+        FormatVersion = FormatVersion, DefName = DefName, Label = Label, Description = Description, StartDormant = StartDormant, ExportProfile = ExportProfile, EnableMPCompatibility = EnableMPCompatibility, TemplateBounds = TemplateBounds, PrefabRotations = PrefabRotations, PrefabEdgeOnly = PrefabEdgeOnly,
         Items = Items.Select(i => i.Copy()).ToList(), RequiredPackages = new(RequiredPackages ?? new()), FrameworkPlacement = FrameworkPlacement, FrameworkTags = new(FrameworkTags ?? new()),
         AutoExportOnSave = AutoExportOnSave, XmlExportDirectory = XmlExportDirectory
     };
@@ -48,7 +47,7 @@ public class StructureDocument
     {
         if (!Regex.IsMatch(DefName ?? "", @"^[A-Za-z_][A-Za-z0-9_]*$")) throw new InvalidOperationException("标识须使用英文字母、数字和下划线，不能以数字开头。");
         if (legacy && !DefName.StartsWith("MP_")) throw new InvalidOperationException("兼容导出要求标识使用 MP_ 前缀；通用工程不受此限制。");
-        if (legacy && Category == "MechCluster")
+        if (legacy && DefName.StartsWith("MP_Cluster_", StringComparison.Ordinal))
         {
             string error = MPClusterPresets.Validate(DefName, Label);
             if (error != null) throw new InvalidOperationException(error + "\n请按目标模组的机械集群命名规范设置标识与名称。");
@@ -56,7 +55,7 @@ public class StructureDocument
         XElement root = new(legacy ? "MechProtocol.MP_StructureDef" : "StructureEditor.StructureDef",
             new XElement("defName", DefName), new XElement("label", Label),
             new XElement("description", Description ?? ""),
-            new XElement("structureCategory", Category), new XElement("startDormant", StartDormant.ToString().ToLowerInvariant()));
+            new XElement("startDormant", StartDormant.ToString().ToLowerInvariant()));
         foreach (string kind in new[] { "Building", "Pawn", "Terrain" })
         {
             XElement list = new(kind == "Building" ? "buildings" : kind == "Pawn" ? "pawns" : "terrain");
@@ -111,9 +110,9 @@ public class StructureDocument
         {
             ExportProfile = def.Name.LocalName == "MechProtocol.MP_StructureDef" ? "MechProtocol" : "Framework", EnableMPCompatibility = def.Name.LocalName == "MechProtocol.MP_StructureDef",
             DefName = (string)def.Element("defName"), Label = (string)def.Element("label") ?? "未命名结构", Description = (string)def.Element("description") ?? "",
-            Category = (string)def.Element("structureCategory") ?? "General", StartDormant = (bool?)def.Element("startDormant") ?? false
+            StartDormant = (bool?)def.Element("startDormant") ?? false
         };
-        if (doc.Category == "MechCluster" && doc.DefName == MP_ClusterNaming.LegacyStarterDefName)
+        if (doc.DefName == MP_ClusterNaming.LegacyStarterDefName)
         { doc.DefName = MP_ClusterNaming.DefaultDefName; doc.Label = MP_ClusterNaming.Label(MP_ClusterNaming.ScytherForgeLabel, 1, 1); }
         foreach (var (list, kind, field) in new[] { ("buildings", "Building", "thingDef"), ("pawns", "Pawn", "pawnKind"), ("terrain", "Terrain", "terrainDef") })
             foreach (XElement entry in def.Element(list)?.Elements("li") ?? Enumerable.Empty<XElement>())
