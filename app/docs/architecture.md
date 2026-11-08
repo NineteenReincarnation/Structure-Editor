@@ -103,3 +103,12 @@ Structure-Editor/
 - 对象朝向字段根据 `CatalogItem.Rotatable` 及当前选中对象是否有可旋转部分决定可见性；无此能力的单个对象不显示朝向。
 - `MainForm.FilterPalette` 重用未变化的筛选结果，避免反复重建 WinForms 素材列表；`UpdateSummary` 对结构摘要做缓存；`StructureCanvas.SelectItems` 避免相同选区产生重复事件。
 - `WorkspaceDocuments.LibraryDefinitions` 不再为结构列表预览第二次反序列化完整 JSON；`WorkspaceStartup` 不在首次完成加载前同步解码固定的八个缩略图，继续通过按需异步请求读取贴图。
+
+
+## 默认原版可解析 XML 合同
+
+- 新建 `StructureDocument.ExportProfile` 默认 `VanillaPrefab`，输出 `PrefabDef`，避免无 MP 兼容时仍因默认 `StructureFramework.StructureDef` 而在纯原版中出现未知 Def 类型。
+- 为不回归旧工程，`StructureDocument.Load` 对缺少 `ExportProfile` 字段的历史 JSON 显式恢复旧的 `Framework` 默认；明确选过格式的工程完全保持原样。
+- `ExportDependencies.Xml` 仅允许明确的三种目标类型，不再把未知格式默默转为框架 XML。
+- `PrefabCodec.Export` 遇到 Pawn、专用修饰器、初始休眠、MP 扩展开关、框架生成参数或框架标签时拒绝有损导出；保存 JSON 仍然安全。
+- 原版 `RimWorld.PrefabDef` 的 `size`、`rotations`、`things`、`terrain`、`edgeOnly` 字段，以及 `PrefabThingData` 的 `positions`、`stuff`、`relativeRotation` 和 `PrefabTerrainData.rects`，可与 RimWorld 1.7 原版反编译定义对应。解析成功 ≠ 实际资产存在或地图自动生成。
