@@ -51,7 +51,7 @@ Structure-Editor/
 - **Git 拉取即可运行**：每次 `main` 有新提交，Windows CI 另行生成精简的、依赖 .NET 10 Windows Desktop Runtime 的 `app/`，将程序文件版本化提交回 `main`（当前也同步到旧默认分支 `codex/structure-editor`）。用户在 GitHub Desktop 拉取后即可运行 `app/StructureEditor.exe`，不必亲自编译。
 - `app/` 是唯一允许由 CI 自动纳入版本控制的生成目录；`dist/`、`bin/`、`obj/` 仍不提交。首次从旧的忽略目录迁移时，请先关闭程序并移走本地未被追踪的旧 `app/`，避免 Git 无法覆盖未跟踪文件。
 - 已有内部验证由 `Program --self-test` 入口运行；`Validation/` 中的检查继续随主程序集编译，以避免改变现有验证行为。
-- 不提交 RimWorld 游戏贴图、DLL、个人路径或配置、迁移备份。第三方资源许可见 `THIRD_PARTY_NOTICES.md`。
+- 不提交 RimWorld 游戏贴图、DLL、个人路径或配置、迁移备份。项目自身的 MIT 许可保留在根目录 `LICENSE`，独立发布包也包含该文件。
 - 修改默认工程格式时保持旧版文件可读取；遇到不支持的数据要明确报错，不能静默丢失布局信息。
 
 ## 维护策略
@@ -127,7 +127,7 @@ Structure-Editor/
 
 - 仓库**唯一启动目标**是 `app/StructureEditor.exe`。移除旧根目录 `启动结构工坊.cmd`；如果旧的个人 Windows 快捷方式原先指向该 CMD，请把目标改成 `app/StructureEditor.exe`。
 - **运行时 app/** 是最小可拉取程序：仅 exe/dll/运行配置及生成标记。删去原先重复的 `app/docs/`、`app/structures/`、`app/examples/`、多余 README 和帮助文档副本。
-- **独立 standalone.zip** 必须保留其自带的 `structures/`、`examples/`、使用说明和第三方许可说明；它属于离线发行件，不是仓库内部第二份可编辑源文件。
+- **独立 standalone.zip** 必须保留其自带的 `structures/`、`examples/`、使用说明和项目 `LICENSE`；它属于离线发行件，不是仓库内部第二份可编辑源文件。
 - 原 `Tools/Tests/TurretExplosionChecks.cs` 移到 `src/StructureEditor/Validation/TurretExplosionChecks.cs`，删除 .csproj 手工链入路径，恢复单一的验证代码归属。
 - `dist/`、`migration/`、`branding/`、`Directory.Build.props`、`*.lnk` 已被 Git 忽略，本地旧文件不会因 Git Pull 自动消失；不要自动删除可能含有数据和配置的本地目录。
 
@@ -160,3 +160,9 @@ Structure-Editor/
 - 「新建」「打开…」从结构标签条移到画布上方操作行最左侧，紧邻「编辑图层」；不再同时显示两份。移除顶部重复的保存目录与 PNG 预览快捷入口，相关操作留在「工程」页或菜单中。
 - 对象属性的「材质」标题和下拉框只在当前对象 `Catalog.MaterialsFor(item)` 存在可用选项时显示；无对象时也隐藏。方向、MP 休眠初态各自按对象能力及导出兼容状态显隐，避免无意义的空输入框。删除右上角与底部重复的「未选择」提示。
 - Windows 启动检查会验证新建快捷动作没有混入居中的结构标签条，其他对应的布局和素材选择回归检查位于 `Validation/StudioUsabilityChecks.cs`。
+
+## 许可与本地迁移文件
+
+- 项目不再另设 `THIRD_PARTY_NOTICES.md`。原内容仅是资源来源说明，不是第三方许可证的全文，也不属于程序运行依赖；本项目的 MIT `LICENSE` 必须保留，独立发布包同样带上。
+- 根目录 `migration/` 已通过 `.gitignore` 排除，只保存开发过程的旧文件、迁移报告、品牌图和原始代码。它不参与当前启动、编译或正式结构读写；未经备份不要自动删除用户本地该目录。
+- `examples/SE_WallCorner.structure.json` 是一个最小 JSON 示例，不是运行必须加载的工程或游戏素材；它独立于作为正式项目库的 `structures/`。

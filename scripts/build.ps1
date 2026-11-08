@@ -25,7 +25,7 @@ $contained = if ($SelfContained) { 'true' } else { 'false' }
 dotnet publish (Join-Path $projectRoot 'src/StructureEditor/StructureEditor.csproj') -c $Configuration -r $Runtime --self-contained $contained -o $appOutput -p:DebugType=None -p:DebugSymbols=false --nologo
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed.' }
 if ($SelfContained) {
-    Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/使用说明.md'), (Join-Path $projectRoot 'THIRD_PARTY_NOTICES.md') -Destination $appOutput
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'docs/使用说明.md'), (Join-Path $projectRoot 'LICENSE') -Destination $appOutput
     Copy-Item -LiteralPath (Join-Path $projectRoot 'examples') -Destination $appOutput -Recurse
     if (Test-Path -LiteralPath (Join-Path $projectRoot 'structures')) {
         Copy-Item -LiteralPath (Join-Path $projectRoot 'structures') -Destination $appOutput -Recurse
