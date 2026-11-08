@@ -2,7 +2,6 @@
 
 public partial class MainForm
 {
-    private readonly Dictionary<CanvasTool, ToolStripButton> toolButtons = new();
     private readonly Dictionary<string, ToolStripButton> MP_rangeButtons = new();
     private void MP_ToggleRange(string id)
     {
@@ -70,11 +69,11 @@ public partial class MainForm
         topBar.Controls.Add(BuildDocumentBar(), 0, 0);
         topBar.Controls.Add(actions, 1, 0);
 
-        librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 3, SplitterDistance = 292, BackColor = Color.FromArgb(39, 52, 61) };
-        inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 298), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 3, SplitterDistance = Math.Max(400, ClientSize.Width - 604), BackColor = librarySplit.BackColor };
+        librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 3, SplitterDistance = 278, BackColor = Color.FromArgb(39, 52, 61) };
+        inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 284), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 3, SplitterDistance = Math.Max(330, ClientSize.Width - 638), BackColor = librarySplit.BackColor };
         librarySplit.Panel2.Controls.Add(inspectorSplit);
         librarySplit.Panel1MinSize = 235; librarySplit.Panel2MinSize = 540;
-        inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 255;
+        inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 300;
 
         Panel library = new() { Dock = DockStyle.Fill, BackColor = surface, Padding = new(10) };
         TableLayoutPanel filters = BuildLibraryFilters();
@@ -86,10 +85,14 @@ public partial class MainForm
         Panel MP_paletteHost = new() { Dock = DockStyle.Fill, BackColor = surface };
         MP_DarkPaletteScrollbar MP_paletteScroll = new(palette);
         palette.Dock = DockStyle.None;
-        palette.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        palette.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
         MP_paletteHost.Resize += (_, _) =>
         {
-            palette.Bounds = MP_paletteHost.ClientRectangle;
+            // Native scrollbar lives outside the clipped panel;
+            // only the custom dark track remains visible.
+            palette.Bounds = new Rectangle(0, 0,
+                MP_paletteHost.ClientSize.Width + SystemInformation.VerticalScrollBarWidth,
+                MP_paletteHost.ClientSize.Height);
             MP_paletteScroll.BringToFront();
             MP_paletteScroll.Invalidate();
         };
@@ -114,16 +117,6 @@ public partial class MainForm
         librarySplit.Panel1.Controls.Add(MP_libraryTabs);
 
         Panel viewport = new() { Dock = DockStyle.Fill };
-        ToolStrip editTools = new() { Dock = DockStyle.Top, Height = 38, AutoSize = false, GripStyle = ToolStripGripStyle.Hidden, BackColor = Color.FromArgb(35, 46, 56), Padding = new(4, 4, 0, 4) };
-        foreach (var (tool, title) in new[] { (CanvasTool.Select, "选择"), (CanvasTool.Place, "放置"), (CanvasTool.Rectangle, "矩形"), (CanvasTool.Erase, "擦除"), (CanvasTool.Hand, "平移"), (CanvasTool.Zoom, "缩放") })
-        {
-            ToolStripButton button = new(title) { DisplayStyle = ToolStripItemDisplayStyle.Text, ForeColor = text, CheckOnClick = false };
-            button.Click += (_, _) => { canvas.Tool = tool; canvas.Focus(); }; editTools.Items.Add(button); toolButtons[tool] = button;
-        }
-        editTools.Items.Add(new ToolStripSeparator()); AddTool(editTools, "旋转", canvas.Rotate);
-        ToolStripDropDownButton center = new("居中") { ForeColor = text };
-        Menu(center, "适应全部    Home", canvas.CenterView); Menu(center, "居中所选    Ctrl+Home", canvas.CenterSelection); Menu(center, "回到原点", canvas.GoToOrigin);
-        editTools.Items.Add(center);
         TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(37, 50, 60), ColumnCount = 4 };
         layerBar.ColumnStyles.Add(new(SizeType.AutoSize)); layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124)); layerBar.ColumnStyles.Add(new(SizeType.Absolute, 110)); layerBar.ColumnStyles.Add(new(SizeType.Percent, 100));
         layerBar.Controls.Add(new Label { Text = "编辑图层", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new(10, 0, 10, 0), ForeColor = muted }, 0, 0);
@@ -176,7 +169,7 @@ public partial class MainForm
         layerBar.Controls.Add(MP_editLayerSelector, 1, 0);
         layerBar.Controls.Add(MP_layerVisibilityBar, 2, 0);
         layerBar.Controls.Add(selectionCount, 3, 0);
-        viewport.Controls.Add(canvas); viewport.Controls.Add(layerBar); viewport.Controls.Add(editTools); inspectorSplit.Panel1.Controls.Add(viewport);
+        viewport.Controls.Add(canvas); viewport.Controls.Add(layerBar); inspectorSplit.Panel1.Controls.Add(viewport);
 
         MP_SectionTabs tabs = new() { Dock = DockStyle.Fill, BackColor = surface, ForeColor = text };
         TableLayoutPanel Page(string title)
@@ -197,7 +190,8 @@ public partial class MainForm
         {
             Row(panel, new Label { Text = title, ForeColor = muted, AutoSize = true }); Row(panel, control, 29);
         }
-        TableLayoutPanel objects = Page("对象"), metadata = Page("结构"), exports = Page("导出"), tips = Page("操作");
+        TableLayoutPanel objects = Page("对象"), metadata = Page("工程");
+        TableLayoutPanel exports = metadata;
         selectedName.Font = new(Font, FontStyle.Bold); Row(objects, selectedName, 65); selectedInfo.ForeColor = muted; Row(objects, selectedInfo, 62);
         materialBox.DropDownStyle = rotationBox.DropDownStyle = ComboBoxStyle.DropDownList;
         Field(objects, "材质", materialBox);
@@ -292,7 +286,6 @@ public partial class MainForm
         exportResult.ForeColor = muted;
         Row(exports, exportResult, 65);
         MP_exportReviewTimer.Tick += (_, _) => MP_RefreshExportReview();
-        Row(tips, new Label { Text = "V 选择 / B 放置 / M 矩形 / E 擦除\nI 吸取 / R 旋转 / H 平移 / Z 缩放\n\n双击对象：吸取并继续放置\nShift 拖动：追加框选\nCtrl 单击：增减选择\nDelete / Backspace：删除\n\n中键 / 空格+拖动：平移\n滚轮：以鼠标为中心缩放\n缩放工具：左键放大，Alt+左键缩小\n\nCtrl+N / O：新建 / 打开\nCtrl+S：保存；Ctrl+Shift+S：另存为\nCtrl+Z / Ctrl+Shift+Z：撤销 / 重做\nCtrl+C / X / V：复制 / 剪切 / 粘贴\nCtrl+D：复制为新对象\n粘贴预览：Q 逆时针 / E 顺时针旋转\nCtrl+A：全选；Ctrl+Shift+A：取消\nCtrl+0：适合窗口；Ctrl+1：实际大小\nCtrl+Home：居中所选；Tab：切换编辑图层\nCtrl+G：殉爆范围；Ctrl+H：探测范围；Ctrl+J：护盾范围\n\n方向键：移动 1 格\nShift+方向键：移动 10 格\n\nTab / Shift+Tab：切换编辑图层", ForeColor = muted }, 700);
         inspectorSplit.Panel2.Controls.Add(tabs);
         foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, categoryBox, dormancyBox, profileBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
         foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, categoryBox, dormancyBox, profileBox })
@@ -352,7 +345,6 @@ public partial class MainForm
     }
     private void RefreshToolDisplay()
     {
-        foreach (var pair in toolButtons) pair.Value.Checked = pair.Key == canvas.Tool;
         if (selectionStatus != null) selectionStatus.Text = canvas.HasStamp ? "整组粘贴 · Q/E 旋转 · 左键放置 / Esc 取消" : canvas.Tool switch
         { CanvasTool.Select => "选择 · Shift 框选", CanvasTool.Rectangle => "矩形铺地 · 左键拖动", CanvasTool.Erase => "擦除 · 左键拖动", CanvasTool.Hand => "平移 · 拖动视图", CanvasTool.Zoom => "缩放 · Alt 缩小", _ => "放置" };
     }
