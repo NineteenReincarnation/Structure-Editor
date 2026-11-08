@@ -54,10 +54,11 @@ public partial class MainForm : Form
             { e.Handled = true; e.SuppressKeyPress = true; }
         };
         canvas.BeforeChange += Snapshot;
-        canvas.Changed += () => { MP_summaryDocument = null; dirty = true; UpdateTitle(); UpdateSummary(); };
+        canvas.Changed += () => { MP_summaryDocument = null; dirty = true; UpdateTitle(); UpdateSummary(); MP_ScheduleExportReview(); };
         canvas.SelectionChanged += ShowSelection;
         canvas.Hint += message => status.Text = message;
         FormClosing += (_, e) => { try { if (!AskSaveWorkspace()) e.Cancel = true; } catch (Exception ex) { e.Cancel = true; MessageBox.Show(this, ex.Message); } };
+        FormClosed += (_, _) => { MP_exportReviewTimer.Stop(); MP_exportReviewTimer.Dispose(); };
         Load += (_, _) => { UpdatePaletteDensity(); FitWorkingArea(); };
         Shown += (_, _) => { if (Program.IsGame(Program.Paths.GameRoot)) LoadCatalog(); else { canvas.Document=document; RefreshMetadata(); status.Text="请在 编辑 → 首选项 中选择 RimWorld 游戏目录，加载本机素材。"; } };
     }
@@ -200,7 +201,8 @@ public partial class MainForm : Form
             rotationBox.Enabled = canRotate;
             if (canRotate) rotationBox.SelectedIndex = placed?.Rotation ?? canvas.BrushRotation;
             var supported = placed == null ? new List<PlacedItem>() : canvas.Selection.Where(i => catalog.Find(i.Kind, i.DefName)?.CanBeDormant == true).ToList();
-            bool mp = document.ExportProfile == "MechProtocol" || document.ExportProfile == "Framework" && document.EnableMPCompatibility;
+            bool mp = document.ExportProfile == "MechProtocol"
+                || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal") && document.EnableMPCompatibility);
             dormancyBox.Enabled = mp && (placed == null ? item.CanBeDormant : supported.Count > 0);
             var states = supported.Select(i => i.StartDormant).Distinct().ToList();
             bool? setting = placed == null ? canvas.BrushDormant : supported.FirstOrDefault()?.StartDormant;
@@ -229,21 +231,44 @@ public partial class MainForm : Form
     private void RefreshMetadata()
     {
         updating = true; idBox.Text = document.DefName; labelBox.Text = document.Label; categoryBox.SelectedIndex = document.Category == "MechCluster" ? 0 : 1; dormant.Checked = document.StartDormant;
-        profileBox.SelectedIndex = document.ExportProfile == "MechProtocol" ? 2 : document.ExportProfile == "VanillaPrefab" ? 1 : 0;
-        mpCompatibility.Checked = document.EnableMPCompatibility; mpCompatibility.Enabled = document.ExportProfile == "Framework";
+        profileBox.SelectedIndex = document.ExportProfile switch
+        {
+            "MechProtocol" => 2, "VanillaPrefab" => 1,
+            "Universal" => 3, _ => 0
+        };
+        mpCompatibility.Checked = document.EnableMPCompatibility;
+        mpCompatibility.Enabled = document.ExportProfile is "Framework" or "Universal";
         autoExport.Checked = document.AutoExportOnSave; exportResult.Text = "";
-        dormant.Enabled = document.ExportProfile == "MechProtocol" || document.ExportProfile == "Framework" && document.EnableMPCompatibility; updating = false;
+        dormant.Enabled = document.ExportProfile == "MechProtocol"
+            || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal") && document.EnableMPCompatibility);
+        updating = false;
         UpdateTitle(); UpdateSummary();
         RefreshSaveLocation(); LoadNamingFields();
     }
     private void CommitMetadata()
     {
         if (updating) return;
-        string profile = profileBox.SelectedIndex == 2 ? "MechProtocol" : profileBox.SelectedIndex == 1 ? "VanillaPrefab" : "Framework";
-        if (document.DefName == idBox.Text && document.Label == labelBox.Text && document.Category == SelectedCategory && document.StartDormant == dormant.Checked && document.ExportProfile == profile && document.EnableMPCompatibility == mpCompatibility.Checked && document.AutoExportOnSave == autoExport.Checked) return;
-        Snapshot(); document.DefName = idBox.Text.Trim(); document.Label = labelBox.Text.Trim(); document.Category = SelectedCategory; document.StartDormant = dormant.Checked; document.ExportProfile = profile; document.EnableMPCompatibility = mpCompatibility.Checked;
+        string profile = profileBox.SelectedIndex switch
+        {
+            2 => "MechProtocol", 1 => "VanillaPrefab",
+            3 => "Universal", _ => "Framework"
+        };
+        // Switching away from an extension-capable output clears only its
+        // enable flag. Original per-object dormancy remains in the JSON.
+        bool compatible = (profile == "Framework" || profile == "Universal")
+            && mpCompatibility.Checked;
+        if (document.DefName == idBox.Text && document.Label == labelBox.Text
+            && document.Category == SelectedCategory
+            && document.StartDormant == dormant.Checked && document.ExportProfile == profile
+            && document.EnableMPCompatibility == compatible
+            && document.AutoExportOnSave == autoExport.Checked) return;
+        Snapshot();
+        document.DefName = idBox.Text.Trim(); document.Label = labelBox.Text.Trim();
+        document.Category = SelectedCategory; document.StartDormant = dormant.Checked;
+        document.ExportProfile = profile; document.EnableMPCompatibility = compatible;
         document.AutoExportOnSave = autoExport.Checked;
         dirty = true; UpdateTitle(); canvas.Invalidate(); RefreshMetadata(); ShowSelection();
+        MP_ScheduleExportReview();
     }
     private void UpdateTitle() { Text = "Structure Editor · 结构工坊 — " + document.Label + (dirty ? " *" : ""); RefreshDocumentTabs(); RefreshNamingPreview(); }
     private void UpdateSummary()

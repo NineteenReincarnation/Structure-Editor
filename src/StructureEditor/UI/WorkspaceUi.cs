@@ -212,32 +212,89 @@ public partial class MainForm
         dormancyInfo.ForeColor = muted; Row(objects, dormancyInfo, 58);
         Row(objects, new Label { Text = "修改直接生效 · Ctrl+Z 撤销", ForeColor = muted }, 29);
         Label groupTip = new() { Text = "双击吸取并切换到放置。\n拖动移动，方向键微调。\nShift 框选，Ctrl 增减选择。", ForeColor = muted }; Row(objects, groupTip, 90);
+        // Structure owns structure identity and game-facing properties only.
+        Row(metadata, new Label { Text = "基本信息", Font = new(Font, FontStyle.Bold),
+            ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
         Row(metadata, BuildClusterNamingPanel());
-        structureIdTitle = new() { Text = "结构标识", ForeColor = muted, AutoSize = true }; Row(metadata, structureIdTitle); Row(metadata, idBox, 29);
-        structureLabelTitle = new() { Text = "显示名称", ForeColor = muted, AutoSize = true }; Row(metadata, structureLabelTitle); Row(metadata, labelBox, 29);
-        profileBox.DropDownStyle=ComboBoxStyle.DropDownList;profileBox.Items.AddRange(new object[]{"Structure Framework（扩展）","原版 PrefabDef（默认）","MechProtocol（专用）"});profileBox.SelectedIndex=1;
-        Field(exports,"XML 目标格式",profileBox);mpCompatibility.Text="启用 MP 扩展（逐对象休眠）";mpCompatibility.AutoSize=true;Row(exports,mpCompatibility);
-        Row(exports,autoExport);
-        Row(exports,new Label { Text="XML 输出文件",ForeColor=muted,AutoSize=true });Row(exports,xmlPathBox,108);
-        xmlPathBox.BackColor=Color.FromArgb(49,58,64);xmlPathBox.ForeColor=text;
-        void ExportButton(string title,Action action)
-        {
-            Button button=MakeButton(title,0,0,230);button.Click+=(_,_)=>Safe(action);Row(exports,button,34);
-        }
-        ExportButton("更改 XML 目录…",SetXmlDirectory);
-        ExportButton("立即导出 XML",ExportToConfiguredLocation);
-        ExportButton("另存为 XML…",()=>ExportLayout(false));
-        ExportButton("导出独立结构内容包…",ExportBundle);
-        ExportButton("导出 PNG 预览…",ExportPreview);
-        exportResult.ForeColor=muted;Row(exports,exportResult,110);
-        Row(exports,new Label { Text="保存会更新 JSON 工程和所选格式的 XML。未指定 XML 目录时，与工程保存在一起。",ForeColor=muted },100);
-        categoryBox.DropDownStyle = ComboBoxStyle.DropDownList; categoryBox.Items.AddRange(new object[] { "机械集群", "通用结构" }); categoryBox.SelectedIndex = 1;
-        Field(metadata, "结构类别", categoryBox); dormant.Text = "默认休眠（MP）"; dormant.AutoSize = true; Row(metadata, dormant);
-        Row(metadata, new Label { Text = "保存目录", ForeColor = muted, AutoSize = true }); Row(metadata, saveFolderBox, 74);
-        saveFolderBox.BackColor = Color.FromArgb(49, 58, 64); saveFolderBox.ForeColor = text;
-        Button chooseFolder = MakeButton("更改保存目录…", 0, 0, 230); chooseFolder.Click += (_, _) => Safe(SetSaveDirectory); Row(metadata, chooseFolder, 34);
+        structureLabelTitle = new() { Text = "结构名称", ForeColor = muted, AutoSize = true };
+        Row(metadata, structureLabelTitle); Row(metadata, labelBox, 29);
+        structureIdTitle = new() { Text = "DefName", ForeColor = muted, AutoSize = true };
+        Row(metadata, structureIdTitle); Row(metadata, idBox, 29);
+        categoryBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        categoryBox.Items.AddRange(new object[] { "机械集群", "通用结构" });
+        categoryBox.SelectedIndex = 1;
+        Field(metadata, "结构类别", categoryBox);
+        dormant.Text = "默认休眠（MP）"; dormant.AutoSize = true;
+        Row(metadata, dormant);
+        Row(metadata, new Label { Text = "结构概览", ForeColor = muted, AutoSize = true });
         summary.ForeColor = muted; Row(metadata, summary, 62);
-        Row(metadata, new Label { Text = "保存：JSON 工程及自动导出 XML。\n在“导出”页设置格式和 XML 目录。\n独立内容包自动声明所需模组。", ForeColor = muted }, 100);
+
+        // Export target, optional compatibility and checks live in one page.
+        Row(exports, new Label { Text = "导出配置", Font = new(Font, FontStyle.Bold),
+            ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
+        profileBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        profileBox.Items.AddRange(new object[]
+        {
+            "Structure Framework（扩展）",
+            "原版 PrefabDef（默认）",
+            "MechProtocol（专用）",
+            "原版基础 + 条件拓展"
+        });
+        profileBox.SelectedIndex = 1;
+        Field(exports, "XML 目标格式", profileBox);
+        Row(exports, new Label { Text = "兼容拓展", Font = new(Font, FontStyle.Bold),
+            ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
+        mpCompatibility.Text = "MechProtocol · 逐对象休眠";
+        mpCompatibility.AutoSize = true;
+        Row(exports, mpCompatibility);
+        MP_compatRecommendation.ForeColor = muted;
+        Row(exports, MP_compatRecommendation);
+        Row(exports, autoExport);
+        Row(exports, new Label { Text = "XML 输出文件", ForeColor = muted, AutoSize = true });
+        Row(exports, xmlPathBox, 65);
+        xmlPathBox.BackColor = Color.FromArgb(42, 55, 64); xmlPathBox.ForeColor = text;
+        Button MP_exportDirectory = MakeButton("更改 XML 目录…", 0, 0, 230);
+        MP_exportDirectory.Click += (_, _) => Safe(SetXmlDirectory);
+        Row(exports, MP_exportDirectory, 32);
+        Row(exports, new Label { Text = "JSON 工程目录", ForeColor = muted, AutoSize = true });
+        Row(exports, saveFolderBox, 55);
+        saveFolderBox.BackColor = Color.FromArgb(42, 55, 64); saveFolderBox.ForeColor = text;
+        Button MP_projectDirectory = MakeButton("更改工程目录…", 0, 0, 230);
+        MP_projectDirectory.Click += (_, _) => Safe(SetSaveDirectory);
+        Row(exports, MP_projectDirectory, 32);
+
+        Row(exports, new Label { Text = "依赖与导出检查", Font = new(Font, FontStyle.Bold),
+            ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
+        MP_exportReviewStatus.ForeColor = muted;
+        Row(exports, MP_exportReviewStatus);
+        MP_exportDependencySummary.ForeColor = muted;
+        Row(exports, MP_exportDependencySummary);
+        MP_exportReviewDetails.BackColor = Color.FromArgb(36, 48, 57);
+        MP_exportReviewDetails.ForeColor = text;
+        MP_exportReviewDetails.BorderStyle = BorderStyle.FixedSingle;
+        Row(exports, MP_exportReviewDetails, 103);
+        MP_exportReviewDetails.Visible = false;
+
+        MP_exportPrimary = MakeButton("立即导出 XML", 0, 0, 230);
+        MP_exportPrimary.Click += (_, _) => Safe(ExportToConfiguredLocation);
+        Row(exports, MP_exportPrimary, 36);
+        Button moreExport = MakeButton("更多导出方式 ▾", 0, 0, 230);
+        ContextMenuStrip moreMenu = new() { BackColor = Color.FromArgb(39, 52, 62),
+            ForeColor = text, ShowImageMargin = false };
+        void More(string title, Action action)
+        {
+            ToolStripMenuItem item = new(title) { ForeColor = text };
+            item.Click += (_, _) => Safe(action);
+            moreMenu.Items.Add(item);
+        }
+        More("另存为 XML…", () => ExportLayout(false));
+        More("导出完整 Mod 内容包…", ExportBundle);
+        More("导出 PNG 预览…", ExportPreview);
+        moreExport.Click += (_, _) => moreMenu.Show(moreExport, new Point(0, moreExport.Height));
+        Row(exports, moreExport, 32);
+        exportResult.ForeColor = muted;
+        Row(exports, exportResult, 65);
+        MP_exportReviewTimer.Tick += (_, _) => MP_RefreshExportReview();
         Row(tips, new Label { Text = "V 选择 / B 放置 / M 矩形 / E 擦除\nI 吸取 / R 旋转 / H 平移 / Z 缩放\n\n双击对象：吸取并继续放置\nShift 拖动：追加框选\nCtrl 单击：增减选择\nDelete / Backspace：删除\n\n中键 / 空格+拖动：平移\n滚轮：以鼠标为中心缩放\n缩放工具：左键放大，Alt+左键缩小\n\nCtrl+N / O：新建 / 打开\nCtrl+S：保存；Ctrl+Shift+S：另存为\nCtrl+Z / Ctrl+Shift+Z：撤销 / 重做\nCtrl+C / X / V：复制 / 剪切 / 粘贴\nCtrl+D：复制为新对象\n粘贴预览：Q 逆时针 / E 顺时针旋转\nCtrl+A：全选；Ctrl+Shift+A：取消\nCtrl+0：适合窗口；Ctrl+1：实际大小\nCtrl+Home：居中所选；Tab：切换编辑图层\nCtrl+G：殉爆范围；Ctrl+H：探测范围；Ctrl+J：护盾范围\n\n方向键：移动 1 格\nShift+方向键：移动 10 格\n\nTab / Shift+Tab：切换编辑图层", ForeColor = muted }, 700);
         inspectorSplit.Panel2.Controls.Add(tabs);
         foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, categoryBox, dormancyBox, profileBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
@@ -282,7 +339,8 @@ public partial class MainForm
             canvas.SetSelectionDormancy(canvas.BrushDormant);
         };
         foreach (Control c in new Control[] { idBox, labelBox, categoryBox, dormant }) c.Leave += (_, _) => CommitMetadata();
-        profileBox.SelectedIndexChanged+=(_,_)=>{if(!updating)CommitMetadata();};mpCompatibility.CheckedChanged+=(_,_)=>{if(!updating)CommitMetadata();};
+        profileBox.SelectedIndexChanged+=(_,_)=>{if(!updating)CommitMetadata();};
+        mpCompatibility.CheckedChanged+=(_,_)=>{if(!updating)CommitMetadata();};
         autoExport.CheckedChanged+=(_,_)=>{if(!updating)CommitMetadata();};
         canvas.ToolChanged += RefreshToolDisplay;
         StatusStrip strip = new() { BackColor = Color.FromArgb(23, 29, 33), ForeColor = text, SizingGrip = false };

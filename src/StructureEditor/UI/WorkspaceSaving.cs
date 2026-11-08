@@ -12,22 +12,43 @@ internal static class StructureStorage
     internal static void ExportXml(StructureDocument document, Catalog catalog, string path, string profile)
     {
         if (catalog == null) throw new InvalidOperationException("素材仍在加载，请稍后导出。");
-        var issues = document.Validate(catalog);
-        if (issues.Count > 0) throw new InvalidOperationException(string.Join("\n", issues.Take(12)));
+        MP_ExportReview.Result review = MP_ExportReview.Inspect(document, catalog, profile);
+        if (!review.CanExport)
+            throw new InvalidOperationException(string.Join("\n", review.Issues.Where(i => i.IsError).Take(12).Select(i => i.Message)));
         var xml = ExportDependencies.Xml(document, catalog, profile);
-        if (File.Exists(path) && XDocument.Load(path).Root is XElement root && root.Name.LocalName == "Defs" && root.Elements().Count() > 1)
-        {
-            // Updating one layout must retain other definitions sharing its source file.
-            var definition = xml.Root!.Elements().Single();
-            var old = root.Elements().FirstOrDefault(e => (string)e.Element("defName") == (string)definition.Element("defName"));
-            if (old != null) old.ReplaceWith(new XElement(definition)); else root.Add(new XElement(definition));
-            xml = root.Document;
-        }
         if (File.Exists(path))
         {
-            var existingRoot = XDocument.Load(path).Root;
-            if (existingRoot?.Name.LocalName == "Defs" && existingRoot.Elements().Count() == 1 && (string)existingRoot.Elements().Single().Element("defName") != document.DefName)
-                throw new InvalidOperationException("目标 XML 属于另一份结构，请更换输出文件。");
+            XDocument existing = XDocument.Load(path);
+            XElement root = existing.Root ?? throw new InvalidOperationException("输出 XML 没有根节点。");
+            if (root.Name.LocalName != "Defs")
+                throw new InvalidOperationException("目标文件并非 RimWorld Defs XML，不会覆盖。");
+            var current = root.Elements().ToList();
+            string extensionId = ExportDependencies.MP_EnhancedName(document.DefName);
+            // A single unrelated definition must never be replaced by export.
+            if (current.Count == 1)
+            {
+                string oldId = (string)current[0].Element("defName");
+                if (oldId != document.DefName && oldId != extensionId)
+                    throw new InvalidOperationException("目标 XML 属于另一份结构，请更换输出文件。");
+            }
+            var produced = xml.Root!.Elements().ToList();
+            foreach (XElement item in produced)
+            {
+                string id = (string)item.Element("defName");
+                var old = current.FirstOrDefault(e =>
+                    string.Equals((string)e.Element("defName"), id, StringComparison.Ordinal));
+                if (old != null) old.ReplaceWith(new XElement(item));
+                else root.Add(new XElement(item));
+            }
+            // Only remove the editor-owned conditional companion if the user
+            // switched away from Universal. Never touch other definitions.
+            if (!produced.Any(e => (string)e.Element("defName") == extensionId))
+                foreach (XElement leftover in root.Elements().Where(e =>
+                    (string)e.Element("defName") == extensionId
+                    && e.Name.LocalName == "StructureFramework.StructureDef"
+                    && e.Attribute("MayRequire") != null).ToList())
+                    leftover.Remove();
+            xml = existing;
         }
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         BackupExisting(path);
@@ -104,12 +125,14 @@ public partial class MainForm
     private void ExportLayout(bool legacy,string requestedProfile=null)
     {
         CommitInspectorEdit();CommitMetadata();
-        if(catalog!=null)
-        {
-            var issues=document.Validate(catalog);if(issues.Count>0){MessageBox.Show(this,string.Join("\n",issues.Take(12)),"导出检查",MessageBoxButtons.OK,MessageBoxIcon.Warning);return;}
-        }
         string profile=requestedProfile??(legacy?"MechProtocol":document.ExportProfile);
-        var requirements=ExportDependencies.Resolve(document,catalog,profile);
+        var review=MP_ExportReview.Inspect(document,catalog,profile);
+        if(!review.CanExport)
+        {
+            MessageBox.Show(this,string.Join("\n",review.Issues.Where(i=>i.IsError).Take(12).Select(i=>i.Message)),"导出检查",MessageBoxButtons.OK,MessageBoxIcon.Warning);
+            return;
+        }
+        var requirements=review.Dependencies;
         using SaveFileDialog dialog=new(){Title="导出 "+profile+" XML（"+requirements.Count+" 个依赖）",Filter="布局 XML|*.xml",InitialDirectory=Path.GetDirectoryName(StructureStorage.XmlTarget(document,currentFile,OutputFolder)),FileName=document.DefName+".xml",DefaultExt="xml",AddExtension=true};
         if(dialog.ShowDialog(this)!=DialogResult.OK)return;
         CheckWorkspaceExportTarget(dialog.FileName);
@@ -119,7 +142,9 @@ public partial class MainForm
     }
     private void ExportBundle()
     {
-        CommitInspectorEdit();CommitMetadata();var issues=document.Validate(catalog);if(issues.Count>0)throw new InvalidOperationException(string.Join("\n",issues.Take(12)));
+        CommitInspectorEdit();CommitMetadata();
+        var review=MP_ExportReview.Inspect(document,catalog,document.ExportProfile);
+        if(!review.CanExport)throw new InvalidOperationException(string.Join("\n",review.Issues.Where(i=>i.IsError).Take(12).Select(i=>i.Message)));
         using FolderBrowserDialog folder=new(){Description="选择内容包的父目录（不会复制模组素材或 DLL）",SelectedPath=OutputFolder};if(folder.ShowDialog(this)!=DialogResult.OK)return;
         string result=ExportDependencies.Bundle(document,catalog,folder.SelectedPath,document.ExportProfile);status.Text="已导出独立结构包："+result;
     }

@@ -27,7 +27,12 @@ internal static class StudioExportChecks
             var profile = (ComboBox)Field("profileBox"); var auto = (CheckBox)Field("autoExport");
             need(Children(exportPage).Contains(profile) && auto.Checked && profile.SelectedIndex == 1,
                 "New projects default to the original PrefabDef XML and automatic save-time export");
-            need(Children(exportPage).OfType<Button>().Any(b => b.Text == "立即导出 XML") && Children(exportPage).OfType<Button>().Any(b => b.Text == "更改 XML 目录…"), "Export page exposes direct export and directory selection");
+            need(Children(exportPage).OfType<Button>().Any(b => b.Text == "立即导出 XML")
+                && Children(exportPage).OfType<Button>().Any(b => b.Text == "更改 XML 目录…")
+                && Children(exportPage).OfType<Button>().Any(b => b.Text.StartsWith("更多导出方式")),
+                "Export page groups direct export and advanced export choices");
+            need(Children(exportPage).OfType<CheckBox>().Any(c => c.Text.Contains("MechProtocol")),
+                "Export page embeds optional mod compatibility settings");
             need(Save() && File.Exists(Path.Combine(root, doc.DefName + ".xml")), "Actual SaveDocument saves project and XML together without an export dialog");
             string xmlFile = Path.Combine(root, doc.DefName + ".xml");
             var nativeXml = XDocument.Load(xmlFile);
@@ -62,6 +67,43 @@ internal static class StudioExportChecks
             need(loaded.XmlExportDirectory == custom.XmlExportDirectory && loaded.Copy().XmlExportDirectory == custom.XmlExportDirectory && loaded.Copy().AutoExportOnSave, "Export destination and toggle roundtrip JSON and undo copies");
             string moved = Path.Combine(root, "SaveAs", "Renamed.structure.json"); var ordinary = doc.Copy(); ordinary.XmlExportDirectory = null;
             need(StructureStorage.SaveProject(ordinary, catalog, moved).XmlPath == Path.Combine(Path.GetDirectoryName(moved)!, ordinary.DefName + ".xml"), "Save As follows the new project folder when no XML directory is configured");
+            var universal = doc.Copy(); universal.ExportProfile = "Universal";
+            universal.Items.Add(new() { Kind = "Pawn", DefName = "Mech_Scyther", X = 11, Z = 11 });
+            var dualXml = ExportDependencies.Xml(universal, catalog, "Universal");
+            need(dualXml.Root!.Elements().Count() == 2
+                && dualXml.Root.Elements().First().Name.LocalName == "PrefabDef"
+                && dualXml.Root.Elements().Skip(1).Single().Name.LocalName == "StructureFramework.StructureDef"
+                && ((string)dualXml.Root.Elements().Last().Attribute("MayRequire"))?.Contains(FrameworkCodec.PackageId) == true,
+                "Universal XML exposes a native prefab and defers framework class parsing by MayRequire");
+            need(dualXml.Root.Element("PrefabDef")!.Element("things")!.Element("Wall") != null
+                && dualXml.Root.Element("PrefabDef")!.Element("pawns") == null
+                && dualXml.Root.Element("StructureFramework.StructureDef")!.Element("pawns") != null,
+                "Universal vanilla fallback keeps compatible buildings while conditional enhancement preserves pawn layout");
+            var universalReview = MP_ExportReview.Inspect(universal,catalog,"Universal");
+            need(universalReview.CanExport && universalReview.Warnings > 0,
+                "Partial native fallback generates a warning instead of deleting JSON pawn data");
+            var missingPackage = doc.Copy();
+            missingPackage.RequiredPackages.Add("test.package.not.loaded");
+            var missingReview = MP_ExportReview.Inspect(missingPackage,catalog,"VanillaPrefab");
+            need(missingReview.CanExport && missingReview.Warnings > 0
+                && ExportDependencies.Xml(missingPackage,catalog,"VanillaPrefab").Root!.Element("PrefabDef")!.Attribute("MayRequire") != null,
+                "Unavailable dependencies warn rather than block and are guarded by native MayRequire");
+            string combinedPath = Path.Combine(root,"Combined.xml");
+            var coreOnly = doc.Copy(); coreOnly.ExportProfile = "Universal";
+            StructureStorage.ExportXml(coreOnly,catalog,combinedPath,"Universal");
+            var combined = XDocument.Load(combinedPath);
+            need(combined.Root!.Elements().Count() == 2 && combined.Root.Elements().Any(x =>
+                    (string)x.Element("defName") == ExportDependencies.MP_EnhancedName(coreOnly.DefName)),
+                "Dual export writes a single native file with its guarded companion");
+            combined.Root.Add(new XElement("PrefabDef",new XElement("defName","MP_Unrelated")));
+            combined.Save(combinedPath);
+            StructureStorage.ExportXml(coreOnly,catalog,combinedPath,"VanillaPrefab");
+            var downgraded = XDocument.Load(combinedPath);
+            need(downgraded.Root!.Elements().Count() == 2
+                && downgraded.Root.Elements().Any(x => (string)x.Element("defName") == "MP_Unrelated")
+                && !downgraded.Root.Elements().Any(x =>
+                    (string)x.Element("defName") == ExportDependencies.MP_EnhancedName(coreOnly.DefName)),
+                "Switching back to native removes only the editor-owned conditional companion, preserving unrelated defs");
             var invalid = custom.Copy(); invalid.ExportProfile = "VanillaPrefab"; invalid.Items.Add(new() { Kind = "Pawn", DefName = "Mech_Scyther", X = 4 });
             string invalidProject = Path.Combine(root, "Invalid.structure.json"), oldXml = File.ReadAllText(customResult.XmlPath);
             var failed = StructureStorage.SaveProject(invalid, catalog, invalidProject);

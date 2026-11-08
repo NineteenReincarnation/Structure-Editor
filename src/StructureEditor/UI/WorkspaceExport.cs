@@ -5,6 +5,61 @@ public partial class MainForm
     private readonly CheckBox autoExport = new() { Text = "保存时自动导出 XML", AutoSize = true, Checked = true };
     private readonly TextBox xmlPathBox = new() { ReadOnly = true, Multiline = true, ScrollBars = ScrollBars.Vertical };
     private readonly Label exportResult = new() { AutoEllipsis = true };
+    private readonly Label MP_compatRecommendation = new() { AutoSize = true };
+    private readonly Label MP_exportReviewStatus = new() { AutoSize = true };
+    private readonly Label MP_exportDependencySummary = new() { AutoSize = true };
+    private readonly TextBox MP_exportReviewDetails = new()
+    {
+        ReadOnly = true, Multiline = true, WordWrap = true,
+        ScrollBars = ScrollBars.Vertical, Height = 103
+    };
+    private readonly System.Windows.Forms.Timer MP_exportReviewTimer = new() { Interval = 360 };
+    private Button MP_exportPrimary;
+
+    private void MP_ScheduleExportReview()
+    {
+        if (IsDisposed || Disposing || MP_exportReviewStatus == null) return;
+        MP_exportReviewTimer.Stop();
+        if (catalog == null)
+        {
+            MP_exportReviewStatus.Text = "正在准备素材与导出检查…";
+            if (MP_exportPrimary != null) MP_exportPrimary.Enabled = false;
+            return;
+        }
+        MP_exportReviewTimer.Start();
+    }
+
+    private void MP_RefreshExportReview()
+    {
+        if (IsDisposed || Disposing) return;
+        MP_exportReviewTimer.Stop();
+        var review = MP_ExportReview.Inspect(document, catalog, document.ExportProfile);
+        MP_exportReviewStatus.Text = review.Summary;
+        MP_exportReviewStatus.ForeColor = review.Errors > 0 ? Color.FromArgb(239, 151, 139)
+            : review.Warnings > 0 ? Color.FromArgb(218, 185, 120) : Color.FromArgb(129, 206, 166);
+        MP_exportDependencySummary.Text = review.Dependencies.Count == 0
+            ? "依赖：仅原版基础内容"
+            : "依赖：" + string.Join("、", review.Dependencies.Select(x => x.Name ?? x.PackageId).Take(5))
+                + (review.Dependencies.Count > 5 ? $" 等 {review.Dependencies.Count} 项" : "");
+        MP_exportReviewDetails.Text = string.Join(Environment.NewLine,
+            review.Issues.Select(x => (x.IsError ? "[错误] " : "[提醒] ") + x.Message));
+        MP_exportReviewDetails.Visible = review.Issues.Count != 0;
+        MP_exportPrimary.Enabled = review.CanExport;
+
+        if (document.ExportProfile is "Framework" or "Universal")
+        {
+            bool recommended = MP_ExportReview.MP_CanRecommendDormancy(document, catalog);
+            MP_compatRecommendation.Text = document.EnableMPCompatibility
+                ? "已启用 · 仅在目标格式支持时生成休眠拓展"
+                : recommended ? "已发现可休眠对象 · 可按需要启用"
+                : "没有发现需要休眠拓展的对象";
+        }
+        else if (document.ExportProfile == "MechProtocol")
+            MP_compatRecommendation.Text = "MP 原生格式已包含对应能力，无需单独启用拓展";
+        else
+            MP_compatRecommendation.Text = "原版不支持此拓展，相关启用配置已清除";
+    }
+
     private void MP_RecordExportTarget(string path)
     {
         if (currentFile == null || string.IsNullOrWhiteSpace(path)) return;
@@ -17,6 +72,7 @@ public partial class MainForm
     private void RefreshExportLocation()
     {
         xmlPathBox.Text = StructureStorage.XmlTarget(document, saveLocationChanged ? null : currentFile, OutputFolder);
+        MP_ScheduleExportReview();
     }
     private void SetXmlDirectory()
     {
