@@ -47,6 +47,9 @@ public partial class MainForm : Form
         AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
         MinimumSize = new Size(1000, 640); KeyPreview = true;
         BuildUi();
+        MP_structureOverview.MP_NavigateRequested += canvas.MP_CenterOnGrid;
+        canvas.MP_ViewChanged += () => MP_structureOverview.MP_SetView(canvas.MP_VisibleCells);
+        MP_structureOverview.MP_SetView(canvas.MP_VisibleCells);
         RefreshMetadata(); ShowSelection();
         InitializeBackgroundLoading();
         KeyDown += (_, e) =>

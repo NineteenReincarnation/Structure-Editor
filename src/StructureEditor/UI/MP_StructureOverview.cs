@@ -9,6 +9,17 @@ internal sealed class MP_StructureOverview : Control
 {
     private readonly List<(Rectangle Area, int Category)> items = new();
     private Rectangle footprint;
+    private RectangleF MP_view = RectangleF.Empty;
+    private Rectangle MP_MapBounds => new(7, 47, Math.Max(1, Width - 14),
+        Math.Max(16, Height - 54));
+    internal event Action<PointF> MP_NavigateRequested;
+
+    internal void MP_SetView(RectangleF view)
+    {
+        if (MP_view.Equals(view)) return;
+        MP_view = view;
+        Invalidate();
+    }
     private int buildings, pawns, terrain;
     private static readonly Color Building = Color.FromArgb(161, 177, 180);
     private static readonly Color Pawn = Color.FromArgb(214, 187, 141);
@@ -103,7 +114,7 @@ internal sealed class MP_StructureOverview : Control
             }
         }
 
-        Rectangle map = new(7, top + 42, usable, Math.Max(16, Height - top - 49));
+        Rectangle map = MP_MapBounds;
         using (SolidBrush fill = new(Inset)) g.FillRectangle(fill, map);
         using (Pen border = new(Frame)) g.DrawRectangle(border,
             map.X, map.Y, map.Width - 1, map.Height - 1);
@@ -128,12 +139,60 @@ internal sealed class MP_StructureOverview : Control
         DrawLayer(g, 2, originX, originY, scale);
         DrawLayer(g, 0, originX, originY, scale);
         DrawLayer(g, 1, originX, originY, scale);
+        // The pale frame is the currently visible canvas, not a separate
+        // selection: moving or zooming the canvas updates it in real time.
+        if (!MP_view.IsEmpty)
+        {
+            RectangleF view = new(
+                originX + (MP_view.Left - footprint.Left) * scale,
+                originY + (footprint.Bottom - MP_view.Bottom) * scale,
+                MP_view.Width * scale, MP_view.Height * scale);
+            RectangleF clippedView = RectangleF.Intersect(view,
+                new RectangleF(map.X + 2, map.Y + 2, map.Width - 4, map.Height - 4));
+            if (clippedView.Width >= 1 && clippedView.Height >= 1)
+            {
+                using SolidBrush overlay = new(Color.FromArgb(36, 146, 205, 224));
+                using Pen outline = new(Color.FromArgb(216, 164, 219, 234), 1.25f);
+                g.FillRectangle(overlay, clippedView);
+                g.DrawRectangle(outline, clippedView.X, clippedView.Y,
+                    clippedView.Width, clippedView.Height);
+            }
+        }
         g.Restore(clipped);
         Rectangle dimensions = new(map.Right - 106, map.Bottom - 19, 99, 16);
         using (SolidBrush labelBg = new(Inset)) g.FillRectangle(labelBg, dimensions);
         TextRenderer.DrawText(g, footprint.Width + " × " + footprint.Height + " 格",
             Font, dimensions, Muted,
             TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        Cursor = items.Count > 0 && MP_MapBounds.Contains(e.Location) ? Cursors.Hand : Cursors.Default;
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        Cursor = Cursors.Default;
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        Rectangle map = MP_MapBounds;
+        if (e.Button != MouseButtons.Left || items.Count == 0 || !map.Contains(e.Location))
+            return;
+        float scale = Math.Min((map.Width - 18f) / Math.Max(1, footprint.Width),
+            (map.Height - 19f) / Math.Max(1, footprint.Height));
+        if (scale <= 0) return;
+        float originX = map.X + (map.Width - footprint.Width * scale) / 2f;
+        float originY = map.Y + (map.Height - footprint.Height * scale) / 2f;
+        // The schematic uses screen Y downward, while structure Z increases upward.
+        MP_NavigateRequested?.Invoke(new PointF(
+            Math.Clamp(footprint.Left + (e.X - originX) / scale, footprint.Left, footprint.Right),
+            Math.Clamp(footprint.Bottom - (e.Y - originY) / scale, footprint.Top, footprint.Bottom)));
     }
 
     private void DrawLayer(Graphics g, int category, float x, float y, float scale)
