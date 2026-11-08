@@ -27,7 +27,7 @@ public class StructureDocument
     public string Description { get; set; } = "使用 Structure Editor 创建的结构布局。";
     public string Category { get; set; } = "General";
     public bool StartDormant { get; set; }
-    public string ExportProfile { get; set; } = "VanillaPrefab";
+    public string ExportProfile { get; set; } = "Framework";
     public bool AutoExportOnSave { get; set; } = true;
     public string XmlExportDirectory { get; set; }
     public bool EnableMPCompatibility { get; set; }
@@ -95,21 +95,14 @@ public class StructureDocument
             var loaded=JsonSerializer.Deserialize<StructureDocument>(json) ?? throw new InvalidDataException("工程文件为空。");
             if (loaded.FormatVersion != 1) throw new InvalidDataException("不支持该工程格式版本：" + loaded.FormatVersion);
             loaded.Items ??= new();
-            using var properties=JsonDocument.Parse(json);
-            if(!properties.RootElement.TryGetProperty(nameof(ExportProfile),out _))
-            {
-                // Files saved before export profiles existed used the old Framework
-                // behavior. Keep their historical output, although NEW projects
-                // default to vanilla PrefabDef.
-                loaded.ExportProfile = "Framework";
-                loaded.EnableMPCompatibility=loaded.StartDormant || loaded.Items.Any(i=>i.StartDormant==true);
-            }
+            // Historical export preferences no longer select the output format.
+            loaded.ExportProfile = "Framework";
             return loaded;
         }
         XElement root = XDocument.Load(path).Root!;
         var definitions = root.Name.LocalName == "Defs" ? root.Elements() : new[] { root };
         XElement selected = definitionName == null ? definitions.FirstOrDefault(d => (string)d.Attribute("Abstract") != "True" && d.Name.LocalName is "PrefabDef" or "StructureFramework.StructureDef" or "MechProtocol.MP_StructureDef" or "StructureEditor.StructureDef") : definitions.FirstOrDefault(d => (string)d.Element("defName") == definitionName);
-        StructureDocument FromXml(StructureDocument value) { value.XmlExportDirectory = Path.GetDirectoryName(Path.GetFullPath(path)); return value; }
+        StructureDocument FromXml(StructureDocument value) { value.XmlExportDirectory = Path.GetDirectoryName(Path.GetFullPath(path)); value.ExportProfile = "Framework"; return value; }
         if (selected?.Name.LocalName == "PrefabDef") return FromXml(PrefabCodec.Import(selected));
         if (selected?.Name.LocalName == "StructureFramework.StructureDef") return FromXml(FrameworkCodec.Import(selected, catalog, root));
         XElement def = selected;

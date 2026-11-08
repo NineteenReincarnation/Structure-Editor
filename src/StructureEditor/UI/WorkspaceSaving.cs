@@ -12,10 +12,10 @@ internal static class StructureStorage
     internal static void ExportXml(StructureDocument document, Catalog catalog, string path, string profile)
     {
         if (catalog == null) throw new InvalidOperationException("素材仍在加载，请稍后导出。");
-        MP_ExportReview.Result review = MP_ExportReview.Inspect(document, catalog, profile);
+        MP_ExportReview.Result review = MP_ExportReview.Inspect(document, catalog, "Framework");
         if (!review.CanExport)
             throw new InvalidOperationException(string.Join("\n", review.Issues.Where(i => i.IsError).Take(12).Select(i => i.Message)));
-        var xml = ExportDependencies.Xml(document, catalog, profile);
+        var xml = ExportDependencies.Xml(document, catalog, "Framework");
         if (File.Exists(path))
         {
             XDocument existing = XDocument.Load(path);
@@ -60,7 +60,7 @@ internal static class StructureStorage
         document.Save(path);
         if (!document.AutoExportOnSave) return new(null, null);
         string xmlPath = XmlTarget(document, path, Path.GetDirectoryName(Path.GetFullPath(path))!);
-        try { ExportXml(document, catalog, xmlPath, document.ExportProfile); return new(xmlPath, null); }
+        try { ExportXml(document, catalog, xmlPath, "Framework"); return new(xmlPath, null); }
         catch (Exception ex) { return new(xmlPath, ex.Message); }
     }
     internal static void BackupExisting(string path)
@@ -120,34 +120,39 @@ public partial class MainForm
         exportResult.ForeColor=result.ExportError==null?muted:Color.Salmon;
         exportResult.Visible = true;
         status.Text=result.ExportError!=null?"工程已保存；XML 导出失败："+result.ExportError:result.XmlPath!=null?"工程和 XML 已保存："+result.XmlPath:"已保存工程："+path;
-        if(result.ExportError!=null) MessageBox.Show(this,"JSON 工程已保存。XML 未更新：\n\n"+result.ExportError+"\n\n可在右侧“导出”页修改格式或目录后重试。","自动导出失败",MessageBoxButtons.OK,MessageBoxIcon.Warning);
+        if(result.ExportError!=null) MessageBox.Show(this,"JSON 工程已保存。XML 未更新：\n\n"+result.ExportError+"\n\n请检查工程页的导出问题或调整 XML 目录后重试。","自动导出失败",MessageBoxButtons.OK,MessageBoxIcon.Warning);
         return true;
     }
-    private void ExportLayout(bool legacy,string requestedProfile=null)
+    private void ExportLayout()
     {
         CommitInspectorEdit();CommitMetadata();
-        string profile=requestedProfile??(legacy?"MechProtocol":document.ExportProfile);
-        var review=MP_ExportReview.Inspect(document,catalog,profile);
+        var review=MP_ExportReview.Inspect(document,catalog,"Framework");
         if(!review.CanExport)
         {
-            MessageBox.Show(this,string.Join("\n",review.Issues.Where(i=>i.IsError).Take(12).Select(i=>i.Message)),"导出检查",MessageBoxButtons.OK,MessageBoxIcon.Warning);
+            MessageBox.Show(this,string.Join("\n",review.Issues.Where(i=>i.IsError).Take(12).Select(i=>i.Message)),
+                "导出检查",MessageBoxButtons.OK,MessageBoxIcon.Warning);
             return;
         }
-        var requirements=review.Dependencies;
-        using SaveFileDialog dialog=new(){Title="导出 "+profile+" XML（"+requirements.Count+" 个依赖）",Filter="布局 XML|*.xml",InitialDirectory=Path.GetDirectoryName(StructureStorage.XmlTarget(document,currentFile,OutputFolder)),FileName=document.DefName+".xml",DefaultExt="xml",AddExtension=true};
+        using SaveFileDialog dialog=new()
+        {
+            Title="导出 Structure Framework XML（"+review.Dependencies.Count+" 个依赖）",
+            Filter="布局 XML|*.xml",
+            InitialDirectory=Path.GetDirectoryName(StructureStorage.XmlTarget(document,currentFile,OutputFolder)),
+            FileName=document.DefName+".xml",DefaultExt="xml",AddExtension=true
+        };
         if(dialog.ShowDialog(this)!=DialogResult.OK)return;
         CheckWorkspaceExportTarget(dialog.FileName);
-        StructureStorage.ExportXml(document,catalog,dialog.FileName,profile);
+        StructureStorage.ExportXml(document,catalog,dialog.FileName,"Framework");
         MP_RecordExportTarget(dialog.FileName);
-        status.Text="已导出布局："+dialog.FileName+(profile=="VanillaPrefab"&&(document.StartDormant||document.Items.Any(i=>i.StartDormant==true))?"（MP 休眠状态仅保留在工程中）":"");
+        status.Text="已导出 Structure Framework 布局："+dialog.FileName;
     }
     private void ExportBundle()
     {
         CommitInspectorEdit();CommitMetadata();
-        var review=MP_ExportReview.Inspect(document,catalog,document.ExportProfile);
+        var review=MP_ExportReview.Inspect(document,catalog,"Framework");
         if(!review.CanExport)throw new InvalidOperationException(string.Join("\n",review.Issues.Where(i=>i.IsError).Take(12).Select(i=>i.Message)));
         using FolderBrowserDialog folder=new(){Description="选择内容包的父目录（不会复制模组素材或 DLL）",SelectedPath=OutputFolder};if(folder.ShowDialog(this)!=DialogResult.OK)return;
-        string result=ExportDependencies.Bundle(document,catalog,folder.SelectedPath,document.ExportProfile);status.Text="已导出独立结构包："+result;
+        string result=ExportDependencies.Bundle(document,catalog,folder.SelectedPath,"Framework");status.Text="已导出独立结构包："+result;
     }
     private StructureDocument LoadChosenDefinition(string file)
     {

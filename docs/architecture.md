@@ -37,7 +37,7 @@ Structure-Editor/
 1. **App → UI**：`Program` 负责启动和配置，`MainForm` 组织 WinForms 工作区及用户操作；主窗体的 `partial` 文件仍保留在同一命名空间 `StructureEditor`。
 2. **Catalog → Canvas / UI**：`ModSources` 识别素材来源，`Catalog` 解析游戏与 Mod 的 XML，`RuntimeCatalog` 在有有效游戏运行时快照时覆盖对应条目；`TextureLibrary` 从用户本机游戏按需加载预览。目录数据不进入用户工程文件。
 3. **Core → Canvas / Formats**：`StructureDocument` 保存建筑、单位、地形、元数据；`StructureIndex` 提供空间索引和占地检查。绘制及格式处理共用同一个结构模型。
-4. **UI → Formats**：`WorkspaceDocuments` 管理多标签与结构库，`WorkspaceSaving` 处理存盘，`WorkspaceExport` 选择格式；`FrameworkCodec`、`PrefabCodec` 与 `ExportDependencies` 负责具体导入导出逻辑。
+4. **UI → Formats**：`WorkspaceDocuments` 管理多标签与结构库，`WorkspaceSaving` 处理存盘，`WorkspaceExport` 固定输出 Framework；`FrameworkCodec` 是唯一 XML 导出器，`PrefabCodec` 仅作为历史格式导入适配；`ExportDependencies` 负责依赖分析。
 5. **Compatibility**：MechProtocol 的名称和专用导出规则只能放在兼容层；默认编辑流程须可独立用于 RimWorld 和其他 Mod。
 
 以上是现有依赖的职责归属，不表示已强制建立跨程序集或复杂依赖注入架构。本次目录整理只移动源文件，不修改类名、公开行为、文件协议或游戏端逻辑。

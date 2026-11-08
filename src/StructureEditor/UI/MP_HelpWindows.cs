@@ -232,7 +232,7 @@ internal static class MP_HelpWindows
             Padding = new Padding(24, 22, 20, 12), BackColor = Surface };
         Label product = Text("Structure Editor", 23f, true);
         Label tagline = Text("RimWorld · 结构工坊", 11.5f, false, Accent);
-        Label detail = Text("结构编辑 · 机械集群设计 · 多格式 XML 导出",
+        Label detail = Text("结构编辑 · 机械集群设计 · Structure Framework 统一标准",
             9.5f, false, Secondary);
         detail.Dock = DockStyle.Bottom; tagline.Dock = DockStyle.Bottom; product.Dock = DockStyle.Top;
         header.Controls.Add(detail); header.Controls.Add(tagline); header.Controls.Add(product);

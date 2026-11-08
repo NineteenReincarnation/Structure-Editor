@@ -18,7 +18,10 @@ public partial class MainForm
         ToolStripMenuItem recent = new("最近打开"); file.DropDownItems.Add(recent);
         recent.DropDownOpening += (_, _) => { recent.DropDownItems.Clear(); foreach (string path in Program.Paths.RecentDocuments.Where(File.Exists).Take(12)) AddMenuAction(recent, Path.GetFileName(path), () => OpenDocumentPath(path)); if (recent.DropDownItems.Count == 0) recent.DropDownItems.Add(new ToolStripMenuItem("无最近工程") { Enabled = false }); };
         file.DropDownItems.Add(new ToolStripSeparator()); AddMenuAction(file, "保存", () => SaveDocument(false), Keys.Control | Keys.S); AddMenuAction(file, "另存为…", () => SaveDocument(true), Keys.Control | Keys.Shift | Keys.S);
-        ToolStripMenuItem export = new("导出"); file.DropDownItems.Add(export); AddMenuAction(export, "当前目标格式 XML…", () => ExportLayout(false)); AddMenuAction(export, "独立结构内容包…", ExportBundle); AddMenuAction(export,"原版 PrefabDef XML…",()=>ExportLayout(false,"VanillaPrefab")); AddMenuAction(export, "PNG 预览…", ExportPreview); export.DropDownItems.Add(new ToolStripSeparator()); AddMenuAction(export, "MechProtocol 兼容 XML…", () => ExportLayout(true));
+        ToolStripMenuItem export = new("导出"); file.DropDownItems.Add(export);
+        AddMenuAction(export,"Structure Framework XML…",ExportLayout);
+        AddMenuAction(export,"独立结构内容包…",ExportBundle);
+        AddMenuAction(export,"PNG 预览…",ExportPreview);
         AddMenuAction(file, "工程保存目录…", SetSaveDirectory); file.DropDownItems.Add(new ToolStripSeparator()); AddMenuAction(file, "关闭工程", CloseWorkspaceDocument, Keys.Control | Keys.W); AddMenuAction(file, "退出", Close, Keys.Alt | Keys.F4);
         var undoAction = AddMenuAction(edit, "撤销", Undo, Keys.Control | Keys.Z); var redoAction = AddMenuAction(edit, "重做", Redo, Keys.Control | Keys.Shift | Keys.Z); edit.DropDownItems.Add(new ToolStripSeparator());
         var cutAction = AddMenuAction(edit, "剪切", CutObjects, Keys.Control | Keys.X); var copyAction = AddMenuAction(edit, "复制", CopyObjects, Keys.Control | Keys.C); var pasteAction = AddMenuAction(edit, "粘贴", PasteObjects, Keys.Control | Keys.V); var duplicateAction = AddMenuAction(edit, "复制为新对象", DuplicateObjects, Keys.Control | Keys.D);
@@ -74,8 +77,8 @@ public partial class MainForm
     }
     private sealed class EditorMenuColors : ProfessionalColorTable
     {
-        private static Color Surface => Color.FromArgb(36, 44, 49);
-        private static Color Highlight => Color.FromArgb(57, 91, 93);
+        private static Color Surface => Color.FromArgb(39, 52, 62);
+        private static Color Highlight => Color.FromArgb(51, 87, 94);
         public override Color ToolStripDropDownBackground => Surface;
         public override Color ImageMarginGradientBegin => Surface;
         public override Color ImageMarginGradientMiddle => Surface;

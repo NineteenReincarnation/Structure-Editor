@@ -15,16 +15,9 @@ public partial class MainForm : Form
         categoryBox = new MP_DarkComboBox(), dormancyBox = new MP_DarkComboBox();
     private readonly Label dormancyInfo = new();
     private readonly CheckBox dormant = new();
-    private readonly ComboBox profileBox = new MP_DarkComboBox();
-    private readonly CheckBox mpCompatibility = new();
     private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new();
-    private readonly MP_StructureOverview MP_structureOverview = new();
     private readonly MP_ExportIndicator MP_exportStatusDot = new();
-    private readonly System.Windows.Forms.Timer MP_overviewDelay = new() { Interval = 110 };
     private Label MP_rotationLabel, MP_materialLabel, MP_dormancyLabel;
-    private StructureDocument MP_summaryDocument;
-    private Catalog MP_summaryCatalog;
-    private int MP_summaryCount = -1;
     private readonly ListBox palette = new();
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Stack<StructureDocument> undo = new(), redo = new();
@@ -47,9 +40,6 @@ public partial class MainForm : Form
         AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
         MinimumSize = new Size(1000, 640); KeyPreview = true;
         BuildUi();
-        MP_structureOverview.MP_NavigateRequested += canvas.MP_CenterOnGrid;
-        canvas.MP_ViewChanged += () => MP_structureOverview.MP_SetView(canvas.MP_VisibleCells);
-        MP_structureOverview.MP_SetView(canvas.MP_VisibleCells);
         RefreshMetadata(); ShowSelection();
         InitializeBackgroundLoading();
         KeyDown += (_, e) =>
@@ -60,18 +50,10 @@ public partial class MainForm : Form
             { e.Handled = true; e.SuppressKeyPress = true; }
         };
         canvas.BeforeChange += Snapshot;
-        MP_overviewDelay.Tick += (_, _) =>
-        {
-            MP_overviewDelay.Stop();
-            if (!IsDisposed && !Disposing) UpdateSummary();
-        };
         canvas.Changed += () =>
         {
-            MP_summaryDocument = null;
             dirty = true;
             UpdateTitle();
-            MP_overviewDelay.Stop();
-            MP_overviewDelay.Start();
             MP_ScheduleExportReview();
         };
         canvas.SelectionChanged += ShowSelection;
@@ -80,7 +62,6 @@ public partial class MainForm : Form
         Disposed += (_, _) =>
         {
             MP_exportReviewTimer.Stop(); MP_exportReviewTimer.Dispose();
-            MP_overviewDelay.Stop(); MP_overviewDelay.Dispose();
         };
         Load += (_, _) => { UpdatePaletteDensity(); FitWorkingArea(); };
         Shown += (_, _) => { if (Program.IsGame(Program.Paths.GameRoot)) LoadCatalog(); else { canvas.Document=document; RefreshMetadata(); status.Text="请在 编辑 → 首选项 中选择 RimWorld 游戏目录，加载本机素材。"; } };
@@ -172,7 +153,9 @@ public partial class MainForm : Form
         Bitmap image = asyncThumbnails ? catalog.Textures.Request(texturePath) : catalog.Textures.Get(texturePath);
         if (image != null)
         {
-            Rectangle src = item.Linked && item.Icon == null ? LinkedGraphics.Source(image.Width, image.Height, 0) : new Rectangle(0, 0, image.Width, image.Height);
+            Rectangle src = item.Linked && item.Icon == null && LinkedGraphics.IsAtlas(image, texturePath)
+                ? LinkedGraphics.Source(image.Width, image.Height, 0)
+                : new Rectangle(0, 0, image.Width, image.Height);
             int iconSize = Px(47); float ratio = Math.Min((float)iconSize / src.Width, (float)iconSize / src.Height);
             Rectangle dest = new(e.Bounds.X + Px(4) + (int)((iconSize - src.Width * ratio) / 2), e.Bounds.Y + Px(6) + (int)((iconSize - src.Height * ratio) / 2), (int)(src.Width * ratio), (int)(src.Height * ratio));
             e.Graphics.DrawImage(image, dest, src, GraphicsUnit.Pixel);
@@ -204,7 +187,7 @@ public partial class MainForm : Form
             MP_rotationLabel.Visible = rotationBox.Visible = false;
             MP_dormancyLabel.Visible = dormancyBox.Visible = dormancyInfo.Visible = false;
         }
-        UpdateSummary();
+       
     }
     private void ShowItem(CatalogItem item, PlacedItem placed)
     {
@@ -251,10 +234,7 @@ public partial class MainForm : Form
                 if (rotationBox.SelectedIndex != rotation) rotationBox.SelectedIndex = rotation;
             }
             var supported = placed == null ? new List<PlacedItem>() : canvas.Selection.Where(i => catalog.Find(i.Kind, i.DefName)?.CanBeDormant == true).ToList();
-            bool mp = document.ExportProfile == "MechProtocol"
-                || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal") && document.EnableMPCompatibility);
-            bool canDormant = placed == null ? item.CanBeDormant : supported.Count > 0;
-            bool showDormancy = mp && canDormant;
+            bool showDormancy = placed == null ? item.CanBeDormant : supported.Count > 0;
             MP_dormancyLabel.Visible = dormancyBox.Visible = dormancyInfo.Visible = showDormancy;
             dormancyBox.Enabled = showDormancy;
             var states = supported.Select(i => i.StartDormant).Distinct().ToList();
@@ -266,6 +246,16 @@ public partial class MainForm : Form
         }
         finally { updating = false; }
     }
+    private static void MP_FitInspectorLabel(Label label, int minimumHeight)
+    {
+        if (label.Width < 40 || label.IsDisposed) return;
+        int measured = TextRenderer.MeasureText(label.Text, label.Font,
+            new Size(Math.Max(40, label.ClientSize.Width - 6), 10000),
+            TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
+        int required = Math.Max(minimumHeight, measured + 6);
+        if (label.Height != required) label.Height = required;
+    }
+
     private void CommitInspectorEdit()
     {
         if (updating) return;
@@ -286,47 +276,27 @@ public partial class MainForm : Form
     private void RefreshMetadata()
     {
         updating = true; idBox.Text = document.DefName; labelBox.Text = document.Label; categoryBox.SelectedIndex = document.Category == "MechCluster" ? 0 : 1; dormant.Checked = document.StartDormant;
-        profileBox.SelectedIndex = document.ExportProfile switch
-        {
-            "MechProtocol" => 2, "VanillaPrefab" => 1,
-            "Universal" => 3, _ => 0
-        };
-        mpCompatibility.Checked = document.EnableMPCompatibility;
-        bool supportsExtension = document.ExportProfile is "Framework" or "Universal";
-        mpCompatibility.Enabled = supportsExtension;
-        mpCompatibility.Visible = supportsExtension;
+        document.ExportProfile = "Framework";
         autoExport.Checked = document.AutoExportOnSave;
         exportResult.Text = "";
         exportResult.Visible = false;
-        dormant.Enabled = document.ExportProfile == "MechProtocol"
-            || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal")
-                && document.EnableMPCompatibility);
-        dormant.Visible = dormant.Enabled;
+        dormant.Enabled = true; dormant.Visible = true;
         updating = false;
-        UpdateTitle(); UpdateSummary();
+        UpdateTitle();
         RefreshSaveLocation(); LoadNamingFields();
     }
     private void CommitMetadata()
     {
         if (updating) return;
-        string profile = profileBox.SelectedIndex switch
-        {
-            2 => "MechProtocol", 1 => "VanillaPrefab",
-            3 => "Universal", _ => "Framework"
-        };
-        // Switching away from an extension-capable output clears only its
-        // enable flag. Original per-object dormancy remains in the JSON.
-        bool compatible = (profile == "Framework" || profile == "Universal")
-            && mpCompatibility.Checked;
+        // XML output is fixed to Structure Framework.
         if (document.DefName == idBox.Text && document.Label == labelBox.Text
             && document.Category == SelectedCategory
-            && document.StartDormant == dormant.Checked && document.ExportProfile == profile
-            && document.EnableMPCompatibility == compatible
+            && document.StartDormant == dormant.Checked && document.ExportProfile == "Framework"
             && document.AutoExportOnSave == autoExport.Checked) return;
         Snapshot();
         document.DefName = idBox.Text.Trim(); document.Label = labelBox.Text.Trim();
         document.Category = SelectedCategory; document.StartDormant = dormant.Checked;
-        document.ExportProfile = profile; document.EnableMPCompatibility = compatible;
+        document.ExportProfile = "Framework";
         document.AutoExportOnSave = autoExport.Checked;
         dirty = true; UpdateTitle(); canvas.Invalidate(); RefreshMetadata(); ShowSelection();
         MP_ScheduleExportReview();
@@ -344,16 +314,6 @@ public partial class MainForm : Form
         // The naming preview also depends on the current file location, not
         // only the visible title (for example after saving a clean document).
         RefreshNamingPreview();
-    }
-    private void UpdateSummary()
-    {
-        if (ReferenceEquals(MP_summaryDocument, document)
-            && ReferenceEquals(MP_summaryCatalog, catalog)
-            && MP_summaryCount == document.Items.Count) return;
-        MP_structureOverview.SetDocument(document, catalog);
-        MP_summaryDocument = document;
-        MP_summaryCatalog = catalog;
-        MP_summaryCount = document.Items.Count;
     }
     private bool AskSave()
     {

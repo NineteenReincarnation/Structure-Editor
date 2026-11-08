@@ -81,7 +81,7 @@ public partial class MainForm
         inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 284), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 3, SplitterDistance = Math.Max(330, ClientSize.Width - 638), BackColor = librarySplit.BackColor };
         librarySplit.Panel2.Controls.Add(inspectorSplit);
         librarySplit.Panel1MinSize = 235; librarySplit.Panel2MinSize = 540;
-        inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 300;
+        inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 320;
 
         Panel library = new() { Dock = DockStyle.Fill, BackColor = surface, Padding = new(10) };
         TableLayoutPanel filters = BuildLibraryFilters();
@@ -125,7 +125,7 @@ public partial class MainForm
         librarySplit.Panel1.Controls.Add(MP_libraryTabs);
 
         Panel viewport = new() { Dock = DockStyle.Fill };
-        TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36,
+        MP_SmoothLayout layerBar = new() { Dock = DockStyle.Top, Height = 36,
             BackColor = Color.FromArgb(37, 50, 60), ColumnCount = 5 };
         layerBar.ColumnStyles.Add(new(SizeType.Absolute, 132));
         layerBar.ColumnStyles.Add(new(SizeType.AutoSize));
@@ -197,9 +197,13 @@ public partial class MainForm
         TableLayoutPanel Page(string title)
         {
             TabPage tab = new(title) { BackColor = surface, ForeColor = text, Padding = new(9), AutoScroll = true };
-            TableLayoutPanel layout = new() { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 1, Padding = new(3), Margin = Padding.Empty };
+            MP_SmoothLayout layout = new() { Dock = DockStyle.Top, AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1,
+                Padding = new(3), Margin = Padding.Empty };
             layout.ColumnStyles.Add(new(SizeType.Percent, 100));
-            layout.SizeChanged += (_, _) => { var extent = new Size(0, layout.Height + tab.Padding.Vertical); if (tab.AutoScrollMinSize != extent) tab.AutoScrollMinSize = extent; };
+            // AutoScroll already measures the docked child. Manually writing
+            // AutoScrollMinSize on every SizeChanged causes repeated relayout
+            // (and clipped controls) when the page width/scrollbar changes.
             tab.Controls.Add(layout); tabs.AddPage(tab); return layout;
         }
         void Row(TableLayoutPanel panel, Control control, int height = 0)
@@ -215,8 +219,15 @@ public partial class MainForm
         TableLayoutPanel objects = Page("对象"), metadata = Page("工程");
         TableLayoutPanel exports = metadata;
         selectedName.Font = new(Font, FontStyle.Bold);
+        // Content may wrap to three lines for long DefNames at 125/150% DPI.
+        // Re-measure when text or available width changes instead of
+        // clipping it into a fixed 49/40px label row.
+        selectedName.TextChanged += (_, _) => MP_FitInspectorLabel(selectedName, 49);
+        selectedName.SizeChanged += (_, _) => MP_FitInspectorLabel(selectedName, 49);
         Row(objects, selectedName, 49);
         selectedInfo.ForeColor = muted;
+        selectedInfo.TextChanged += (_, _) => MP_FitInspectorLabel(selectedInfo, 40);
+        selectedInfo.SizeChanged += (_, _) => MP_FitInspectorLabel(selectedInfo, 40);
         Row(objects, selectedInfo, 40);
         materialBox.DropDownStyle = rotationBox.DropDownStyle = ComboBoxStyle.DropDownList;
         MP_materialLabel = new Label { Text = "材质", ForeColor = muted, AutoSize = true };
@@ -250,27 +261,10 @@ public partial class MainForm
         Field(metadata, "类别", categoryBox);
         dormant.Text = "默认休眠"; dormant.AutoSize = true;
         Row(metadata, dormant);
-        // A compact diagram makes object composition and occupied footprint
-        // visible without adding a separate statistics page or toolbar.
-        Row(metadata, MP_structureOverview, 146);
-
         Row(metadata, new Label { Text = "XML 导出", Font = new(Font, FontStyle.Bold),
             ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
-        profileBox.DropDownStyle = ComboBoxStyle.DropDownList;
-        profileBox.Items.AddRange(new object[]
-        {
-            "Structure Framework（扩展）",
-            "原版 PrefabDef（默认）",
-            "MechProtocol（专用）",
-            "原版基础 + 条件拓展"
-        });
-        profileBox.SelectedIndex = 1;
-        Field(metadata, "目标格式", profileBox);
-        mpCompatibility.Text = "MechProtocol · 逐对象休眠";
-        mpCompatibility.AutoSize = true;
-        Row(metadata, mpCompatibility);
-        MP_compatRecommendation.ForeColor = muted;
-        Row(metadata, MP_compatRecommendation);
+        Row(metadata,new Label { Text="Structure Framework · 统一结构标准",
+            AutoSize=true,ForeColor=text });
         Row(metadata, autoExport);
         Panel reviewRow = new()
         {
@@ -298,7 +292,7 @@ public partial class MainForm
 
         Button advancedToggle = MakeButton("高级设置  ▸", 0, 0, 230);
         Row(metadata, advancedToggle, 33);
-        TableLayoutPanel advanced = new()
+        MP_SmoothLayout advanced = new()
         {
             AutoSize = true, Dock = DockStyle.Top,
             BackColor = surface, ColumnCount = 1, Visible = false,
@@ -344,15 +338,15 @@ public partial class MainForm
             item.Click += (_, _) => Safe(action);
             moreMenu.Items.Add(item);
         }
-        More("另存为 XML…", () => ExportLayout(false));
+        More("另存为 XML…", ExportLayout);
         More("导出完整 Mod 内容包…", ExportBundle);
         More("导出 PNG 预览…", ExportPreview);
         moreExport.Click += (_, _) => moreMenu.Show(moreExport, new Point(0, moreExport.Height));
         Row(advanced, moreExport, 32);
         MP_exportReviewTimer.Tick += (_, _) => MP_RefreshExportReview();
         inspectorSplit.Panel2.Controls.Add(tabs);
-        foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, categoryBox, dormancyBox, profileBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
-        foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, categoryBox, dormancyBox, profileBox })
+        foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, categoryBox, dormancyBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
+        foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, categoryBox, dormancyBox })
         {
             combo.FlatStyle = FlatStyle.Flat; combo.DrawMode = DrawMode.OwnerDrawFixed;
             combo.ItemHeight = combo == materialBox ? Math.Max(32, Font.Height + 14)
@@ -423,14 +417,12 @@ public partial class MainForm
             canvas.SetSelectionDormancy(canvas.BrushDormant);
         };
         foreach (Control c in new Control[] { idBox, labelBox, categoryBox, dormant }) c.Leave += (_, _) => CommitMetadata();
-        profileBox.SelectedIndexChanged+=(_,_)=>{if(!updating)CommitMetadata();};
-        mpCompatibility.CheckedChanged+=(_,_)=>{if(!updating)CommitMetadata();};
         autoExport.CheckedChanged+=(_,_)=>{if(!updating)CommitMetadata();};
         canvas.ToolChanged += RefreshToolDisplay;
         StatusStrip strip = new() { BackColor = Color.FromArgb(23, 29, 33), ForeColor = text, SizingGrip = false };
         selectionStatus = new() { BorderSides = ToolStripStatusLabelBorderSides.None, Text = "放置" };
         status.Text = "正在读取游戏素材…"; strip.Items.Add(status); strip.Items.Add(selectionStatus);
-        TableLayoutPanel workspace = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = Padding.Empty, Padding = Padding.Empty };
+        MP_SmoothLayout workspace = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = surface };
         workspace.ColumnStyles.Add(new(SizeType.Percent, 100));
         workspace.RowStyles.Add(new(SizeType.AutoSize)); workspace.RowStyles.Add(new(SizeType.Absolute, 38)); workspace.RowStyles.Add(new(SizeType.Percent, 100)); workspace.RowStyles.Add(new(SizeType.AutoSize));
         menu.Dock = strip.Dock = DockStyle.Fill; menu.Margin = topBar.Margin = librarySplit.Margin = strip.Margin = Padding.Empty;

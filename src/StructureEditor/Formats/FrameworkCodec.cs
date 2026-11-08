@@ -5,6 +5,12 @@ namespace StructureEditor;
 internal static class FrameworkCodec
 {
     public const string PackageId = "nineteenreincarnation.structureframework";
+    internal static bool UsesMpDormancy(StructureDocument doc, Catalog catalog, PlacedItem item) =>
+        item.Kind != "Terrain" && catalog?.Find(item.Kind,item.DefName)?.CanBeDormant == true
+        && (doc.StartDormant || item.StartDormant.HasValue);
+    internal static bool NeedsMpDormancy(StructureDocument doc, Catalog catalog) =>
+        doc.Items.Any(i=>UsesMpDormancy(doc,catalog,i));
+
     public static XElement Export(StructureDocument document, Catalog catalog)
     {
         _ = document.ToXml();
@@ -23,7 +29,7 @@ internal static class FrameworkCodec
                 if(kind=="Building"&&!string.IsNullOrEmpty(item.Stuff))entry.Add(new XElement("stuffDef",item.Stuff));
                 var modifiers = new XElement("modifiers");
                 foreach(string xml in item.FrameworkModifiers ?? new())modifiers.Add(XElement.Parse(xml));
-                if(document.EnableMPCompatibility && kind!="Terrain" && catalog.Find(kind,item.DefName)?.CanBeDormant==true)
+                if(UsesMpDormancy(document,catalog,item))
                     modifiers.Add(new XElement("li",new XAttribute("Class","StructureFramework.Integrations.MPDormancyModifier"),new XElement("dormant",(item.StartDormant??document.StartDormant).ToString().ToLowerInvariant())));
                 if(modifiers.HasElements)entry.Add(modifiers);entries.Add(entry);
             }
