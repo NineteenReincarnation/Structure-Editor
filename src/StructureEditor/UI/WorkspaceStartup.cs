@@ -82,8 +82,14 @@ public partial class MainForm
             canvas.Document = document; RefreshMetadata(); RefreshPacks(); RefreshGroups(); FilterPalette(); canvas.CenterView();
             if (restoreWorkspace) RestoreWorkspace();
             textureRefresh.Start(); CatalogLoadMilliseconds = timer.ElapsedMilliseconds;
-            status.Text = result.Warning ?? $"已读取 {catalog.Items.Count} 项素材 · 预览按需加载";
-            File.WriteAllText(Path.Combine(Program.DataDirectory, "startup.log"), $"Catalog ready: {CatalogLoadMilliseconds} ms; items: {catalog.Items.Count}; sources: {catalog.Textures.SourceCount}; game parsing and initial decoding ran in the background.\n");
+            status.Text = result.Warning ?? $"已读取 {catalog.Items.Count} 项素材 · " +
+                (catalog.MP_UsedWarmCache ? "缓存加速" : "已更新缓存") + " · 预览按需加载";
+            File.WriteAllText(Path.Combine(Program.DataDirectory, "startup.log"),
+                $"Catalog ready: {CatalogLoadMilliseconds} ms; cache hit: {catalog.MP_UsedWarmCache}; " +
+                $"cache check: {catalog.MP_CacheCheckMilliseconds} ms; " +
+                $"texture source index: {catalog.MP_TextureIndexMilliseconds} ms; " +
+                $"definition resolution: {catalog.MP_DefParseMilliseconds} ms; " +
+                $"items: {catalog.Items.Count}; texture sources: {catalog.Textures.SourceCount}.\n");
             if (catalog.Warnings.Count > 0) File.WriteAllLines(Path.Combine(Program.DataDirectory, "catalog-warnings.log"), catalog.Warnings);
         }
         catch (OperationCanceledException) { loaded?.Dispose(); }

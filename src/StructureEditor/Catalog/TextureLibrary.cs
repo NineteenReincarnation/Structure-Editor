@@ -43,7 +43,9 @@ public class TextureLibrary : IDisposable
         appearancePaths.Clear();
         ZipArchive zip = ZipFile.OpenRead(path);
         archives.Add(zip);
-        offsets[zip] = ReadOffsets(path);
+        // Central-directory offsets are expensive (a per-entry seek/read).
+        // Build them only when the first actual texture decode is requested.
+        // The normal UI path only needs entry names during catalog indexing.
         foreach (ZipArchiveEntry e in zip.Entries)
             if ((e.FullName.Contains("Textures/", StringComparison.OrdinalIgnoreCase)) && (e.Name.EndsWith(".dds.split") || e.Name.EndsWith(".dds") || e.Name.EndsWith(".png")))
                 sources[Key(e.FullName)] = new Source(null, zip, e.FullName, path);
@@ -162,7 +164,11 @@ public class TextureLibrary : IDisposable
     {
         ZipArchiveEntry entry = source.Archive.GetEntry(source.Entry)!;
         using FileStream file = File.OpenRead(source.ArchivePath);
-        file.Position = offsets[source.Archive][source.Entry];
+        // Called under the existing decoder lock, so the lazy index is shared
+        // across preview requests without racing other background workers.
+        if (!offsets.TryGetValue(source.Archive, out var archiveOffsets))
+            offsets[source.Archive] = archiveOffsets = ReadOffsets(source.ArchivePath);
+        file.Position = archiveOffsets[source.Entry];
         byte[] header = new byte[30]; file.ReadExactly(header);
         int method = BinaryPrimitives.ReadUInt16LittleEndian(header.AsSpan(8));
         int names = BinaryPrimitives.ReadUInt16LittleEndian(header.AsSpan(26)) + BinaryPrimitives.ReadUInt16LittleEndian(header.AsSpan(28));

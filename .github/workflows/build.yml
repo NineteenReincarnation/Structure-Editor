@@ -50,6 +50,12 @@ jobs:
           dotnet ./app/StructureEditor.dll --ui-smoke-test
           if ($LASTEXITCODE -ne 0) { throw "WinForms startup smoke test failed." }
 
+      - name: Verify warm catalog cache, invalidation, and lazy ZIP indexing
+        shell: pwsh
+        run: |
+          dotnet ./app/StructureEditor.dll --catalog-cache-test
+          if ($LASTEXITCODE -ne 0) { throw "Catalog cache regression check failed." }
+
       - name: Commit app files to main and legacy default branch
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         shell: pwsh

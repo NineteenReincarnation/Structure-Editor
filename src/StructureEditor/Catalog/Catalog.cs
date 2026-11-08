@@ -61,6 +61,10 @@ public class Catalog : IDisposable
     public Dictionary<string, XElement> StructureDefinitions { get; } = new();
     public Dictionary<string, XElement> PaletteDefinitions { get; } = new();
     public bool RuntimeSnapshotUsed { get; private set; }
+    public bool MP_UsedWarmCache { get; private set; }
+    public long MP_CacheCheckMilliseconds { get; private set; }
+    public long MP_TextureIndexMilliseconds { get; private set; }
+    public long MP_DefParseMilliseconds { get; private set; }
     public TextureLibrary Textures { get; private set; }
     private readonly Dictionary<(string Kind, string DefName), CatalogItem> index = new();
     private readonly Dictionary<string, Color> materialColors = new();
@@ -124,20 +128,58 @@ public class Catalog : IDisposable
         return result;
     }
 
-    public void Load(StudioPaths paths, IProgress<string> progress = null, CancellationToken cancellation = default)
+    public void Load(StudioPaths paths, IProgress<string> progress = null,
+        CancellationToken cancellation = default, string cacheDirectory = null)
     {
         if (!Directory.Exists(Path.Combine(paths.GameRoot, "Data", "Core", "Defs"))) throw new DirectoryNotFoundException("请选择包含 Data/Core 的 RimWorld 游戏目录。");
         Textures?.Dispose(); Items.Clear(); Materials.Clear(); Sources.Clear(); Warnings.Clear(); StructureDefinitions.Clear(); PaletteDefinitions.Clear();
-        raw.Clear(); named.Clear(); resolved.Clear(); origins.Clear(); sourceOrigins.Clear(); labels.Clear(); indexedCount = -1; RuntimeSnapshotUsed = false;
-        progress?.Report("正在索引游戏贴图…"); Textures = new TextureLibrary();
+        raw.Clear(); named.Clear(); resolved.Clear(); origins.Clear(); sourceOrigins.Clear(); labels.Clear();
+        indexedCount = -1; RuntimeSnapshotUsed = false; MP_UsedWarmCache = false;
+        MP_CacheCheckMilliseconds = MP_TextureIndexMilliseconds = MP_DefParseMilliseconds = 0;
+        progress?.Report("正在读取模组配置…");
         Sources.AddRange(ModSources.Resolve(paths, Warnings));
+        int sourceWarningCount = Warnings.Count;
         HashSet<string> packages = new(Sources.Select(s => s.PackageId), StringComparer.OrdinalIgnoreCase);
+
+        // Warm launch: scan only file metadata, reuse cached parsed definitions,
+        // classifications, translations and runtime catalog if they are unchanged.
+        var scanTime = System.Diagnostics.Stopwatch.StartNew();
+        string fingerprint = MP_CatalogSnapshotCache.Fingerprint(paths, Sources, cancellation);
+        var cached = MP_CatalogSnapshotCache.Read(paths, cacheDirectory, fingerprint);
+        MP_CacheCheckMilliseconds = scanTime.ElapsedMilliseconds;
+        if (cached != null)
+        {
+            try
+            {
+                MP_CatalogSnapshotCache.Restore(this, cached);
+                RuntimeSnapshotUsed = cached.RuntimeSnapshotUsed;
+                MP_UsedWarmCache = true;
+            }
+            catch (Exception ex) when (ex is System.Xml.XmlException or InvalidDataException
+                or ArgumentException or NullReferenceException)
+            {
+                // Corrupt cache: safely reconstruct directly from live game XML.
+                Items.Clear(); Materials.Clear(); StructureDefinitions.Clear(); PaletteDefinitions.Clear();
+                Warnings.RemoveRange(sourceWarningCount, Warnings.Count - sourceWarningCount);
+                MP_UsedWarmCache = false; indexedCount = -1;
+            }
+        }
+        progress?.Report(MP_UsedWarmCache ? "缓存有效，正在建立贴图索引…" : "正在索引游戏贴图…");
+        Textures = new TextureLibrary();
+        var textureTime = new System.Diagnostics.Stopwatch();
+        textureTime.Start();
         Textures.AddArchive(Path.Combine(paths.GameRoot, "Assets.zip"));
+        textureTime.Stop();
         foreach (CatalogSource source in Sources)
         {
             string folder = source.Root, pack = source.Display;
             cancellation.ThrowIfCancellationRequested(); progress?.Report("正在读取素材：" + pack + "…");
-            if (pack != "Core") Textures.AddArchive(Path.Combine(folder, "Assets.zip"));
+            if (pack != "Core")
+            {
+                textureTime.Start();
+                Textures.AddArchive(Path.Combine(folder, "Assets.zip"));
+                textureTime.Stop();
+            }
             List<string> load = new() { folder };
             string folders = Path.Combine(folder, "LoadFolders.xml");
             if (File.Exists(folders))
@@ -149,7 +191,10 @@ public class Catalog : IDisposable
             else if (Directory.Exists(Path.Combine(folder, "1.7"))) load.Add(Path.Combine(folder, "1.7"));
             foreach (string part in load.Distinct())
             {
+                textureTime.Start();
                 Textures.AddFolder(Path.Combine(part, "Textures"));
+                textureTime.Stop();
+                if (MP_UsedWarmCache) continue;
                 ReadTranslations(part);
                 string defs = Path.Combine(part, "Defs");
                 if (!Directory.Exists(defs)) continue;
@@ -179,7 +224,10 @@ public class Catalog : IDisposable
                 }
             }
         }
+        MP_TextureIndexMilliseconds = textureTime.ElapsedMilliseconds;
+        if (MP_UsedWarmCache) return;
         progress?.Report("正在整理建筑、单位和地形分类…");
+        var parseTime = System.Diagnostics.Stopwatch.StartNew();
         foreach (var pair in raw)
         {
             cancellation.ThrowIfCancellationRequested();
@@ -200,6 +248,10 @@ public class Catalog : IDisposable
         }
         RuntimeSnapshotUsed = RuntimeCatalog.Apply(this,paths);
         RebuildIndexes();
+        MP_DefParseMilliseconds = parseTime.ElapsedMilliseconds;
+        cancellation.ThrowIfCancellationRequested();
+        MP_CatalogSnapshotCache.Write(paths, cacheDirectory, fingerprint, this,
+            sourceWarningCount, RuntimeSnapshotUsed);
         // XML inheritance trees are loading scratch data, not a runtime catalog cache.
         raw.Clear(); named.Clear(); resolved.Clear(); origins.Clear(); sourceOrigins.Clear(); labels.Clear();
     }

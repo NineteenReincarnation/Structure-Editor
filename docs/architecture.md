@@ -135,3 +135,11 @@ Structure-Editor/
 
 - 自定义深色标签容器 `MP_SectionTabs` 的 `TabPage` 必须由 WinForms `TabControl.TabPages` 承载，不能放进普通 `Panel.Controls`；外层按钮只负责可见的深色标题栏。
 - `Program --ui-smoke-test` 在 Windows 无需加载 RimWorld 游戏目录，即可实例化主窗体并核对全部标签页的父容器；Windows CI 在更新 `app/` 前执行此检查，避免只编译成功却启动即报错。
+
+## 启动性能与缓存
+
+- `MP_CatalogSnapshotCache`：基于已选游戏与 Mod 目录的 XML、翻译、配置及 RuntimeCatalog 文件路径、大小与更新时间生成指纹；未变化时直接加载分类、标签、结构索引和材质快照，减少每次启动重复解析 Def 和语言翻译。变更模组或文件后自动失效重建；损坏或不可访问的缓存自动回退到原始 XML。
+- `TextureLibrary`：建立 ZIP 内图片清单后不再为所有条目提前读取本地偏移；第一次真正解码该 ZIP 中贴图时按需生成偏移索引，避免启动阶段不必要的随机磁盘 I/O。
+- `WorkspaceStartup`：仍在后台加载，不阻塞 UI 线程；`%LOCALAPPDATA%/StructureEditor/startup.log` 记录缓存命中、指纹检查、贴图索引、Def 解析及端到端加载耗时。
+- `--catalog-cache-test`：无需真实游戏安装，验证冷/热启动、修改 XML 自动失效、重新命中以及贴图 ZIP 偏移懒加载，Windows CI 必须通过后才能同步 `app/`。
+- JSON 结构工程、输出 XML、已安装 Mod 和本机设置均不写入该缓存，也不会因缓存失效被修改或清理。
