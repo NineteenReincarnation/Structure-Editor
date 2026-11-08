@@ -18,9 +18,9 @@ internal static class StudioFrameworkChecks
         need(restored.Items.Count==3&&restored.Items[1].Rotation==1&&restored.Items[0].X==-1,"Framework XML must roundtrip exact object coordinates and rotations");
         var deps=ExportDependencies.Resolve(room,catalog,"Framework");
         need(deps.Count==1&&deps[0].PackageId==FrameworkCodec.PackageId,"A Core-only framework structure needs only the framework package");
-        need(room.ExportProfile == "VanillaPrefab" && !room.EnableMPCompatibility,
-            "A new JSON project defaults to unextended native PrefabDef");
-        var prefab=ExportDependencies.Xml(room,catalog,"VanillaPrefab");string prefabFile=Path.Combine(folder,"SF_PrefabRoundtrip.xml");prefab.Save(prefabFile);
+        need(room.ExportProfile == "Framework",
+            "A new project uses the unified Framework XML standard");
+        var prefab=new XDocument(new XElement("Defs",PrefabCodec.Export(room,catalog)));string prefabFile=Path.Combine(folder,"SF_PrefabRoundtrip.xml");prefab.Save(prefabFile);
         var native=StructureDocument.Load(prefabFile,catalog);
         need(native.Items.Count==3&&native.Items[0].X==-1&&native.Items.First(i=>i.DefName=="Door").Rotation==1,"Prefab compatibility preserves coordinates through its origin comment");
         need(!prefab.ToString().Contains("startDormant")&&prefab.Root.Element("PrefabDef").Element("size")!=null,"Original Prefab XML uses only native placement fields");
@@ -34,11 +34,13 @@ internal static class StudioFrameworkChecks
         try { PrefabCodec.Export(tagged,catalog); } catch(InvalidOperationException) { blocked = true; }
         need(blocked && tagged.FrameworkTags.Count == 1, "Native export must reject framework-only tags instead of silently dropping them");
         var explicitFramework = room.Copy(); explicitFramework.ExportProfile = "Framework";
-        need(ExportDependencies.Xml(explicitFramework,catalog,explicitFramework.ExportProfile).Root?.Element("StructureFramework.StructureDef") != null,
-            "Explicit framework projects remain framework exports");
-        var sleeper=new StructureDocument{DefName="SF_Sleeper",EnableMPCompatibility=true,Items=new(){new(){Kind="Building",DefName="MechCapsule",StartDormant=true}}};
+        need(ExportDependencies.Xml(explicitFramework,catalog,"VanillaPrefab").Root?.Element("StructureFramework.StructureDef")!=null
+            && ExportDependencies.Xml(explicitFramework,catalog,"MechProtocol").Root?.Element("StructureFramework.StructureDef")!=null
+            && ExportDependencies.Xml(explicitFramework,catalog,"Universal").Root!.Elements().Count()==1,
+            "All historic profile choices now resolve to a single Framework definition");
+        var sleeper=new StructureDocument{DefName="SF_Sleeper",Items=new(){new(){Kind="Building",DefName="MechCapsule",StartDormant=true}}};
         var mp=FrameworkCodec.Export(sleeper,catalog);
-        need(mp.ToString().Contains("StructureFramework.Integrations.MPDormancyModifier")&&mp.Element("requiredPackages").Value.Contains("Anno.MechProtocol"),"MP sleep states are emitted only as an explicit optional integration");
+        need(mp.ToString().Contains("StructureFramework.Integrations.MPDormancyModifier")&&mp.Element("requiredPackages").Value.Contains("Anno.MechProtocol"),"MP sleep states automatically trigger Framework modifier integration");
         var sleepRoundtrip=FrameworkCodec.Import(mp,catalog);
         need(sleepRoundtrip.EnableMPCompatibility&&sleepRoundtrip.Items.Single().StartDormant==true,"MP extension state survives framework import");
         using(var form=new MainForm())
@@ -46,7 +48,7 @@ internal static class StudioFrameworkChecks
             var ordinary=sleeper.Copy();ordinary.EnableMPCompatibility=false;form.BindForChecks(catalog,ordinary);
             var canvas=(StructureCanvas)typeof(MainForm).GetField("canvas",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(form);canvas.SelectAll();
             var state=(ComboBox)typeof(MainForm).GetField("dormancyBox",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(form);
-            need(!state.Enabled,"Per-object sleep controls must be disabled for a generic framework project");
+            need(state.Enabled,"Per-object sleep controls no longer depend on output mode toggles");
         }
         string bundle=ExportDependencies.Bundle(room,catalog,Path.Combine(folder,"ContentPackages"),"Framework");
         var about=XDocument.Load(Path.Combine(bundle,"About","About.xml"));
@@ -55,7 +57,9 @@ internal static class StudioFrameworkChecks
         var compactDoc=FrameworkCodec.Import(compact.Element("StructureFramework.StructureDef"),catalog,compact);
         need(compactDoc.Items.Count==2&&compactDoc.Items.All(i=>i.Stuff=="Steel"),"Compact palettes and symbol layouts are editable without loading game DLLs");
         string oldProject=Path.Combine(folder,"LegacySleep.structure.json");File.WriteAllText(oldProject,"{\"FormatVersion\":1,\"Items\":[{\"Kind\":\"Building\",\"DefName\":\"MechCapsule\",\"StartDormant\":true}]}");
-        need(StructureDocument.Load(oldProject,catalog).EnableMPCompatibility,"Older sleep projects retain their MP compatibility when migrating to the framework");
+        need(StructureDocument.Load(oldProject,catalog).ExportProfile=="Framework"
+            && StructureDocument.Load(oldProject,catalog).Items.Single().StartDormant==true,
+            "Historical JSON keeps sleep properties while migrating to Framework");
         string multiple=Path.Combine(folder,"MultipleLegacy.xml");File.WriteAllText(multiple,"<Defs><MechProtocol.MP_StructureDef><defName>MP_First</defName></MechProtocol.MP_StructureDef><MechProtocol.MP_StructureDef><defName>MP_Second</defName></MechProtocol.MP_StructureDef></Defs>");
         need(StructureDocument.Load(multiple,catalog,"MP_Second").DefName=="MP_Second","The selected legacy definition must be imported from a multi-definition XML");
         bool unsupported=false;try{FrameworkCodec.Import(XElement.Parse("<StructureFramework.StructureDef><defName>Unknown</defName><unknownBehavior>true</unknownBehavior></StructureFramework.StructureDef>"),catalog);}catch(InvalidDataException){unsupported=true;}
