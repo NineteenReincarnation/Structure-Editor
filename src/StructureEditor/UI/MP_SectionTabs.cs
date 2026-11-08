@@ -10,6 +10,7 @@ internal sealed class MP_SectionTabs : UserControl
     private int selection = -1;
 
     internal event EventHandler SelectedIndexChanged;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal int SelectedIndex
     {
         get => selection;
