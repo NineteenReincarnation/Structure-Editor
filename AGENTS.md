@@ -17,3 +17,5 @@
 
 - Document tabs use `MP_DocumentTabButton` with a per-tab close X; preserve unsaved-save confirmation and prevent X-click activation. Ctrl+G/H/J toggle explosion/detection/shield previews, Ctrl+D duplicates objects.
 - Do not regress to native white WinForms tab-header gaps, light palette scrollbars or white combo arrow wells; keep the integrated `MP_SectionTabs` and the dark control surfaces.
+
+- Repository cleanup: keep one canonical editable root `structures/`, root `docs/` and `examples/`. CI-tracked `app/` is runtime files only, not a duplicate library; `build.ps1 -SelfContained` embeds standalone copies for portable distribution. Run `app/StructureEditor.exe` directly, no root launcher script. All validation code remains in `src/StructureEditor/Validation/`.

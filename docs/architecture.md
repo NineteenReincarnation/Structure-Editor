@@ -16,6 +16,7 @@ Structure-Editor/
 ├─ examples/                   # 可复用的无游戏资源结构工程
 ├─ structures/                 # 用户维护的结构工程库，优先读取，JSON/XML 成对保存
 ├─ scripts/                    # 构建、打包、验证入口
+├─ app/                        # CI 更新的精简运行程序（不再复制数据/文档）
 ├─ src/StructureEditor/
 │  ├─ App/                     # 程序启动、应用品牌与全局运行设置
 │  ├─ Canvas/                  # 画布绘制、选取、交互、粘贴预览
@@ -24,10 +25,9 @@ Structure-Editor/
 │  ├─ Formats/                 # JSON/XML 等结构格式的读写与导出依赖
 │  ├─ UI/                      # WinForms 主窗口、菜单、工作区、结构库、保存流
 │  ├─ Compatibility/           # 仅存特定 Mod 的兼容逻辑、共享命名规则
-│  ├─ Validation/              # 原有内置自检及功能回归检查
+│  ├─ Validation/              # 所有自检及功能回归检查（含 TurretExplosionChecks）
 │  ├─ StructureEditor.csproj   # 固定项目入口，不改变构建路径
 │  └─ app.manifest
-├─ Tools/Tests/                # 特殊验证工具/从项目文件链接编译的检查代码
 ├─ AGENTS.md                   # 开发约束
 ├─ README.md                   # 默认中文项目介绍
 └─ README.en.md                # 英文项目介绍
@@ -64,7 +64,7 @@ Structure-Editor/
 - 左侧提供「素材库 / 结构库」标签，不再弹出单独的文件选择窗口。选中结构将优先显示同名 PNG（`<DefName>.png` / `<DefName>_preview.png`），无图时使用游戏素材渲染 PNG 到本地预览缓存；双击结构直接打开。
 - JSON 工程和同名 XML 属于同一份结构，左侧只显示一条记录，打开时优先使用可编辑的 `.structure.json`，避免重复或误改导出的 XML。
 - 首次保存新工程默认使用仓库结构库（除非用户选择过另一个保存位置）。编辑已有工程时继续在原有位置保存；可通过「保存位置」修改。
-- `scripts/build.ps1` 将结构库复制到独立发行包的 `app/structures/`，因此单独解压发布包时也可读取；在完整仓库里优先读取仓库根目录，避免修改的是过时副本。
+- `scripts/build.ps1 -SelfContained` 只为独立发布包复制一套 `structures/`，因此单独解压也可读取；普通 `app/` 开发版不再复制结构库，在完整仓库里直接读取根目录唯一的 `structures/`。
 - 不应在 JSON 中保存作者电脑的绝对游戏路径。仓库中的 `structures/Tests/` 是调试布局，`structures/MechanoidSentryOutposts/` 为哨戒阵地。
 
 ### 结构重命名
@@ -122,3 +122,11 @@ Structure-Editor/
 - 普通 XML 的依赖列表仅作检查及 XML 注释；导出完整 Mod 包时，原有格式继续用 \`About.xml/modDependencies\` 声明必需依赖；\`Universal\` 的扩展依赖只生成可选 \`loadAfter\`，与原版基础 Def 的独立加载能力保持一致。
 - UI 的「兼容拓展」嵌入「导出」页，自动给出适用性推荐但不自动更改手动勾选状态；格式切换只清除已不适用的开关，不抹除对象的原始属性。
 - \`Validation/StudioExportChecks.cs\` 覆盖原版/框架/MP/通用输出、告警分级、条件依赖及共享 XML 安全更新；Windows 编译不代表已经在真实游戏中完成端到端加载验证。
+
+## 根目录与生成文件整洁约定
+
+- 仓库**唯一启动目标**是 `app/StructureEditor.exe`。移除旧根目录 `启动结构工坊.cmd`；如果旧的个人 Windows 快捷方式原先指向该 CMD，请把目标改成 `app/StructureEditor.exe`。
+- **运行时 app/** 是最小可拉取程序：仅 exe/dll/运行配置及生成标记。删去原先重复的 `app/docs/`、`app/structures/`、`app/examples/`、多余 README 和帮助文档副本。
+- **独立 standalone.zip** 必须保留其自带的 `structures/`、`examples/`、使用说明和第三方许可说明；它属于离线发行件，不是仓库内部第二份可编辑源文件。
+- 原 `Tools/Tests/TurretExplosionChecks.cs` 移到 `src/StructureEditor/Validation/TurretExplosionChecks.cs`，删除 .csproj 手工链入路径，恢复单一的验证代码归属。
+- `dist/`、`migration/`、`branding/`、`Directory.Build.props`、`*.lnk` 已被 Git 忽略，本地旧文件不会因 Git Pull 自动消失；不要自动删除可能含有数据和配置的本地目录。

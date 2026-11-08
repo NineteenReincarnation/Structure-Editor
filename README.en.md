@@ -22,6 +22,16 @@ Still writing XML by hand to design buildings, mechanoid clusters, and special e
 
 With its grid-based editor, you can place buildings, adjust their positions, plan defensive outposts, and see the entire layout as you work—much like building directly in the game.
 
+## Launch and folders
+
+Open **[`app/StructureEditor.exe`](./app/StructureEditor.exe)** from the repository. After pulling `main`, CI updates this executable directly. No separate root-level launcher is needed. You may create a personal Windows shortcut targeting `app/StructureEditor.exe` (local `.lnk` files are not tracked).
+
+- `app/`: generated runtime files only; do not edit or store structures here.
+- `structures/`: the single editable JSON/XML structure library.
+- `docs/`: user and engineering documentation; `src/`: code; `scripts/`: build and validation.
+- `dist/` and `migration/` are ignored local outputs. Clean them manually if you no longer need their contents.
+- For use outside the repository, download the CI `standalone.zip`, which includes its own library and usage guide.
+
 ## Key Features
 
 - **Visual structure editing**: Place, move, rotate, and remove objects on an intuitive grid-based canvas.
