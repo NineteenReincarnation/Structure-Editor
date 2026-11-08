@@ -53,12 +53,8 @@ public partial class MainForm
                             file = Path.Combine(Path.GetDirectoryName(file)!, MP_ClusterNaming.DefaultDefName + ".xml");
                         if (File.Exists(file)) try { restored = StructureDocument.Load(file,source,Program.Paths.LastDefinition); } catch (Exception ex) { warning = "上次工程未恢复：" + ex.Message; }
                     }
-                    progress.Report("正在准备首屏预览…");
-                    // Warm only the first visible palette entries; remaining thumbnails load on demand.
-                    foreach (var entry in source.Items.Where(i => i.Kind == "Building").OrderBy(i => CatalogGrouping.Order(i.Group)).ThenBy(i => i.Label).Take(8))
-                    {
-                        cancellation.ThrowIfCancellationRequested(); source.Textures.Get(entry.Icon ?? entry.Texture);
-                    }
+                    // Return the loaded catalog immediately. Thumbnail decoding now
+                    // happens on demand via TextureLibrary.Request, not during startup.
                     return (Source: source, Restored: restored, File: file, Warning: warning);
                 }
                 catch { source.Dispose(); throw; }

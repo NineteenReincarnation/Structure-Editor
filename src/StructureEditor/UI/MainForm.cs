@@ -18,6 +18,10 @@ public partial class MainForm : Form
     private readonly ComboBox profileBox = new MP_DarkComboBox();
     private readonly CheckBox mpCompatibility = new();
     private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new(), summary = new();
+    private Label MP_rotationLabel;
+    private StructureDocument MP_summaryDocument;
+    private int MP_summaryCount = -1;
+    private string MP_summaryText;
     private readonly ListBox palette = new();
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Stack<StructureDocument> undo = new(), redo = new();
@@ -28,6 +32,7 @@ public partial class MainForm : Form
     private bool dirty, updating, filtering, saveLocationChanged;
     private List<PlacedItem> copied = new();
     private CatalogItem shownItem;
+    private bool MP_rebuildingPalette;
 
     public MainForm()
     {
@@ -49,7 +54,7 @@ public partial class MainForm : Form
             { e.Handled = true; e.SuppressKeyPress = true; }
         };
         canvas.BeforeChange += Snapshot;
-        canvas.Changed += () => { dirty = true; UpdateTitle(); UpdateSummary(); };
+        canvas.Changed += () => { MP_summaryDocument = null; dirty = true; UpdateTitle(); UpdateSummary(); };
         canvas.SelectionChanged += ShowSelection;
         canvas.Hint += message => status.Text = message;
         FormClosing += (_, e) => { try { if (!AskSaveWorkspace()) e.Cancel = true; } catch (Exception ex) { e.Cancel = true; MessageBox.Show(this, ex.Message); } };
@@ -103,10 +108,29 @@ public partial class MainForm : Form
         if (catalog == null || filtering) return;
         string query = search.Text.Trim(); string pack = packBox.SelectedIndex > 0 ? packBox.SelectedItem?.ToString() : null;
         string group = groupBox.SelectedIndex > 0 ? groupBox.SelectedItem?.ToString() : null;
-        palette.BeginUpdate(); palette.Items.Clear();
-        foreach (CatalogItem item in catalog.Query(FilterKind, pack, group, query, ClusterScope).Where(MatchesScope)
-            .OrderBy(i => scopeBox.SelectedIndex == 3 ? Program.Paths.RecentAssets.IndexOf(CatalogCollections.Key(i)) : CatalogGrouping.Order(i.Group)).ThenBy(i => i.Pack == "Core" ? 0 : 1).ThenBy(i => i.Label)) palette.Items.Add(item);
-        palette.EndUpdate(); libraryInfo.Text = $"{palette.Items.Count} 个素材";
+        var results = catalog.Query(FilterKind, pack, group, query, ClusterScope).Where(MatchesScope)
+            .OrderBy(i => scopeBox.SelectedIndex == 3 ? Program.Paths.RecentAssets.IndexOf(CatalogCollections.Key(i)) : CatalogGrouping.Order(i.Group))
+            .ThenBy(i => i.Pack == "Core" ? 0 : 1).ThenBy(i => i.Label).ToArray();
+        // Avoid clearing/repainting the owner-drawn list when the result set is identical.
+        // This matters when users cycle layers or repeatedly change selection.
+        if (palette.Items.Count == results.Length &&
+            results.Where((item, index) => !ReferenceEquals(palette.Items[index], item)).Any() == false)
+            return;
+        CatalogItem previous = palette.SelectedItem as CatalogItem;
+        palette.BeginUpdate();
+        try
+        {
+            MP_rebuildingPalette = true;
+            palette.Items.Clear();
+            palette.Items.AddRange(results.Cast<object>().ToArray());
+            if (previous != null && results.Contains(previous)) palette.SelectedItem = previous;
+        }
+        finally
+        {
+            MP_rebuildingPalette = false;
+            palette.EndUpdate();
+        }
+        libraryInfo.Text = $"{results.Length} 个素材";
     }
     private void DrawPalette(object sender, DrawItemEventArgs e)
     {
@@ -133,7 +157,7 @@ public partial class MainForm : Form
     }
     private void SelectBrush()
     {
-        if (palette.SelectedItem is not CatalogItem item) return;
+        if (MP_rebuildingPalette || palette.SelectedItem is not CatalogItem item) return;
         RememberAsset(item);
         bool keepRectangle = canvas.Tool == CanvasTool.Rectangle && item.Kind == "Terrain";
         canvas.Brush = item; canvas.BrushRotation = item.Kind == "Pawn" ? 2 : 0; canvas.Tool = keepRectangle ? CanvasTool.Rectangle : CanvasTool.Place; canvas.ClearSelection();
@@ -143,7 +167,7 @@ public partial class MainForm : Form
     {
         if (canvas.Selected != null && catalog != null) ShowItem(catalog.Find(canvas.Selected.Kind, canvas.Selected.DefName), canvas.Selected);
         else if (canvas.Brush != null) ShowItem(canvas.Brush, null);
-        else { selectedName.Text = "未选择对象"; selectedInfo.Text = "从左侧选择素材，或按 V 选择已有对象。"; }
+        else { selectedName.Text = "未选择对象"; selectedInfo.Text = "从左侧选择素材，或切换至选择工具。"; if (MP_rotationLabel != null) MP_rotationLabel.Visible = rotationBox.Visible = false; }
         UpdateSummary();
     }
     private void ShowItem(CatalogItem item, PlacedItem placed)
@@ -164,7 +188,12 @@ public partial class MainForm : Form
             if (materialBox.Items.Count > 0) materialBox.SelectedItem = preferred ?? materialBox.Items[0];
             materialBox.Enabled = materialBox.Items.Count > 0;
             canvas.BrushStuff = (materialBox.SelectedItem as MaterialItem)?.DefName;
-            rotationBox.SelectedIndex = placed?.Rotation ?? canvas.BrushRotation; rotationBox.Enabled = item.Rotatable || canvas.Selection.Count > 1;
+            bool canRotate = placed != null && canvas.Selection.Count > 1
+                ? canvas.Selection.Any(selected => catalog.Find(selected.Kind, selected.DefName)?.Rotatable == true)
+                : item.Rotatable;
+            MP_rotationLabel.Visible = rotationBox.Visible = canRotate;
+            rotationBox.Enabled = canRotate;
+            if (canRotate) rotationBox.SelectedIndex = placed?.Rotation ?? canvas.BrushRotation;
             var supported = placed == null ? new List<PlacedItem>() : canvas.Selection.Where(i => catalog.Find(i.Kind, i.DefName)?.CanBeDormant == true).ToList();
             bool mp = document.ExportProfile == "MechProtocol" || document.ExportProfile == "Framework" && document.EnableMPCompatibility;
             dormancyBox.Enabled = mp && (placed == null ? item.CanBeDormant : supported.Count > 0);
@@ -214,8 +243,25 @@ public partial class MainForm : Form
     private void UpdateTitle() { Text = "Structure Editor · 结构工坊 — " + document.Label + (dirty ? " *" : ""); RefreshDocumentTabs(); RefreshNamingPreview(); }
     private void UpdateSummary()
     {
-        summary.Text = $"建筑 {document.Items.Count(i => i.Kind == "Building")}   单位 {document.Items.Count(i => i.Kind == "Pawn")}\n地板 {document.Items.Count(i => i.Kind == "Terrain")}   总计 {document.Items.Count}";
-        if (selectionCount != null) selectionCount.Text = canvas.Selection.Count == 0 ? "未选择" : $"已选 {canvas.Selection.Count} 个";
+        if (!ReferenceEquals(MP_summaryDocument, document) || MP_summaryCount != document.Items.Count)
+        {
+            int buildings = 0, pawns = 0, terrain = 0;
+            foreach (PlacedItem item in document.Items)
+            {
+                if (item.Kind == "Building") buildings++;
+                else if (item.Kind == "Pawn") pawns++;
+                else if (item.Kind == "Terrain") terrain++;
+            }
+            MP_summaryText = $"建筑 {buildings}   单位 {pawns}\n地板 {terrain}   总计 {document.Items.Count}";
+            MP_summaryDocument = document;
+            MP_summaryCount = document.Items.Count;
+        }
+        if (summary.Text != MP_summaryText) summary.Text = MP_summaryText;
+        if (selectionCount != null)
+        {
+            string selectionLabel = canvas.Selection.Count == 0 ? "未选择" : $"已选 {canvas.Selection.Count} 个";
+            if (selectionCount.Text != selectionLabel) selectionCount.Text = selectionLabel;
+        }
     }
     private bool AskSave()
     {

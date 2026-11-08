@@ -108,7 +108,9 @@ internal static class StudioWorkspaceChecks
             form.Size = new(1450, 900);
             var inspector = ((GroupBox)Field("namingPanel")).Parent;
             while (inspector is not TabPage) inspector = inspector.Parent;
-            ((TabControl)inspector.Parent).SelectedTab = (TabPage)inspector;
+            var tabs = inspector.Parent?.Parent as MP_SectionTabs;
+            need(tabs != null && tabs.SelectPage((TabPage)inspector),
+                "Workspace metadata section remains selectable with the unified dark tab control");
             StudioInteractionChecks.RenderWorkspace(form, Path.Combine(folder, "workspace-documents.png"));
             form.Size = new(1060, 720); StudioInteractionChecks.RenderWorkspace(form, Path.Combine(folder, "workspace-documents-compact.png"));
         }

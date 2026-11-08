@@ -46,6 +46,14 @@ internal sealed class MP_SectionTabs : UserControl
         Controls.Add(header);
     }
 
+    internal bool SelectPage(TabPage page)
+    {
+        int index = pages.FindIndex(entry => ReferenceEquals(entry.Page, page));
+        if (index < 0) return false;
+        SelectedIndex = index;
+        return true;
+    }
+
     internal void AddPage(TabPage page)
     {
         int index = pages.Count;

@@ -70,8 +70,15 @@ public partial class MainForm
                     if (json.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object
                         || !json.RootElement.TryGetProperty("DefName", out _)
                         || !json.RootElement.TryGetProperty("Items", out _)) continue;
-                    var doc = StructureDocument.Load(file);
-                    result.Add((file, doc.DefName, doc.Label));
+                    if (json.RootElement.GetProperty("DefName").ValueKind != System.Text.Json.JsonValueKind.String) continue;
+                    string id = json.RootElement.GetProperty("DefName").GetString();
+                    if (!string.IsNullOrWhiteSpace(id))
+                    {
+                        string label = json.RootElement.TryGetProperty("Label", out var labelElement)
+                            && labelElement.ValueKind == System.Text.Json.JsonValueKind.String
+                            ? labelElement.GetString() : null;
+                        result.Add((file, id, string.IsNullOrWhiteSpace(label) ? id : label));
+                    }
                     continue;
                 }
                 var root = XDocument.Load(file).Root;

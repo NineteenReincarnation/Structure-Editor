@@ -116,26 +116,17 @@ public partial class MainForm
 
         Panel viewport = new() { Dock = DockStyle.Fill };
         ToolStrip editTools = new() { Dock = DockStyle.Top, Height = 38, AutoSize = false, GripStyle = ToolStripGripStyle.Hidden, BackColor = Color.FromArgb(35, 46, 56), Padding = new(4, 4, 0, 4) };
-        foreach (var (tool, title) in new[] { (CanvasTool.Select, "选择 V"), (CanvasTool.Place, "放置 B"), (CanvasTool.Rectangle, "矩形 M"), (CanvasTool.Erase, "擦除 E"), (CanvasTool.Hand, "平移 H"), (CanvasTool.Zoom, "缩放 Z") })
+        foreach (var (tool, title) in new[] { (CanvasTool.Select, "选择"), (CanvasTool.Place, "放置"), (CanvasTool.Rectangle, "矩形"), (CanvasTool.Erase, "擦除"), (CanvasTool.Hand, "平移"), (CanvasTool.Zoom, "缩放") })
         {
             ToolStripButton button = new(title) { DisplayStyle = ToolStripItemDisplayStyle.Text, ForeColor = text, CheckOnClick = false };
             button.Click += (_, _) => { canvas.Tool = tool; canvas.Focus(); }; editTools.Items.Add(button); toolButtons[tool] = button;
         }
-        editTools.Items.Add(new ToolStripSeparator()); AddTool(editTools, "旋转 R", canvas.Rotate);
+        editTools.Items.Add(new ToolStripSeparator()); AddTool(editTools, "旋转", canvas.Rotate);
         ToolStripDropDownButton center = new("居中") { ForeColor = text };
         Menu(center, "适应全部    Home", canvas.CenterView); Menu(center, "居中所选    Ctrl+Home", canvas.CenterSelection); Menu(center, "回到原点", canvas.GoToOrigin);
         editTools.Items.Add(center);
-        ToolStripDropDownButton layers = new("图层") { ForeColor = text };
-        foreach (var (kind, title) in new[] { ("Building", "建筑"), ("Pawn", "单位"), ("Terrain", "地板") })
-        {
-            ToolStripMenuItem item = new("显示" + title) { Checked = true, CheckOnClick = true };
-            item.CheckedChanged += (_, _) => { if (item.Checked) canvas.VisibleLayers.Add(kind); else canvas.VisibleLayers.Remove(kind); canvas.ClearSelection(); canvas.Invalidate(); };
-            layers.DropDownItems.Add(item);
-        }
-        ToolStripMenuItem grid = new("显示网格 G") { Checked = true, CheckOnClick = true };
-        grid.CheckedChanged += (_, _) => { canvas.ShowGrid = grid.Checked; canvas.Invalidate(); }; layers.DropDownItems.Add(grid); editTools.Items.Add(layers);
-        TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(37, 50, 60), ColumnCount = 3 };
-        layerBar.ColumnStyles.Add(new(SizeType.AutoSize)); layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124)); layerBar.ColumnStyles.Add(new(SizeType.Percent, 100));
+        TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(37, 50, 60), ColumnCount = 4 };
+        layerBar.ColumnStyles.Add(new(SizeType.AutoSize)); layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124)); layerBar.ColumnStyles.Add(new(SizeType.Absolute, 110)); layerBar.ColumnStyles.Add(new(SizeType.Percent, 100));
         layerBar.Controls.Add(new Label { Text = "编辑图层", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new(10, 0, 10, 0), ForeColor = muted }, 0, 0);
         MP_editLayerSelector = new MP_DarkComboBox() { Dock = DockStyle.Fill, Margin = new(0, 3, 0, 3), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = surface, ForeColor = text };
         MP_editLayerSelector.Items.AddRange(new object[] { "全部", "建筑", "单位", "地形" }); MP_editLayerSelector.SelectedIndex = 0;
@@ -145,7 +136,47 @@ public partial class MainForm
             selectionStatus.Text = "编辑图层：" + MP_editLayerSelector.Text;
         };
         selectionCount = new() { Text = "未选择", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight, Padding = new(0, 0, 12, 0), ForeColor = muted };
-        layerBar.Controls.Add(MP_editLayerSelector, 1, 0); layerBar.Controls.Add(selectionCount, 2, 0);
+        ToolStrip MP_layerVisibilityBar = new()
+        {
+            Dock = DockStyle.Fill, GripStyle = ToolStripGripStyle.Hidden,
+            BackColor = layerBar.BackColor, Margin = Padding.Empty,
+            Padding = new Padding(2, 3, 0, 3)
+        };
+        ToolStripDropDownButton MP_visibleLayers = new("显示图层")
+        {
+            ForeColor = text, ToolTipText = "选择要显示的图层"
+        };
+        foreach (var (kind, label) in new[] { ("Building", "建筑"), ("Pawn", "单位"), ("Terrain", "地形") })
+        {
+            ToolStripMenuItem item = new(label) { Checked = true, CheckOnClick = true };
+            item.CheckedChanged += (_, _) =>
+            {
+                if (item.Checked) canvas.VisibleLayers.Add(kind); else canvas.VisibleLayers.Remove(kind);
+                canvas.ClearSelection(); canvas.Invalidate();
+            };
+            MP_visibleLayers.DropDownItems.Add(item);
+        }
+        MP_visibleLayers.DropDownItems.Add(new ToolStripSeparator());
+        ToolStripMenuItem MP_gridVisibility = new("网格") { Checked = canvas.ShowGrid, CheckOnClick = true };
+        MP_gridVisibility.CheckedChanged += (_, _) =>
+        {
+            canvas.ShowGrid = MP_gridVisibility.Checked;
+            canvas.Invalidate();
+        };
+        MP_visibleLayers.DropDownItems.Add(MP_gridVisibility);
+        MP_visibleLayers.DropDownOpening += (_, _) =>
+        {
+            foreach (ToolStripMenuItem item in MP_visibleLayers.DropDownItems.OfType<ToolStripMenuItem>())
+            {
+                if (item == MP_gridVisibility) { item.Checked = canvas.ShowGrid; continue; }
+                string kind = item.Text switch { "建筑" => "Building", "单位" => "Pawn", _ => "Terrain" };
+                item.Checked = canvas.VisibleLayers.Contains(kind);
+            }
+        };
+        MP_layerVisibilityBar.Items.Add(MP_visibleLayers);
+        layerBar.Controls.Add(MP_editLayerSelector, 1, 0);
+        layerBar.Controls.Add(MP_layerVisibilityBar, 2, 0);
+        layerBar.Controls.Add(selectionCount, 3, 0);
         viewport.Controls.Add(canvas); viewport.Controls.Add(layerBar); viewport.Controls.Add(editTools); inspectorSplit.Panel1.Controls.Add(viewport);
 
         MP_SectionTabs tabs = new() { Dock = DockStyle.Fill, BackColor = surface, ForeColor = text };
@@ -172,7 +203,9 @@ public partial class MainForm
         materialBox.DropDownStyle = rotationBox.DropDownStyle = ComboBoxStyle.DropDownList;
         Field(objects, "材质", materialBox);
         rotationBox.Items.AddRange(new object[] { "北 / North", "东 / East", "南 / South", "西 / West" }); rotationBox.SelectedIndex = 0;
-        Field(objects, "方向", rotationBox);
+        MP_rotationLabel = new Label { Text = "方向", ForeColor = muted, AutoSize = true };
+        Row(objects, MP_rotationLabel);
+        Row(objects, rotationBox, 29);
         dormancyBox.DropDownStyle = ComboBoxStyle.DropDownList;
         dormancyBox.Items.AddRange(new object[] { "跟随结构默认", "初始休眠", "初始唤醒", "保持各自设置（混合）" }); dormancyBox.SelectedIndex = 0;
         Field(objects, "初始状态（MP 专用）", dormancyBox);

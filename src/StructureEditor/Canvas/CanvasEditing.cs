@@ -135,10 +135,19 @@ public partial class StructureCanvas : Control
     public bool CanPlace(PlacedItem item, PlacedItem except = null) => index.CanPlace(new[] { item }, except == null ? null : new() { except }, item.Kind == "Terrain" && except == null, replaceSameBuildings: except == null);
     private void SelectItems(IEnumerable<PlacedItem> items)
     {
-        selection.Clear(); foreach (var item in items) selection.Add(item);
-        Selected = selection.LastOrDefault(); SelectionChanged?.Invoke(); Invalidate();
+        ICollection<PlacedItem> next = items as ICollection<PlacedItem> ?? items.ToArray();
+        if (selection.SetEquals(next)) return;
+        selection.Clear();
+        foreach (var item in next) selection.Add(item);
+        Selected = selection.LastOrDefault();
+        SelectionChanged?.Invoke();
+        Invalidate();
     }
-    public void ClearSelection() => SelectItems(Array.Empty<PlacedItem>());
+    public void ClearSelection()
+    {
+        if (selection.Count != 0 || Selected != null)
+            SelectItems(Array.Empty<PlacedItem>());
+    }
     public void SelectAll() { Tool = CanvasTool.Select; SelectItems(Document.Items.Where(Editable)); }
     public void SelectArea(Rectangle bounds, bool additive = false)
     {
