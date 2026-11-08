@@ -26,6 +26,33 @@ internal static class StudioDormancyAndWallsChecks
             using Bitmap image = wallCanvas.ExportPreview(); image.Save(Path.Combine(folder, "walls16-" + stuff + ".png"));
             if (stuff == "Steel") atlas.Save(Path.Combine(folder, "wall-atlas.png"));
         }
+        // Animal flaps are full-frame door graphics, not guaranteed to be
+        // named *_Atlas. They should merge only when placed in neighboring
+        // cells, and keep their complete outline when isolated.
+        var curtain = catalog.Find("Building", "AnimalFlap");
+        need(curtain != null && LinkedGraphics.IsSeamJoinable(curtain),
+            "AnimalFlap supports neighbor-aware seam rendering");
+        var curtainLeft = new PlacedItem { Kind = "Building", DefName = "AnimalFlap" };
+        var curtainCells = new Dictionary<Point, PlacedItem>();
+        need(LinkedGraphics.Mask(curtainLeft, catalog, curtainCells) == 0 &&
+            LinkedGraphics.SeamJoinedSource(128, 128, 0) == new Rectangle(0, 0, 128, 128),
+            "Isolated curtains retain all original sprite edges");
+        curtainCells[new Point(1, 0)] = new PlacedItem { Kind = "Building", DefName = "AnimalFlap", X = 1 };
+        int curtainMask = LinkedGraphics.Mask(curtainLeft, catalog, curtainCells);
+        Rectangle joined = LinkedGraphics.SeamJoinedSource(128, 128, curtainMask);
+        need((curtainMask & 2) != 0 && joined.Right < 128 && joined.Left == 0,
+            "Adjacent curtains trim their shared right frame");
+        curtainCells.Clear();
+        curtainCells[new Point(2, 0)] = new PlacedItem { Kind = "Building", DefName = "AnimalFlap", X = 2 };
+        need(LinkedGraphics.Mask(curtainLeft, catalog, curtainCells) == 0,
+            "Curtains separated by a one-cell gap cannot connect");
+        StructureDocument curtainPreview = new();
+        for (int x = 0; x < 4; x++)
+            curtainPreview.Items.Add(new PlacedItem { Kind = "Building", DefName = "AnimalFlap", X = x, Z = 0 });
+        using (StructureCanvas curtainCanvas = new() { Catalog = catalog, Document = curtainPreview })
+        using (Bitmap curtainImage = curtainCanvas.ExportPreview())
+            curtainImage.Save(Path.Combine(folder, "animal-flap-linked.png"));
+
         var barricade = catalog.Find("Building", "Barricade");
         var block = new StructureDocument();
         for (int z = 0; z < 3; z++) for (int x = 0; x < 3; x++) block.Items.Add(new() { Kind = "Building", DefName = "Wall", Stuff = "Steel", X = x, Z = z });

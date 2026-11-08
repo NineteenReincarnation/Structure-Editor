@@ -55,6 +55,45 @@ internal static class LinkedGraphics
         return transparent >= tested * 3 / 4 && occupied >= 5;
     }
 
+    // Curtains/animal flaps use a whole-frame texture in some game versions:
+    // treating that as a sixteen-state atlas either shrinks the whole picture
+    // to one fragment or repeats its framed edges on every adjacent cell.
+    // Do not make every door link: the AnimalFlap is the only native door with
+    // this fabric-seam treatment. Other linked defs can also fall back to it
+    // when their art isn't an actual atlas.
+    internal static bool IsSeamJoinable(CatalogItem entry) =>
+        entry != null && (entry.DefName == "AnimalFlap"
+            || (entry.Linked && entry.LinkType == "Basic"));
+
+    internal static Rectangle GraphicSource(CatalogItem entry, Bitmap texture, string texturePath, int mask)
+    {
+        Rectangle full = new(0, 0, texture.Width, texture.Height);
+        if (entry == null) return full;
+        // Graphic_Multi has directional full images; the curtain does not
+        // become a link atlas merely because the bitmap dimensions divide by 16.
+        bool explicitAtlas = (texturePath ?? "").Contains("Atlas", StringComparison.OrdinalIgnoreCase);
+        if (entry.Linked && (explicitAtlas || (entry.DefName != "AnimalFlap" && IsAtlas(texture, texturePath))))
+            return Source(texture.Width, texture.Height, mask);
+        if (!IsSeamJoinable(entry) || mask == 0) return full;
+        return SeamJoinedSource(texture.Width, texture.Height, mask);
+    }
+
+    // Only remove the thin *inner* frame when another compatible piece is
+    // directly adjacent. Keep the outer edges of unconnected flaps untouched.
+    internal static Rectangle SeamJoinedSource(int width, int height, int mask)
+    {
+        int edgeX = Math.Max(1, (int)Math.Round(width * 0.065));
+        int edgeY = Math.Max(1, (int)Math.Round(height * 0.065));
+        edgeX = Math.Min(edgeX, Math.Max(1, width / 6));
+        edgeY = Math.Min(edgeY, Math.Max(1, height / 6));
+        int left = (mask & 8) != 0 ? edgeX : 0;
+        int right = (mask & 2) != 0 ? edgeX : 0;
+        int top = (mask & 1) != 0 ? edgeY : 0;
+        int bottom = (mask & 4) != 0 ? edgeY : 0;
+        return new Rectangle(left, top, Math.Max(1, width - left - right),
+            Math.Max(1, height - top - bottom));
+    }
+
     // MaterialAtlasPool samples the inner 3/16 of a 1/4 atlas tile: 1/32 padding on each side.
     internal static Rectangle Source(int width, int height, int mask) => new(
         mask % 4 * width / 4 + width / 32, (3 - mask / 4) * height / 4 + height / 32,
@@ -74,9 +113,11 @@ internal static class LinkedGraphics
     {
         if (!cells.TryGetValue(new(item.X + dx, item.Z + dz), out var neighbor)) return false;
         CatalogItem other = catalog.Find(neighbor.Kind, neighbor.DefName);
-        return parent?.LinkFlags.Count > 0
-            ? other != null && parent.LinkFlags.Intersect(other.LinkFlags).Any(f => f != "MapEdge")
-            : neighbor.DefName == item.DefName;
+        // A group flag can also link neighboring different defs; identical
+        // curtain pieces link even if their source defs define no linkFlags.
+        return neighbor.DefName == item.DefName ||
+            (parent?.LinkFlags.Count > 0 && other != null &&
+                parent.LinkFlags.Intersect(other.LinkFlags).Any(f => f != "MapEdge"));
     }
     internal static int CornerMask(PlacedItem item, Catalog catalog, IReadOnlyDictionary<Point, PlacedItem> cells)
     {

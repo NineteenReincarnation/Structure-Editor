@@ -337,10 +337,11 @@ public partial class StructureCanvas
             return;
         }
         Rectangle source = new(0, 0, texture.Width, texture.Height);
-        if (entry.Linked && LinkedGraphics.IsAtlas(texture, texturePath))
+        if (entry.Linked || LinkedGraphics.IsSeamJoinable(entry))
         {
             var cells = item.Kind == "Terrain" ? linkedIndex.Terrain : linkedIndex.Solid;
-            source = LinkedGraphics.Source(texture.Width, texture.Height, LinkedGraphics.Mask(item, Catalog, cells));
+            int neighbors = LinkedGraphics.Mask(item, Catalog, cells);
+            source = LinkedGraphics.GraphicSource(entry, texture, texturePath, neighbors);
         }
         float w = item.Kind == "Terrain" ? 1 : entry.DrawX, h = item.Kind == "Terrain" ? 1 : entry.DrawZ;
         if (renderingTerrainChunk && item.Kind == "Terrain" && alpha == 1)

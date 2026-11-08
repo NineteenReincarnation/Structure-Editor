@@ -25,3 +25,5 @@
 - Branch cleanup: keep development and CI commits on `main` only; do not push, synchronize, delete, or rename any other branch. The repository owner handles other branches manually.
 
 - Do not reintroduce the obsolete document category selector. New JSON and Framework XML omit Category/category/structureCategory; legacy files containing them remain readable. MP cluster naming is a collapsible optional tool recognized from the MP_Cluster_ DefName prefix, not a general document type.
+
+- Connected fabric graphics: AnimalFlap uses neighbor-aware frame seam selection when directly adjacent, without treating its ordinary directional sprite as a 4x4 wall atlas. Test both adjacent and separated placement; do not crop isolated curtains or change XML semantics.
