@@ -38,6 +38,7 @@ public partial class MainForm
             MP_exportReviewStatus.Text = review.Summary;
         MP_exportReviewStatus.ForeColor = review.Errors > 0 ? Color.FromArgb(239, 151, 139)
             : review.Warnings > 0 ? Color.FromArgb(218, 185, 120) : Color.FromArgb(129, 206, 166);
+        MP_exportStatusDot.SetState(review.Errors, review.Warnings);
         string dependencies = review.Dependencies.Count == 0
             ? "依赖：仅原版基础内容"
             : "依赖：" + string.Join("、", review.Dependencies.Select(x => x.Name ?? x.PackageId).Take(5))

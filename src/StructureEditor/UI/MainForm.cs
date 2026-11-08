@@ -17,11 +17,14 @@ public partial class MainForm : Form
     private readonly CheckBox dormant = new();
     private readonly ComboBox profileBox = new MP_DarkComboBox();
     private readonly CheckBox mpCompatibility = new();
-    private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new(), summary = new();
+    private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new();
+    private readonly MP_StructureOverview MP_structureOverview = new();
+    private readonly MP_ExportIndicator MP_exportStatusDot = new();
+    private readonly System.Windows.Forms.Timer MP_overviewDelay = new() { Interval = 110 };
     private Label MP_rotationLabel, MP_materialLabel, MP_dormancyLabel;
     private StructureDocument MP_summaryDocument;
+    private Catalog MP_summaryCatalog;
     private int MP_summaryCount = -1;
-    private string MP_summaryText;
     private readonly ListBox palette = new();
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Stack<StructureDocument> undo = new(), redo = new();
@@ -54,11 +57,28 @@ public partial class MainForm : Form
             { e.Handled = true; e.SuppressKeyPress = true; }
         };
         canvas.BeforeChange += Snapshot;
-        canvas.Changed += () => { MP_summaryDocument = null; dirty = true; UpdateTitle(); UpdateSummary(); MP_ScheduleExportReview(); };
+        MP_overviewDelay.Tick += (_, _) =>
+        {
+            MP_overviewDelay.Stop();
+            if (!IsDisposed && !Disposing) UpdateSummary();
+        };
+        canvas.Changed += () =>
+        {
+            MP_summaryDocument = null;
+            dirty = true;
+            UpdateTitle();
+            MP_overviewDelay.Stop();
+            MP_overviewDelay.Start();
+            MP_ScheduleExportReview();
+        };
         canvas.SelectionChanged += ShowSelection;
         canvas.Hint += message => status.Text = message;
         FormClosing += (_, e) => { try { if (!AskSaveWorkspace()) e.Cancel = true; } catch (Exception ex) { e.Cancel = true; MessageBox.Show(this, ex.Message); } };
-        FormClosed += (_, _) => { MP_exportReviewTimer.Stop(); MP_exportReviewTimer.Dispose(); };
+        Disposed += (_, _) =>
+        {
+            MP_exportReviewTimer.Stop(); MP_exportReviewTimer.Dispose();
+            MP_overviewDelay.Stop(); MP_overviewDelay.Dispose();
+        };
         Load += (_, _) => { UpdatePaletteDensity(); FitWorkingArea(); };
         Shown += (_, _) => { if (Program.IsGame(Program.Paths.GameRoot)) LoadCatalog(); else { canvas.Document=document; RefreshMetadata(); status.Text="请在 编辑 → 首选项 中选择 RimWorld 游戏目录，加载本机素材。"; } };
     }
@@ -308,23 +328,29 @@ public partial class MainForm : Form
         dirty = true; UpdateTitle(); canvas.Invalidate(); RefreshMetadata(); ShowSelection();
         MP_ScheduleExportReview();
     }
-    private void UpdateTitle() { Text = "Structure Editor · 结构工坊 — " + document.Label + (dirty ? " *" : ""); RefreshDocumentTabs(); RefreshNamingPreview(); }
+    private void UpdateTitle()
+    {
+        string next = "Structure Editor · 结构工坊 — " + document.Label + (dirty ? " *" : "");
+        // Moving one item can generate many canvas change notifications.
+        // Tab layout and naming preview only need refreshing on a title change.
+        if (Text != next)
+        {
+            Text = next;
+            RefreshDocumentTabs();
+        }
+        // The naming preview also depends on the current file location, not
+        // only the visible title (for example after saving a clean document).
+        RefreshNamingPreview();
+    }
     private void UpdateSummary()
     {
-        if (!ReferenceEquals(MP_summaryDocument, document) || MP_summaryCount != document.Items.Count)
-        {
-            int buildings = 0, pawns = 0, terrain = 0;
-            foreach (PlacedItem item in document.Items)
-            {
-                if (item.Kind == "Building") buildings++;
-                else if (item.Kind == "Pawn") pawns++;
-                else if (item.Kind == "Terrain") terrain++;
-            }
-            MP_summaryText = $"建筑 {buildings}   单位 {pawns}\n地板 {terrain}   总计 {document.Items.Count}";
-            MP_summaryDocument = document;
-            MP_summaryCount = document.Items.Count;
-        }
-        if (summary.Text != MP_summaryText) summary.Text = MP_summaryText;
+        if (ReferenceEquals(MP_summaryDocument, document)
+            && ReferenceEquals(MP_summaryCatalog, catalog)
+            && MP_summaryCount == document.Items.Count) return;
+        MP_structureOverview.SetDocument(document, catalog);
+        MP_summaryDocument = document;
+        MP_summaryCatalog = catalog;
+        MP_summaryCount = document.Items.Count;
     }
     private bool AskSave()
     {

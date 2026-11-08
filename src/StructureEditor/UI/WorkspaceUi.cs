@@ -250,8 +250,9 @@ public partial class MainForm
         Field(metadata, "类别", categoryBox);
         dormant.Text = "默认休眠"; dormant.AutoSize = true;
         Row(metadata, dormant);
-        summary.ForeColor = muted;
-        Row(metadata, summary, 43);
+        // A compact diagram makes object composition and occupied footprint
+        // visible without adding a separate statistics page or toolbar.
+        Row(metadata, MP_structureOverview, 146);
 
         Row(metadata, new Label { Text = "XML 导出", Font = new(Font, FontStyle.Bold),
             ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
@@ -271,8 +272,17 @@ public partial class MainForm
         MP_compatRecommendation.ForeColor = muted;
         Row(metadata, MP_compatRecommendation);
         Row(metadata, autoExport);
+        Panel reviewRow = new()
+        {
+            Height = 27, BackColor = surface, Margin = Padding.Empty
+        };
+        MP_exportStatusDot.Location = new Point(1, 3);
         MP_exportReviewStatus.ForeColor = muted;
-        Row(metadata, MP_exportReviewStatus);
+        MP_exportReviewStatus.Location = new Point(24, 2);
+        MP_exportReviewStatus.Margin = Padding.Empty;
+        reviewRow.Controls.Add(MP_exportStatusDot);
+        reviewRow.Controls.Add(MP_exportReviewStatus);
+        Row(metadata, reviewRow, 27);
         MP_exportReviewDetails.BackColor = Color.FromArgb(36, 48, 57);
         MP_exportReviewDetails.ForeColor = text;
         MP_exportReviewDetails.BorderStyle = BorderStyle.None;

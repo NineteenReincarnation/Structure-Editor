@@ -85,9 +85,17 @@ public partial class MainForm
     {
         if (loadingNaming || namingCore?.SelectedItem is not MPClusterPreset preset || namingTier.SelectedIndex < 0) return;
         int tier = namingTier.SelectedIndex + 1, variant = (int)namingVariant.Value;
-        namingLabel.Text = MP_ClusterNaming.Label(preset.Label, tier, variant); namingId.Text = MP_ClusterNaming.DefName(preset.Core, tier, variant);
-        namingStatus.Text = namingId.Text != document.DefName ? "自动识别…" : currentFile == null ? "空草稿 · 未保存" : Path.GetExtension(currentFile).Equals(".json", StringComparison.OrdinalIgnoreCase) ? "JSON · 已加载" : "XML · 已加载";
-        namingStatus.ForeColor = muted; applyNaming.Enabled = true;
+        string label = MP_ClusterNaming.Label(preset.Label, tier, variant);
+        string id = MP_ClusterNaming.DefName(preset.Core, tier, variant);
+        string state = id != document.DefName ? "自动识别…"
+            : currentFile == null ? "空草稿 · 未保存"
+            : Path.GetExtension(currentFile).Equals(".json", StringComparison.OrdinalIgnoreCase)
+                ? "JSON · 已加载" : "XML · 已加载";
+        if (namingLabel.Text != label) namingLabel.Text = label;
+        if (namingId.Text != id) namingId.Text = id;
+        if (namingStatus.Text != state) namingStatus.Text = state;
+        if (namingStatus.ForeColor != muted) namingStatus.ForeColor = muted;
+        if (!applyNaming.Enabled) applyNaming.Enabled = true;
     }
     private void NamingChoiceChanged()
     {
