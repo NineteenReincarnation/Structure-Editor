@@ -33,7 +33,7 @@ internal static class MP_HelpWindows
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            if (keyData == Keys.Escape) { Close(); return true; }
+            if (keyData == System.Windows.Forms.Keys.Escape) { Close(); return true; }
             return base.ProcessCmdKey(ref msg, keyData);
         }
 

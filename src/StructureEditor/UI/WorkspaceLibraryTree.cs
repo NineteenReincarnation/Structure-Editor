@@ -326,7 +326,7 @@ public partial class MainForm
             MP_libraryDetails.Text = entry.Label;
             MP_libraryDetails.Tag = entry.Id;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             MP_libraryDetails.Text = entry.Label;
         }
