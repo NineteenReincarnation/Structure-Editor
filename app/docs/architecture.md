@@ -94,3 +94,12 @@ Structure-Editor/
 - `UI/MP_SectionTabs.cs`：替换原生 TabControl 的亮白未使用页签区域，以统一深色标签栏组织左侧素材/结构库及右侧属性四个页面。
 - `UI/MP_DarkControls.cs`：覆绘原生 ComboBox 的亮色箭头区，并在素材 ListBox 的系统滚动条上覆盖可拖动的深色滚动轨道，同时保留原始列表选择、滚轮及键盘行为。
 - `UI/WorkspaceCommands.cs`：Ctrl+G/H/J 分别控制殉爆、探测、护盾范围；原 Ctrl+J 复制重映射为 Ctrl+D，菜单与帮助同步更新。
+
+
+## 编辑图层与性能调整
+
+- 编辑工具栏移除快捷键字母后缀；按键处理仍由 `WorkspaceCommands.HandleModeShortcut` 负责。
+- `WorkspaceUi` 将一级「显示图层」菜单移到编辑图层旁边，直接设置 `StructureCanvas.VisibleLayers` 与 `ShowGrid`，并在打开时同步快捷键切换产生的网格状态。
+- 对象朝向字段根据 `CatalogItem.Rotatable` 及当前选中对象是否有可旋转部分决定可见性；无此能力的单个对象不显示朝向。
+- `MainForm.FilterPalette` 重用未变化的筛选结果，避免反复重建 WinForms 素材列表；`UpdateSummary` 对结构摘要做缓存；`StructureCanvas.SelectItems` 避免相同选区产生重复事件。
+- `WorkspaceDocuments.LibraryDefinitions` 不再为结构列表预览第二次反序列化完整 JSON；`WorkspaceStartup` 不在首次完成加载前同步解码固定的八个缩略图，继续通过按需异步请求读取贴图。
