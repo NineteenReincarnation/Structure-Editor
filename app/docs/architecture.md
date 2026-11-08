@@ -112,3 +112,13 @@ Structure-Editor/
 - `ExportDependencies.Xml` 仅允许明确的三种目标类型，不再把未知格式默默转为框架 XML。
 - `PrefabCodec.Export` 遇到 Pawn、专用修饰器、初始休眠、MP 扩展开关、框架生成参数或框架标签时拒绝有损导出；保存 JSON 仍然安全。
 - 原版 `RimWorld.PrefabDef` 的 `size`、`rotations`、`things`、`terrain`、`edgeOnly` 字段，以及 `PrefabThingData` 的 `positions`、`stuff`、`relativeRotation` 和 `PrefabTerrainData.rects`，可与 RimWorld 1.7 原版反编译定义对应。解析成功 ≠ 实际资产存在或地图自动生成。
+
+
+## 导出检查和原版条件兼容
+
+- 新的 \`Formats/MP_ExportReview.cs\` 提供统一输出分析，区分 **Error**（有损、不可解析、格式不支持）和 **Warning**（本地缺少引用或依赖、通用原版回退省略扩展对象）。\`StructureStorage.ExportXml\` 在覆盖输出前调用分析，只有确定错误阻止导出。JSON 永远在 XML 之前保存，导出失败仍保留可编辑项目。
+- \`ExportDependencies.Xml(...,"Universal")\` 生成 \`PrefabDef\`（仅 Core 建筑+地形）和有 \`MayRequire\` 的 \`StructureFramework.StructureDef\`。增强定义的 DefName 使用 \`MP_EnhancedName\` 统一生成，避免与原版基础定义重名；不是游戏运行时自动选择替代版本。
+- 原版 \`VanillaPrefab\` 在存在外部依赖时，于**整个 Def** 设置 \`MayRequire\`，避免把未安装素材的引用直接交给原版解析；不对未经证实支持条件加载的子字段做不安全的细粒度条件标记。
+- 普通 XML 的依赖列表仅作检查及 XML 注释；导出完整 Mod 包时，原有格式继续用 \`About.xml/modDependencies\` 声明必需依赖；\`Universal\` 的扩展依赖只生成可选 \`loadAfter\`，与原版基础 Def 的独立加载能力保持一致。
+- UI 的「兼容拓展」嵌入「导出」页，自动给出适用性推荐但不自动更改手动勾选状态；格式切换只清除已不适用的开关，不抹除对象的原始属性。
+- \`Validation/StudioExportChecks.cs\` 覆盖原版/框架/MP/通用输出、告警分级、条件依赖及共享 XML 安全更新；Windows 编译不代表已经在真实游戏中完成端到端加载验证。
