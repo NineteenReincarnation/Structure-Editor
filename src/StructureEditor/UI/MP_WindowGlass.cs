@@ -37,7 +37,7 @@ internal sealed class MP_GlassLayout : TableLayoutPanel
 {
     public MP_GlassLayout()
     {
-        BackColor = Color.FromArgb(29, 40, 48);
+        BackColor = Color.FromArgb(35, 47, 57);
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
             ControlStyles.UserPaint, true);
     }
@@ -47,11 +47,11 @@ internal sealed class MP_GlassLayout : TableLayoutPanel
         Rectangle bounds = ClientRectangle;
         if (bounds.Width <= 0 || bounds.Height <= 0) return;
         using var fill = new LinearGradientBrush(bounds,
-            Color.FromArgb(62, 81, 95), Color.FromArgb(27, 38, 48),
+            Color.FromArgb(46, 62, 73), Color.FromArgb(34, 47, 57),
             LinearGradientMode.Vertical);
         e.Graphics.FillRectangle(fill, bounds);
-        using var reflection = new Pen(Color.FromArgb(92, 135, 153), 1);
-        using var border = new Pen(Color.FromArgb(53, 76, 86), 1);
+        using var reflection = new Pen(Color.FromArgb(60, 83, 95), 1);
+        using var border = new Pen(Color.FromArgb(54, 73, 83), 1);
         e.Graphics.DrawLine(reflection, 0, 0, bounds.Right, 0);
         e.Graphics.DrawLine(border, 0, bounds.Bottom - 1, bounds.Right, bounds.Bottom - 1);
     }

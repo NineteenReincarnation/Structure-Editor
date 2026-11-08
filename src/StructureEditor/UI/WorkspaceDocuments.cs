@@ -23,7 +23,7 @@ public partial class MainForm
 
     private ToolStrip BuildDocumentBar()
     {
-        documentBar = new() { Dock = DockStyle.Fill, GripStyle = ToolStripGripStyle.Hidden, BackColor = surface, Padding = new(6, 3, 6, 3), CanOverflow = true };
+        documentBar = new() { Dock = DockStyle.Fill, AutoSize = false, GripStyle = ToolStripGripStyle.Hidden, BackColor = Color.FromArgb(35, 47, 57), Padding = new(6, 4, 0, 4), CanOverflow = true, Margin = Padding.Empty };
         AddTool(documentBar, "+ 新建", NewDocument);
         AddTool(documentBar, "打开…", OpenDocument);
         return documentBar;

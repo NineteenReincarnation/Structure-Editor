@@ -21,19 +21,25 @@ public partial class MainForm
         ToolStripManager.Renderer = new StudioRenderer();
         MenuStrip menu = BuildMenus(); MainMenuStrip = menu;
         void Menu(ToolStripDropDownItem parent,string title,Action action) => AddMenuAction(parent,title,action);
-        // The native window caption already carries the product name/icon.
-        // Keep this row for actions only, not a second decorative title.
         ApplyBranding();
-        MP_GlassLayout heading = new() { Dock = DockStyle.Fill, Height = 43,
-            ColumnCount = 2, RowCount = 1, Padding = new Padding(8, 4, 8, 4) };
-        heading.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        heading.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        // A single continuous row: documents on the left, preview and save
+        // actions on the right. Keep the action width reserved as tabs overflow.
+        MP_GlassLayout topBar = new()
+        {
+            Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1,
+            Margin = Padding.Empty, Padding = Padding.Empty
+        };
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        topBar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
         ToolStrip actions = new()
         {
-            Dock = DockStyle.Right, GripStyle = ToolStripGripStyle.Hidden,
-            BackColor = Color.FromArgb(27, 37, 45), Padding = new Padding(5, 2, 5, 2),
-            LayoutStyle = ToolStripLayoutStyle.HorizontalStackWithOverflow,
-            AutoSize = true
+            Dock = DockStyle.Fill, GripStyle = ToolStripGripStyle.Hidden,
+            AutoSize = true, CanOverflow = false,
+            Margin = Padding.Empty, BackColor = Color.FromArgb(35, 47, 57),
+            Padding = new Padding(6, 4, 8, 4),
+            LayoutStyle = ToolStripLayoutStyle.HorizontalStackWithOverflow
         };
         ToolStripButton MP_rangeToggle(string label, string name, bool initial, Action<bool> onChange)
         {
@@ -54,10 +60,12 @@ public partial class MainForm
         AddTool(actions, "保存", () => SaveDocument(false));
         AddTool(actions, "保存位置", SetSaveDirectory);
         AddTool(actions, "导出预览", ExportPreview);
-        heading.Controls.Add(actions, 1, 0);
 
-        librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 6, SplitterDistance = 292, BackColor = Color.FromArgb(21, 27, 30) };
-        inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 298), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 6, SplitterDistance = Math.Max(400, ClientSize.Width - 604), BackColor = librarySplit.BackColor };
+        topBar.Controls.Add(BuildDocumentBar(), 0, 0);
+        topBar.Controls.Add(actions, 1, 0);
+
+        librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 3, SplitterDistance = 292, BackColor = Color.FromArgb(39, 52, 61) };
+        inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 298), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 3, SplitterDistance = Math.Max(400, ClientSize.Width - 604), BackColor = librarySplit.BackColor };
         librarySplit.Panel2.Controls.Add(inspectorSplit);
         librarySplit.Panel1MinSize = 235; librarySplit.Panel2MinSize = 540;
         inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 255;
@@ -68,7 +76,7 @@ public partial class MainForm
         palette.BackColor = surface; palette.ForeColor = text; palette.DrawItem += DrawPalette; palette.SelectedIndexChanged += (_, _) => SelectBrush();
         libraryInfo.Dock = DockStyle.Bottom; libraryInfo.Height = 43; libraryInfo.ForeColor = muted;
         library.Controls.Add(palette); library.Controls.Add(filters); library.Controls.Add(libraryInfo);
-        MP_libraryTabs = new TabControl
+        MP_libraryTabs = new MP_SeamlessTabs
         {
             Dock = DockStyle.Fill, BackColor = surface, ForeColor = text,
             Padding = new Point(10, 5), DrawMode = TabDrawMode.OwnerDrawFixed
@@ -130,7 +138,7 @@ public partial class MainForm
         layerBar.Controls.Add(MP_editLayerSelector, 1, 0); layerBar.Controls.Add(selectionCount, 2, 0);
         viewport.Controls.Add(canvas); viewport.Controls.Add(layerBar); viewport.Controls.Add(editTools); inspectorSplit.Panel1.Controls.Add(viewport);
 
-        TabControl tabs = new() { Dock = DockStyle.Fill, Padding = new(6, 7), DrawMode = TabDrawMode.OwnerDrawFixed, BackColor = surface };
+        MP_SeamlessTabs tabs = new() { Dock = DockStyle.Fill, Padding = new(6, 7), DrawMode = TabDrawMode.OwnerDrawFixed, BackColor = surface };
         tabs.DrawItem += (_, e) =>
         {
             bool selected = e.Index == tabs.SelectedIndex;
@@ -243,11 +251,11 @@ public partial class MainForm
         StatusStrip strip = new() { BackColor = Color.FromArgb(23, 29, 33), ForeColor = text, SizingGrip = false };
         selectionStatus = new() { BorderSides = ToolStripStatusLabelBorderSides.Left, Text = "放置" };
         status.Text = "正在读取游戏素材…"; strip.Items.Add(status); strip.Items.Add(selectionStatus);
-        TableLayoutPanel workspace = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Margin = Padding.Empty, Padding = Padding.Empty };
+        TableLayoutPanel workspace = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = Padding.Empty, Padding = Padding.Empty };
         workspace.ColumnStyles.Add(new(SizeType.Percent, 100));
-        workspace.RowStyles.Add(new(SizeType.AutoSize)); workspace.RowStyles.Add(new(SizeType.AutoSize)); workspace.RowStyles.Add(new(SizeType.AutoSize)); workspace.RowStyles.Add(new(SizeType.Percent, 100)); workspace.RowStyles.Add(new(SizeType.AutoSize));
-        menu.Dock = strip.Dock = DockStyle.Fill; menu.Margin = heading.Margin = librarySplit.Margin = strip.Margin = Padding.Empty;
-        workspace.Controls.Add(menu, 0, 0); workspace.Controls.Add(heading, 0, 1); workspace.Controls.Add(BuildDocumentBar(), 0, 2); workspace.Controls.Add(librarySplit, 0, 3); workspace.Controls.Add(strip, 0, 4); Controls.Add(workspace);
+        workspace.RowStyles.Add(new(SizeType.AutoSize)); workspace.RowStyles.Add(new(SizeType.Absolute, 38)); workspace.RowStyles.Add(new(SizeType.Percent, 100)); workspace.RowStyles.Add(new(SizeType.AutoSize));
+        menu.Dock = strip.Dock = DockStyle.Fill; menu.Margin = topBar.Margin = librarySplit.Margin = strip.Margin = Padding.Empty;
+        workspace.Controls.Add(menu, 0, 0); workspace.Controls.Add(topBar, 0, 1); workspace.Controls.Add(librarySplit, 0, 2); workspace.Controls.Add(strip, 0, 3); Controls.Add(workspace);
         RefreshToolDisplay(); ResumeLayout(true);
     }
     private void RefreshToolDisplay()
@@ -266,10 +274,10 @@ public partial class MainForm
             Rectangle area = e.AffectedBounds;
             if (area.Width <= 0 || area.Height <= 0) return;
             using var fill = new System.Drawing.Drawing2D.LinearGradientBrush(area,
-                Color.FromArgb(59, 78, 91), Color.FromArgb(29, 41, 51),
+                Color.FromArgb(46, 62, 73), Color.FromArgb(34, 47, 57),
                 System.Drawing.Drawing2D.LinearGradientMode.Vertical);
             e.Graphics.FillRectangle(fill, area);
-            using var line = new Pen(Color.FromArgb(70, 103, 117));
+            using var line = new Pen(Color.FromArgb(54, 73, 83));
             e.Graphics.DrawLine(line, area.Left, area.Bottom - 1, area.Right, area.Bottom - 1);
         }
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e) { e.TextColor = Color.FromArgb(224, 231, 232); base.OnRenderItemText(e); }
@@ -291,6 +299,6 @@ public partial class MainForm
         public override Color ButtonCheckedGradientMiddle => ButtonCheckedGradientBegin;
         public override Color ButtonCheckedGradientEnd => ButtonCheckedGradientBegin;
         public override Color MenuBorder => Color.FromArgb(74, 96, 103);
-        public override Color ToolStripBorder => Color.FromArgb(48, 60, 65);
+        public override Color ToolStripBorder => Color.FromArgb(47, 63, 73);
     }
 }
