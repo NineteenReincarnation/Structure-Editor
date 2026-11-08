@@ -8,8 +8,6 @@ public partial class StructureCanvas
     private bool showTurretExplosionRanges;
     private bool showProximityRanges;
     private bool showShieldRanges;
-    private readonly System.Windows.Forms.Timer MP_rangePulseTimer = new() { Interval = 100 };
-    private bool MP_rangePulseBound;
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public bool ShowProximityRanges
     {
@@ -18,8 +16,6 @@ public partial class StructureCanvas
         {
             if (showProximityRanges == value) return;
             showProximityRanges = value;
-            if (!MP_rangePulseBound) { MP_rangePulseTimer.Tick += (_, _) => Invalidate(); MP_rangePulseBound = true; }
-            MP_UpdateRangePulseTimer();
             Invalidate();
         }
     }
@@ -31,20 +27,8 @@ public partial class StructureCanvas
         {
             if (showShieldRanges == value) return;
             showShieldRanges = value;
-            if (!MP_rangePulseBound)
-            {
-                MP_rangePulseTimer.Tick += (_, _) => Invalidate();
-                MP_rangePulseBound = true;
-            }
-            MP_UpdateRangePulseTimer();
             Invalidate();
         }
-    }
-
-    private void MP_UpdateRangePulseTimer()
-    {
-        if (showProximityRanges || showShieldRanges) MP_rangePulseTimer.Start();
-        else MP_rangePulseTimer.Stop();
     }
 
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
@@ -194,7 +178,6 @@ public partial class StructureCanvas
             (entry.ProximityTriggerRadius ?? 0, Color.FromArgb(81, 202, 218), "探测"),
             (entry.DormantWakeRadius ?? 0, Color.FromArgb(239, 171, 90), "唤醒")
         };
-        float pulse = (float)(0.65 + 0.35 * Math.Sin(Environment.TickCount64 / 400d));
         foreach (var range in ranges)
         {
             if (!float.IsFinite(range.Radius) || range.Radius <= 0) continue;
@@ -203,7 +186,7 @@ public partial class StructureCanvas
             if (!area.IntersectsWith(viewport)) continue;
             var state = g.Save();
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            int alpha = (int)(190 * pulse);
+            const int alpha = 170;
             using SolidBrush fill = new(Color.FromArgb(preview ? 12 : 9, range.Color));
             using Pen edge = new(Color.FromArgb(alpha, range.Color), 1.6f)
             {
@@ -225,7 +208,7 @@ public partial class StructureCanvas
         if (entry?.ShieldRadii == null || entry.ShieldRadii.Count == 0) return;
         PointF center = Screen(item.X, item.Z);
         Color ringColor = Color.FromArgb(133, 182, 245);
-        int pulse = (int)(155 + 55 * Math.Sin(Environment.TickCount64 / 600d));
+        const int pulse = 165;
         foreach (float radius in entry.ShieldRadii)
         {
             if (!float.IsFinite(radius) || radius <= 0) continue;
@@ -354,7 +337,7 @@ public partial class StructureCanvas
             return;
         }
         Rectangle source = new(0, 0, texture.Width, texture.Height);
-        if (entry.Linked && texture.Width >= 4 && texture.Height >= 4)
+        if (entry.Linked && LinkedGraphics.IsAtlas(texture, texturePath))
         {
             var cells = item.Kind == "Terrain" ? linkedIndex.Terrain : linkedIndex.Solid;
             source = LinkedGraphics.Source(texture.Width, texture.Height, LinkedGraphics.Mask(item, Catalog, cells));
@@ -421,5 +404,5 @@ public partial class StructureCanvas
         finally { exportingPreview = false; cellSize = savedSize; origin = savedOrigin; ClearTerrainCache(); }
         return output;
     }
-    protected override void Dispose(bool disposing) { if (disposing) { MP_rangePulseTimer.Dispose(); ClearTerrainCache(); ClearPastePreview(); } base.Dispose(disposing); }
+    protected override void Dispose(bool disposing) { if (disposing) { ClearTerrainCache(); ClearPastePreview(); } base.Dispose(disposing); }
 }

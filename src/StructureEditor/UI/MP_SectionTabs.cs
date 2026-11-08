@@ -54,7 +54,7 @@ internal sealed class MP_SectionTabs : UserControl
             if (content.SelectedIndex >= 0 && content.SelectedIndex != selection)
                 SelectedIndex = content.SelectedIndex;
         };
-        header = new FlowLayoutPanel
+        header = new MP_SmoothFlow
         {
             Dock = DockStyle.Top, Height = 31, WrapContents = false,
             Margin = Padding.Empty, Padding = Padding.Empty,

@@ -33,6 +33,25 @@ internal static class MP_WindowGlass
     }
 }
 
+// Avoid background-erase flashes when docking, resizing or switching pages.
+internal sealed class MP_SmoothLayout : TableLayoutPanel
+{
+    internal MP_SmoothLayout()
+    {
+        DoubleBuffered = true;
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+    }
+}
+
+internal sealed class MP_SmoothFlow : FlowLayoutPanel
+{
+    internal MP_SmoothFlow()
+    {
+        DoubleBuffered = true;
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+    }
+}
+
 internal sealed class MP_GlassLayout : TableLayoutPanel
 {
     public MP_GlassLayout()

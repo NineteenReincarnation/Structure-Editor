@@ -18,13 +18,8 @@ public partial class MainForm : Form
     private readonly ComboBox profileBox = new MP_DarkComboBox();
     private readonly CheckBox mpCompatibility = new();
     private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new();
-    private readonly MP_StructureOverview MP_structureOverview = new();
     private readonly MP_ExportIndicator MP_exportStatusDot = new();
-    private readonly System.Windows.Forms.Timer MP_overviewDelay = new() { Interval = 110 };
     private Label MP_rotationLabel, MP_materialLabel, MP_dormancyLabel;
-    private StructureDocument MP_summaryDocument;
-    private Catalog MP_summaryCatalog;
-    private int MP_summaryCount = -1;
     private readonly ListBox palette = new();
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Stack<StructureDocument> undo = new(), redo = new();
@@ -47,9 +42,6 @@ public partial class MainForm : Form
         AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
         MinimumSize = new Size(1000, 640); KeyPreview = true;
         BuildUi();
-        MP_structureOverview.MP_NavigateRequested += canvas.MP_CenterOnGrid;
-        canvas.MP_ViewChanged += () => MP_structureOverview.MP_SetView(canvas.MP_VisibleCells);
-        MP_structureOverview.MP_SetView(canvas.MP_VisibleCells);
         RefreshMetadata(); ShowSelection();
         InitializeBackgroundLoading();
         KeyDown += (_, e) =>
@@ -60,18 +52,10 @@ public partial class MainForm : Form
             { e.Handled = true; e.SuppressKeyPress = true; }
         };
         canvas.BeforeChange += Snapshot;
-        MP_overviewDelay.Tick += (_, _) =>
-        {
-            MP_overviewDelay.Stop();
-            if (!IsDisposed && !Disposing) UpdateSummary();
-        };
         canvas.Changed += () =>
         {
-            MP_summaryDocument = null;
             dirty = true;
             UpdateTitle();
-            MP_overviewDelay.Stop();
-            MP_overviewDelay.Start();
             MP_ScheduleExportReview();
         };
         canvas.SelectionChanged += ShowSelection;
@@ -80,7 +64,6 @@ public partial class MainForm : Form
         Disposed += (_, _) =>
         {
             MP_exportReviewTimer.Stop(); MP_exportReviewTimer.Dispose();
-            MP_overviewDelay.Stop(); MP_overviewDelay.Dispose();
         };
         Load += (_, _) => { UpdatePaletteDensity(); FitWorkingArea(); };
         Shown += (_, _) => { if (Program.IsGame(Program.Paths.GameRoot)) LoadCatalog(); else { canvas.Document=document; RefreshMetadata(); status.Text="请在 编辑 → 首选项 中选择 RimWorld 游戏目录，加载本机素材。"; } };
@@ -172,7 +155,9 @@ public partial class MainForm : Form
         Bitmap image = asyncThumbnails ? catalog.Textures.Request(texturePath) : catalog.Textures.Get(texturePath);
         if (image != null)
         {
-            Rectangle src = item.Linked && item.Icon == null ? LinkedGraphics.Source(image.Width, image.Height, 0) : new Rectangle(0, 0, image.Width, image.Height);
+            Rectangle src = item.Linked && item.Icon == null && LinkedGraphics.IsAtlas(image, texturePath)
+                ? LinkedGraphics.Source(image.Width, image.Height, 0)
+                : new Rectangle(0, 0, image.Width, image.Height);
             int iconSize = Px(47); float ratio = Math.Min((float)iconSize / src.Width, (float)iconSize / src.Height);
             Rectangle dest = new(e.Bounds.X + Px(4) + (int)((iconSize - src.Width * ratio) / 2), e.Bounds.Y + Px(6) + (int)((iconSize - src.Height * ratio) / 2), (int)(src.Width * ratio), (int)(src.Height * ratio));
             e.Graphics.DrawImage(image, dest, src, GraphicsUnit.Pixel);
@@ -204,7 +189,7 @@ public partial class MainForm : Form
             MP_rotationLabel.Visible = rotationBox.Visible = false;
             MP_dormancyLabel.Visible = dormancyBox.Visible = dormancyInfo.Visible = false;
         }
-        UpdateSummary();
+       
     }
     private void ShowItem(CatalogItem item, PlacedItem placed)
     {
@@ -303,7 +288,7 @@ public partial class MainForm : Form
                 && document.EnableMPCompatibility);
         dormant.Visible = dormant.Enabled;
         updating = false;
-        UpdateTitle(); UpdateSummary();
+        UpdateTitle();
         RefreshSaveLocation(); LoadNamingFields();
     }
     private void CommitMetadata()
@@ -344,16 +329,6 @@ public partial class MainForm : Form
         // The naming preview also depends on the current file location, not
         // only the visible title (for example after saving a clean document).
         RefreshNamingPreview();
-    }
-    private void UpdateSummary()
-    {
-        if (ReferenceEquals(MP_summaryDocument, document)
-            && ReferenceEquals(MP_summaryCatalog, catalog)
-            && MP_summaryCount == document.Items.Count) return;
-        MP_structureOverview.SetDocument(document, catalog);
-        MP_summaryDocument = document;
-        MP_summaryCatalog = catalog;
-        MP_summaryCount = document.Items.Count;
     }
     private bool AskSave()
     {

@@ -125,7 +125,7 @@ public partial class MainForm
         librarySplit.Panel1.Controls.Add(MP_libraryTabs);
 
         Panel viewport = new() { Dock = DockStyle.Fill };
-        TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36,
+        MP_SmoothLayout layerBar = new() { Dock = DockStyle.Top, Height = 36,
             BackColor = Color.FromArgb(37, 50, 60), ColumnCount = 5 };
         layerBar.ColumnStyles.Add(new(SizeType.Absolute, 132));
         layerBar.ColumnStyles.Add(new(SizeType.AutoSize));
@@ -197,7 +197,7 @@ public partial class MainForm
         TableLayoutPanel Page(string title)
         {
             TabPage tab = new(title) { BackColor = surface, ForeColor = text, Padding = new(9), AutoScroll = true };
-            TableLayoutPanel layout = new() { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 1, Padding = new(3), Margin = Padding.Empty };
+            MP_SmoothLayout layout = new() { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 1, Padding = new(3), Margin = Padding.Empty };
             layout.ColumnStyles.Add(new(SizeType.Percent, 100));
             layout.SizeChanged += (_, _) => { var extent = new Size(0, layout.Height + tab.Padding.Vertical); if (tab.AutoScrollMinSize != extent) tab.AutoScrollMinSize = extent; };
             tab.Controls.Add(layout); tabs.AddPage(tab); return layout;
@@ -250,10 +250,6 @@ public partial class MainForm
         Field(metadata, "类别", categoryBox);
         dormant.Text = "默认休眠"; dormant.AutoSize = true;
         Row(metadata, dormant);
-        // A compact diagram makes object composition and occupied footprint
-        // visible without adding a separate statistics page or toolbar.
-        Row(metadata, MP_structureOverview, 146);
-
         Row(metadata, new Label { Text = "XML 导出", Font = new(Font, FontStyle.Bold),
             ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
         profileBox.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -298,7 +294,7 @@ public partial class MainForm
 
         Button advancedToggle = MakeButton("高级设置  ▸", 0, 0, 230);
         Row(metadata, advancedToggle, 33);
-        TableLayoutPanel advanced = new()
+        MP_SmoothLayout advanced = new()
         {
             AutoSize = true, Dock = DockStyle.Top,
             BackColor = surface, ColumnCount = 1, Visible = false,
@@ -430,7 +426,7 @@ public partial class MainForm
         StatusStrip strip = new() { BackColor = Color.FromArgb(23, 29, 33), ForeColor = text, SizingGrip = false };
         selectionStatus = new() { BorderSides = ToolStripStatusLabelBorderSides.None, Text = "放置" };
         status.Text = "正在读取游戏素材…"; strip.Items.Add(status); strip.Items.Add(selectionStatus);
-        TableLayoutPanel workspace = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = Padding.Empty, Padding = Padding.Empty };
+        MP_SmoothLayout workspace = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = surface };
         workspace.ColumnStyles.Add(new(SizeType.Percent, 100));
         workspace.RowStyles.Add(new(SizeType.AutoSize)); workspace.RowStyles.Add(new(SizeType.Absolute, 38)); workspace.RowStyles.Add(new(SizeType.Percent, 100)); workspace.RowStyles.Add(new(SizeType.AutoSize));
         menu.Dock = strip.Dock = DockStyle.Fill; menu.Margin = topBar.Margin = librarySplit.Margin = strip.Margin = Padding.Empty;
