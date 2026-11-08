@@ -9,10 +9,13 @@ public partial class MainForm : Form
 {
     private readonly StructureCanvas canvas = new();
     private readonly TextBox search = new(), idBox = new(), labelBox = new();
-    private readonly ComboBox kindBox = new(), packBox = new(), groupBox = new(), scopeBox = new(), materialBox = new(), rotationBox = new(), categoryBox = new(), dormancyBox = new();
+    private readonly ComboBox kindBox = new MP_DarkComboBox(), packBox = new MP_DarkComboBox(),
+        groupBox = new MP_DarkComboBox(), scopeBox = new MP_DarkComboBox(),
+        materialBox = new MP_DarkComboBox(), rotationBox = new MP_DarkComboBox(),
+        categoryBox = new MP_DarkComboBox(), dormancyBox = new MP_DarkComboBox();
     private readonly Label dormancyInfo = new();
     private readonly CheckBox dormant = new();
-    private readonly ComboBox profileBox = new();
+    private readonly ComboBox profileBox = new MP_DarkComboBox();
     private readonly CheckBox mpCompatibility = new();
     private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new(), summary = new();
     private readonly ListBox palette = new();

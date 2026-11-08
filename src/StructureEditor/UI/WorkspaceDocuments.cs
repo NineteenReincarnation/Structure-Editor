@@ -11,7 +11,7 @@ internal sealed class WorkspaceDocument
     public StructureDocument[] Undo = Array.Empty<StructureDocument>(), Redo = Array.Empty<StructureDocument>();
     public PointF ViewOrigin;
     public float ViewScale;
-    public ToolStripButton Tab;
+    public MP_DocumentTabButton Tab;
 }
 
 public partial class MainForm
@@ -104,9 +104,13 @@ public partial class MainForm
     }
     private void AddDocumentTab(WorkspaceDocument session)
     {
-        session.Tab = new() { ForeColor = text, DisplayStyle = ToolStripItemDisplayStyle.Text, AutoToolTip = false };
-        session.Tab.Click += (_, _) => Safe(() => SwitchWorkspaceDocument(session));
-        session.Tab.MouseUp += (_, e) => { if (e.Button == MouseButtons.Middle) Safe(() => { SwitchWorkspaceDocument(session); CloseWorkspaceDocument(); }); };
+        session.Tab = new MP_DocumentTabButton();
+        session.Tab.ActivateRequested += () => Safe(() => SwitchWorkspaceDocument(session));
+        session.Tab.CloseRequested += () => Safe(() =>
+        {
+            if (session != activeDocument) SwitchWorkspaceDocument(session);
+            CloseWorkspaceDocument();
+        });
         documentBar.Items.Add(session.Tab);
         RefreshDocumentTabs();
     }
@@ -123,9 +127,11 @@ public partial class MainForm
         foreach (var session in documents)
         {
             bool active = session == activeDocument;
-            session.Tab.Text = (active ? document.Label : session.Document.Label) + ((active ? dirty : session.Dirty) ? " *" : "");
+            session.Tab.UpdateTitle((active ? document.Label : session.Document.Label) +
+                ((active ? dirty : session.Dirty) ? " *" : ""));
             session.Tab.Checked = active;
-            session.Tab.ToolTipText = (active ? document.DefName : session.Document.DefName) + "\n" + (active ? currentFile : session.File);
+            // Avoid Windows' large white default tooltip exposing absolute paths.
+            session.Tab.ToolTipText = "";
         }
     }
     internal void SwitchWorkspaceDocument(WorkspaceDocument session)

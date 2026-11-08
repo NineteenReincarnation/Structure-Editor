@@ -3,6 +3,12 @@
 public partial class MainForm
 {
     private readonly Dictionary<CanvasTool, ToolStripButton> toolButtons = new();
+    private readonly Dictionary<string, ToolStripButton> MP_rangeButtons = new();
+    private void MP_ToggleRange(string id)
+    {
+        if (MP_rangeButtons.TryGetValue(id, out ToolStripButton button) && !button.IsDisposed)
+            button.Checked = !button.Checked;
+    }
     private readonly System.Windows.Forms.Timer searchDelay = new() { Interval = 160 };
     private readonly Font smallFont = new("Microsoft YaHei UI", 8);
     private ToolStripStatusLabel selectionStatus;
@@ -50,6 +56,7 @@ public partial class MainForm
             };
             button.CheckedChanged += (_, _) => onChange(button.Checked);
             actions.Items.Add(button);
+            MP_rangeButtons[name] = button;
             return button;
         }
         MP_rangeToggle("殉爆范围", "TurretExplosionRanges", false, SetTurretExplosionRanges);
@@ -75,29 +82,32 @@ public partial class MainForm
         palette.Dock = DockStyle.Fill; palette.DrawMode = DrawMode.OwnerDrawFixed; palette.ItemHeight = 78; palette.IntegralHeight = false; palette.BorderStyle = BorderStyle.None;
         palette.BackColor = surface; palette.ForeColor = text; palette.DrawItem += DrawPalette; palette.SelectedIndexChanged += (_, _) => SelectBrush();
         libraryInfo.Dock = DockStyle.Bottom; libraryInfo.Height = 43; libraryInfo.ForeColor = muted;
-        library.Controls.Add(palette); library.Controls.Add(filters); library.Controls.Add(libraryInfo);
-        MP_libraryTabs = new MP_SeamlessTabs
+        // Cover the bright native ListBox scrollbar with a dark draggable track.
+        // Scrolling and selection still use the original ListBox.
+        Panel MP_paletteHost = new() { Dock = DockStyle.Fill, BackColor = surface };
+        MP_DarkPaletteScrollbar MP_paletteScroll = new(palette);
+        palette.Dock = DockStyle.None;
+        palette.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        MP_paletteHost.Resize += (_, _) =>
         {
-            Dock = DockStyle.Fill, BackColor = surface, ForeColor = text,
-            Padding = new Point(10, 5), DrawMode = TabDrawMode.OwnerDrawFixed
+            palette.Bounds = MP_paletteHost.ClientRectangle;
+            MP_paletteScroll.BringToFront();
+            MP_paletteScroll.Invalidate();
         };
-        MP_libraryTabs.DrawItem += (_, e) =>
+        MP_paletteHost.Controls.Add(palette);
+        MP_paletteHost.Controls.Add(MP_paletteScroll);
+        MP_paletteScroll.BringToFront();
+        library.Controls.Add(MP_paletteHost); library.Controls.Add(filters); library.Controls.Add(libraryInfo);
+        MP_libraryTabs = new MP_SectionTabs
         {
-            bool active = e.Index == MP_libraryTabs.SelectedIndex;
-            using var fill = new System.Drawing.Drawing2D.LinearGradientBrush(e.Bounds,
-                active ? Color.FromArgb(86, 114, 129) : Color.FromArgb(49, 65, 77),
-                active ? Color.FromArgb(42, 70, 81) : Color.FromArgb(33, 45, 54),
-                System.Drawing.Drawing2D.LinearGradientMode.Vertical);
-            e.Graphics.FillRectangle(fill, e.Bounds);
-            TextRenderer.DrawText(e.Graphics, MP_libraryTabs.TabPages[e.Index].Text, Font,
-                e.Bounds, text, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            Dock = DockStyle.Fill, BackColor = surface, ForeColor = text
         };
         TabPage materialsPage = new("素材库") { BackColor = surface, Padding = Padding.Empty };
         materialsPage.Controls.Add(library);
         TabPage structuresPage = new("结构库") { BackColor = surface, Padding = Padding.Empty };
         structuresPage.Controls.Add(MP_CreateStructureLibraryPanel());
-        MP_libraryTabs.TabPages.Add(materialsPage);
-        MP_libraryTabs.TabPages.Add(structuresPage);
+        MP_libraryTabs.AddPage(materialsPage);
+        MP_libraryTabs.AddPage(structuresPage);
         MP_libraryTabs.SelectedIndexChanged += (_, _) =>
         {
             if (MP_libraryTabs.SelectedIndex == 1 && !MP_libraryLoaded) Safe(MP_ReloadLibrary);
@@ -127,7 +137,7 @@ public partial class MainForm
         TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(37, 50, 60), ColumnCount = 3 };
         layerBar.ColumnStyles.Add(new(SizeType.AutoSize)); layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124)); layerBar.ColumnStyles.Add(new(SizeType.Percent, 100));
         layerBar.Controls.Add(new Label { Text = "编辑图层", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new(10, 0, 10, 0), ForeColor = muted }, 0, 0);
-        MP_editLayerSelector = new() { Dock = DockStyle.Fill, Margin = new(0, 3, 0, 3), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = surface, ForeColor = text };
+        MP_editLayerSelector = new MP_DarkComboBox() { Dock = DockStyle.Fill, Margin = new(0, 3, 0, 3), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = surface, ForeColor = text };
         MP_editLayerSelector.Items.AddRange(new object[] { "全部", "建筑", "单位", "地形" }); MP_editLayerSelector.SelectedIndex = 0;
         MP_editLayerSelector.SelectedIndexChanged += (_, _) =>
         {
@@ -138,20 +148,14 @@ public partial class MainForm
         layerBar.Controls.Add(MP_editLayerSelector, 1, 0); layerBar.Controls.Add(selectionCount, 2, 0);
         viewport.Controls.Add(canvas); viewport.Controls.Add(layerBar); viewport.Controls.Add(editTools); inspectorSplit.Panel1.Controls.Add(viewport);
 
-        MP_SeamlessTabs tabs = new() { Dock = DockStyle.Fill, Padding = new(6, 7), DrawMode = TabDrawMode.OwnerDrawFixed, BackColor = surface };
-        tabs.DrawItem += (_, e) =>
-        {
-            bool selected = e.Index == tabs.SelectedIndex;
-            using SolidBrush background = new(selected ? Color.FromArgb(53, 86, 84) : surface); e.Graphics.FillRectangle(background, e.Bounds);
-            TextRenderer.DrawText(e.Graphics, tabs.TabPages[e.Index].Text, Font, e.Bounds, text, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-        };
+        MP_SectionTabs tabs = new() { Dock = DockStyle.Fill, BackColor = surface, ForeColor = text };
         TableLayoutPanel Page(string title)
         {
             TabPage tab = new(title) { BackColor = surface, ForeColor = text, Padding = new(9), AutoScroll = true };
             TableLayoutPanel layout = new() { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 1, Padding = new(3), Margin = Padding.Empty };
             layout.ColumnStyles.Add(new(SizeType.Percent, 100));
             layout.SizeChanged += (_, _) => { var extent = new Size(0, layout.Height + tab.Padding.Vertical); if (tab.AutoScrollMinSize != extent) tab.AutoScrollMinSize = extent; };
-            tab.Controls.Add(layout); tabs.TabPages.Add(tab); return layout;
+            tab.Controls.Add(layout); tabs.AddPage(tab); return layout;
         }
         void Row(TableLayoutPanel panel, Control control, int height = 0)
         {
@@ -201,7 +205,7 @@ public partial class MainForm
         Button chooseFolder = MakeButton("更改保存目录…", 0, 0, 230); chooseFolder.Click += (_, _) => Safe(SetSaveDirectory); Row(metadata, chooseFolder, 34);
         summary.ForeColor = muted; Row(metadata, summary, 62);
         Row(metadata, new Label { Text = "保存：JSON 工程及自动导出 XML。\n在“导出”页设置格式和 XML 目录。\n独立内容包自动声明所需模组。", ForeColor = muted }, 100);
-        Row(tips, new Label { Text = "V 选择 / B 放置 / M 矩形 / E 擦除\nI 吸取 / R 旋转 / H 平移 / Z 缩放\n\n双击对象：吸取并继续放置\nShift 拖动：追加框选\nCtrl 单击：增减选择\nDelete / Backspace：删除\n\n中键 / 空格+拖动：平移\n滚轮：以鼠标为中心缩放\n缩放工具：左键放大，Alt+左键缩小\n\nCtrl+N / O：新建 / 打开\nCtrl+S：保存；Ctrl+Shift+S：另存为\nCtrl+Z / Ctrl+Shift+Z：撤销 / 重做\nCtrl+C / X / V：复制 / 剪切 / 粘贴\nCtrl+J：复制为新对象\n粘贴预览：Q 逆时针 / E 顺时针旋转\nCtrl+A：全选；Ctrl+Shift+A：取消\nCtrl+0：适合窗口；Ctrl+1：实际大小\nCtrl+Home：居中所选；Tab：切换编辑图层\n\n方向键：移动 1 格\nShift+方向键：移动 10 格\n\nTab / Shift+Tab：切换编辑图层", ForeColor = muted }, 700);
+        Row(tips, new Label { Text = "V 选择 / B 放置 / M 矩形 / E 擦除\nI 吸取 / R 旋转 / H 平移 / Z 缩放\n\n双击对象：吸取并继续放置\nShift 拖动：追加框选\nCtrl 单击：增减选择\nDelete / Backspace：删除\n\n中键 / 空格+拖动：平移\n滚轮：以鼠标为中心缩放\n缩放工具：左键放大，Alt+左键缩小\n\nCtrl+N / O：新建 / 打开\nCtrl+S：保存；Ctrl+Shift+S：另存为\nCtrl+Z / Ctrl+Shift+Z：撤销 / 重做\nCtrl+C / X / V：复制 / 剪切 / 粘贴\nCtrl+D：复制为新对象\n粘贴预览：Q 逆时针 / E 顺时针旋转\nCtrl+A：全选；Ctrl+Shift+A：取消\nCtrl+0：适合窗口；Ctrl+1：实际大小\nCtrl+Home：居中所选；Tab：切换编辑图层\nCtrl+G：殉爆范围；Ctrl+H：探测范围；Ctrl+J：护盾范围\n\n方向键：移动 1 格\nShift+方向键：移动 10 格\n\nTab / Shift+Tab：切换编辑图层", ForeColor = muted }, 700);
         inspectorSplit.Panel2.Controls.Add(tabs);
         foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, categoryBox, dormancyBox, profileBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
         foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, categoryBox, dormancyBox, profileBox })
@@ -249,7 +253,7 @@ public partial class MainForm
         autoExport.CheckedChanged+=(_,_)=>{if(!updating)CommitMetadata();};
         canvas.ToolChanged += RefreshToolDisplay;
         StatusStrip strip = new() { BackColor = Color.FromArgb(23, 29, 33), ForeColor = text, SizingGrip = false };
-        selectionStatus = new() { BorderSides = ToolStripStatusLabelBorderSides.Left, Text = "放置" };
+        selectionStatus = new() { BorderSides = ToolStripStatusLabelBorderSides.None, Text = "放置" };
         status.Text = "正在读取游戏素材…"; strip.Items.Add(status); strip.Items.Add(selectionStatus);
         TableLayoutPanel workspace = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = Padding.Empty, Padding = Padding.Empty };
         workspace.ColumnStyles.Add(new(SizeType.Percent, 100));

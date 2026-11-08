@@ -8,7 +8,7 @@ public partial class MainForm
 {
     private sealed record MP_LibraryEntry(string File, string Id, string Label, bool HasXml);
 
-    private TabControl MP_libraryTabs;
+    private MP_SectionTabs MP_libraryTabs;
     private TreeView MP_libraryTree;
     private TextBox MP_librarySearch;
     private PictureBox MP_libraryPreview;

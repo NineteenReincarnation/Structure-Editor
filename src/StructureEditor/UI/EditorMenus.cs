@@ -21,7 +21,7 @@ public partial class MainForm
         ToolStripMenuItem export = new("导出"); file.DropDownItems.Add(export); AddMenuAction(export, "当前目标格式 XML…", () => ExportLayout(false)); AddMenuAction(export, "独立结构内容包…", ExportBundle); AddMenuAction(export,"原版 PrefabDef XML…",()=>ExportLayout(false,"VanillaPrefab")); AddMenuAction(export, "PNG 预览…", ExportPreview); export.DropDownItems.Add(new ToolStripSeparator()); AddMenuAction(export, "MechProtocol 兼容 XML…", () => ExportLayout(true));
         AddMenuAction(file, "工程保存目录…", SetSaveDirectory); file.DropDownItems.Add(new ToolStripSeparator()); AddMenuAction(file, "关闭工程", CloseWorkspaceDocument, Keys.Control | Keys.W); AddMenuAction(file, "退出", Close, Keys.Alt | Keys.F4);
         var undoAction = AddMenuAction(edit, "撤销", Undo, Keys.Control | Keys.Z); var redoAction = AddMenuAction(edit, "重做", Redo, Keys.Control | Keys.Shift | Keys.Z); edit.DropDownItems.Add(new ToolStripSeparator());
-        var cutAction = AddMenuAction(edit, "剪切", CutObjects, Keys.Control | Keys.X); var copyAction = AddMenuAction(edit, "复制", CopyObjects, Keys.Control | Keys.C); var pasteAction = AddMenuAction(edit, "粘贴", PasteObjects, Keys.Control | Keys.V); var duplicateAction = AddMenuAction(edit, "复制为新对象", DuplicateObjects, Keys.Control | Keys.J);
+        var cutAction = AddMenuAction(edit, "剪切", CutObjects, Keys.Control | Keys.X); var copyAction = AddMenuAction(edit, "复制", CopyObjects, Keys.Control | Keys.C); var pasteAction = AddMenuAction(edit, "粘贴", PasteObjects, Keys.Control | Keys.V); var duplicateAction = AddMenuAction(edit, "复制为新对象", DuplicateObjects, Keys.Control | Keys.D);
         var deleteAction = AddMenuAction(edit, "删除", canvas.DeleteSelected, Keys.Delete); edit.DropDownItems.Add(new ToolStripSeparator()); AddMenuAction(edit, "全选", canvas.SelectAll, Keys.Control | Keys.A); var deselectAction = AddMenuAction(edit, "取消选择", canvas.ClearSelection, Keys.Control | Keys.Shift | Keys.A);
         edit.DropDownOpening += (_, _) => { undoAction.Enabled = undo.Count > 0; redoAction.Enabled = redo.Count > 0; pasteAction.Enabled = copied.Count > 0; foreach (var item in new[] { cutAction, copyAction, duplicateAction, deleteAction, deselectAction }) item.Enabled = canvas.Selection.Count > 0; };
         edit.DropDownItems.Add(new ToolStripSeparator()); ToolStripMenuItem prefs = new("首选项"); edit.DropDownItems.Add(prefs); AddMenuAction(prefs, "游戏目录…", SetPaths); AddMenuAction(prefs, "素材来源…", ShowSources);
@@ -29,10 +29,23 @@ public partial class MainForm
         AddMenuAction(objects, "顺时针旋转 90°", canvas.Rotate, Keys.R); AddMenuAction(objects, "吸取为放置笔刷", canvas.Eyedropper, Keys.I); AddMenuAction(objects, "加入 / 取消收藏", ToggleFavorite); AddMenuAction(objects, "居中显示所选", canvas.CenterSelection, Keys.Control | Keys.Home);
         AddMenuAction(view, "适合窗口", canvas.CenterView, Keys.Control | Keys.D0); AddMenuAction(view, "实际大小（100%）", () => canvas.ZoomAtCenter(1, true), Keys.Control | Keys.D1); AddMenuAction(view, "放大", () => canvas.ZoomAtCenter(1.2f), Keys.Control | Keys.Oemplus); AddMenuAction(view, "缩小", () => canvas.ZoomAtCenter(1 / 1.2f), Keys.Control | Keys.OemMinus); AddMenuAction(view, "显示 / 隐藏网格", () => { canvas.ShowGrid = !canvas.ShowGrid; canvas.Invalidate(); }, Keys.G);
         AddMenuAction(window, "素材库", () => librarySplit.Panel1Collapsed = !librarySplit.Panel1Collapsed); AddMenuAction(window, "属性面板", ToggleInspector); AddMenuAction(window, "重置工作区", () => { librarySplit.Panel1Collapsed = false; inspectorSplit.Panel2Collapsed = false; canvas.CenterView(); });
-        var explosionRanges = AddMenuAction(view, "显示炮塔损毁爆炸范围", () => SetTurretExplosionRanges(!canvas.ShowTurretExplosionRanges));
+        var explosionRanges = AddMenuAction(view, "殉爆范围", () => MP_ToggleRange("TurretExplosionRanges"));
         explosionRanges.Name = "TurretExplosionRanges";
+        explosionRanges.ShortcutKeyDisplayString = "Ctrl+G";
+        var detectorRanges = AddMenuAction(view, "探测范围", () => MP_ToggleRange("ProximityRanges"));
+        detectorRanges.Name = "ProximityRanges";
+        detectorRanges.ShortcutKeyDisplayString = "Ctrl+H";
+        var shieldRanges = AddMenuAction(view, "护盾范围", () => MP_ToggleRange("ShieldRanges"));
+        shieldRanges.Name = "ShieldRanges";
+        shieldRanges.ShortcutKeyDisplayString = "Ctrl+J";
+        view.DropDownOpening += (_, _) =>
+        {
+            explosionRanges.Checked = canvas.ShowTurretExplosionRanges;
+            detectorRanges.Checked = canvas.ShowProximityRanges;
+            shieldRanges.Checked = canvas.ShowShieldRanges;
+        };
         AddMenuAction(help, "使用说明", () => Process.Start(new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "使用说明.md")) { UseShellExecute = true }));
-        AddMenuAction(help, "键盘快捷键", () => MessageBox.Show(this, "V 选择 / B 放置 / M 矩形 / E 擦除\nI 吸取 / R 旋转 / H 平移 / Z 缩放\n空格+拖动：临时平移；滚轮：缩放\nCtrl+0 适合窗口 / Ctrl+1 实际大小\nCtrl+J 复制 / Ctrl+Shift+Z 重做\nTab 切换编辑图层；Shift+Tab 反向切换\n粘贴预览：Q 逆时针 / E 顺时针旋转\nShift 框选 / Ctrl 单击增减选择\nDelete / Backspace 删除；Esc 取消", "键盘快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information));
+        AddMenuAction(help, "键盘快捷键", () => MessageBox.Show(this, "V 选择 / B 放置 / M 矩形 / E 擦除\nI 吸取 / R 旋转 / H 平移 / Z 缩放\n空格+拖动：临时平移；滚轮：缩放\nCtrl+0 适合窗口 / Ctrl+1 实际大小\nCtrl+D 复制为新对象 / Ctrl+Shift+Z 重做\nCtrl+G 殉爆范围 / Ctrl+H 探测范围 / Ctrl+J 护盾范围\nTab 切换编辑图层；Shift+Tab 反向切换\n粘贴预览：Q 逆时针 / E 顺时针旋转\nShift 框选 / Ctrl 单击增减选择\nDelete / Backspace 删除；Esc 取消", "键盘快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information));
         AddMenuAction(help, "项目主页", () => Process.Start(new ProcessStartInfo("https://github.com/NineteenReincarnation") { UseShellExecute = true }));
         AddMenuAction(help, "关于 Structure Editor", () => MessageBox.Show(this, "Structure Editor · 结构工坊\n版本 " + Application.ProductVersion + "\nRimWorld 结构布局编辑器\n作者：NineteenReincarnation\n素材从本机游戏及额外来源读取。", "关于 Structure Editor", MessageBoxButtons.OK, MessageBoxIcon.Information));
         var headings = new ToolStripMenuItem[] { file, edit, objects, view, window, help };

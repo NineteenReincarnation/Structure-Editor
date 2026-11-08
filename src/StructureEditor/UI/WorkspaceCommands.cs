@@ -88,6 +88,9 @@ public partial class MainForm
         // so explicitly complete native text edits before the menu sees the command.
         if (input is TextBoxBase textInput && HandleTextShortcut(textInput, keyData)) return true;
         if (InputOwnsShortcut(input, keyData)) return base.ProcessCmdKey(ref msg, keyData);
+        if (keyData == (Keys.Control | Keys.G)) { MP_ToggleRange("TurretExplosionRanges"); return true; }
+        if (keyData == (Keys.Control | Keys.H)) { MP_ToggleRange("ProximityRanges"); return true; }
+        if (keyData == (Keys.Control | Keys.J)) { MP_ToggleRange("ShieldRanges"); return true; }
         if (HandleModeShortcut(keyData)) return true;
         if (keyData == (Keys.Control | Keys.N)) { Safe(NewDocument); return true; }
         if (keyData == (Keys.Control | Keys.O)) { Safe(OpenDocument); return true; }
@@ -97,7 +100,7 @@ public partial class MainForm
         if (keyData == (Keys.Control | Keys.C)) { CopyObjects(); return true; }
         if (keyData == (Keys.Control | Keys.X)) { CutObjects(); return true; }
         if (keyData == (Keys.Control | Keys.V)) { PasteObjects(); return true; }
-        if (keyData == (Keys.Control | Keys.J)) { DuplicateObjects(); return true; }
+        if (keyData == (Keys.Control | Keys.D)) { DuplicateObjects(); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.A)) { canvas.ClearSelection(); return true; }
         if (keyData == Keys.Escape) { canvas.Cancel(); return true; }
         if ((keyData == Keys.Tab || keyData == (Keys.Shift | Keys.Tab))
