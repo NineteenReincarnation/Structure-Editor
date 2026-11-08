@@ -15,8 +15,6 @@ public partial class MainForm : Form
         categoryBox = new MP_DarkComboBox(), dormancyBox = new MP_DarkComboBox();
     private readonly Label dormancyInfo = new();
     private readonly CheckBox dormant = new();
-    private readonly ComboBox profileBox = new MP_DarkComboBox();
-    private readonly CheckBox mpCompatibility = new();
     private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new();
     private readonly MP_ExportIndicator MP_exportStatusDot = new();
     private Label MP_rotationLabel, MP_materialLabel, MP_dormancyLabel;
@@ -236,10 +234,7 @@ public partial class MainForm : Form
                 if (rotationBox.SelectedIndex != rotation) rotationBox.SelectedIndex = rotation;
             }
             var supported = placed == null ? new List<PlacedItem>() : canvas.Selection.Where(i => catalog.Find(i.Kind, i.DefName)?.CanBeDormant == true).ToList();
-            bool mp = document.ExportProfile == "MechProtocol"
-                || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal") && document.EnableMPCompatibility);
-            bool canDormant = placed == null ? item.CanBeDormant : supported.Count > 0;
-            bool showDormancy = mp && canDormant;
+            bool showDormancy = placed == null ? item.CanBeDormant : supported.Count > 0;
             MP_dormancyLabel.Visible = dormancyBox.Visible = dormancyInfo.Visible = showDormancy;
             dormancyBox.Enabled = showDormancy;
             var states = supported.Select(i => i.StartDormant).Distinct().ToList();
@@ -271,22 +266,11 @@ public partial class MainForm : Form
     private void RefreshMetadata()
     {
         updating = true; idBox.Text = document.DefName; labelBox.Text = document.Label; categoryBox.SelectedIndex = document.Category == "MechCluster" ? 0 : 1; dormant.Checked = document.StartDormant;
-        profileBox.SelectedIndex = document.ExportProfile switch
-        {
-            "MechProtocol" => 2, "VanillaPrefab" => 1,
-            "Universal" => 3, _ => 0
-        };
-        mpCompatibility.Checked = document.EnableMPCompatibility;
-        bool supportsExtension = document.ExportProfile is "Framework" or "Universal";
-        mpCompatibility.Enabled = supportsExtension;
-        mpCompatibility.Visible = supportsExtension;
+        document.ExportProfile = "Framework";
         autoExport.Checked = document.AutoExportOnSave;
         exportResult.Text = "";
         exportResult.Visible = false;
-        dormant.Enabled = document.ExportProfile == "MechProtocol"
-            || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal")
-                && document.EnableMPCompatibility);
-        dormant.Visible = dormant.Enabled;
+        dormant.Enabled = true; dormant.Visible = true;
         updating = false;
         UpdateTitle();
         RefreshSaveLocation(); LoadNamingFields();
@@ -294,24 +278,15 @@ public partial class MainForm : Form
     private void CommitMetadata()
     {
         if (updating) return;
-        string profile = profileBox.SelectedIndex switch
-        {
-            2 => "MechProtocol", 1 => "VanillaPrefab",
-            3 => "Universal", _ => "Framework"
-        };
-        // Switching away from an extension-capable output clears only its
-        // enable flag. Original per-object dormancy remains in the JSON.
-        bool compatible = (profile == "Framework" || profile == "Universal")
-            && mpCompatibility.Checked;
+        // XML output is fixed to Structure Framework.
         if (document.DefName == idBox.Text && document.Label == labelBox.Text
             && document.Category == SelectedCategory
-            && document.StartDormant == dormant.Checked && document.ExportProfile == profile
-            && document.EnableMPCompatibility == compatible
+            && document.StartDormant == dormant.Checked && document.ExportProfile == "Framework"
             && document.AutoExportOnSave == autoExport.Checked) return;
         Snapshot();
         document.DefName = idBox.Text.Trim(); document.Label = labelBox.Text.Trim();
         document.Category = SelectedCategory; document.StartDormant = dormant.Checked;
-        document.ExportProfile = profile; document.EnableMPCompatibility = compatible;
+        document.ExportProfile = "Framework";
         document.AutoExportOnSave = autoExport.Checked;
         dirty = true; UpdateTitle(); canvas.Invalidate(); RefreshMetadata(); ShowSelection();
         MP_ScheduleExportReview();

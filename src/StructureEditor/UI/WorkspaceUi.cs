@@ -252,21 +252,8 @@ public partial class MainForm
         Row(metadata, dormant);
         Row(metadata, new Label { Text = "XML 导出", Font = new(Font, FontStyle.Bold),
             ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });
-        profileBox.DropDownStyle = ComboBoxStyle.DropDownList;
-        profileBox.Items.AddRange(new object[]
-        {
-            "Structure Framework（扩展）",
-            "原版 PrefabDef（默认）",
-            "MechProtocol（专用）",
-            "原版基础 + 条件拓展"
-        });
-        profileBox.SelectedIndex = 1;
-        Field(metadata, "目标格式", profileBox);
-        mpCompatibility.Text = "MechProtocol · 逐对象休眠";
-        mpCompatibility.AutoSize = true;
-        Row(metadata, mpCompatibility);
-        MP_compatRecommendation.ForeColor = muted;
-        Row(metadata, MP_compatRecommendation);
+        Row(metadata,new Label { Text="Structure Framework · 统一结构标准",
+            AutoSize=true,ForeColor=text });
         Row(metadata, autoExport);
         Panel reviewRow = new()
         {
@@ -340,15 +327,15 @@ public partial class MainForm
             item.Click += (_, _) => Safe(action);
             moreMenu.Items.Add(item);
         }
-        More("另存为 XML…", () => ExportLayout(false));
+        More("另存为 XML…", ExportLayout);
         More("导出完整 Mod 内容包…", ExportBundle);
         More("导出 PNG 预览…", ExportPreview);
         moreExport.Click += (_, _) => moreMenu.Show(moreExport, new Point(0, moreExport.Height));
         Row(advanced, moreExport, 32);
         MP_exportReviewTimer.Tick += (_, _) => MP_RefreshExportReview();
         inspectorSplit.Panel2.Controls.Add(tabs);
-        foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, categoryBox, dormancyBox, profileBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
-        foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, categoryBox, dormancyBox, profileBox })
+        foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, categoryBox, dormancyBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
+        foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, categoryBox, dormancyBox })
         {
             combo.FlatStyle = FlatStyle.Flat; combo.DrawMode = DrawMode.OwnerDrawFixed;
             combo.ItemHeight = combo == materialBox ? Math.Max(32, Font.Height + 14)
@@ -419,8 +406,6 @@ public partial class MainForm
             canvas.SetSelectionDormancy(canvas.BrushDormant);
         };
         foreach (Control c in new Control[] { idBox, labelBox, categoryBox, dormant }) c.Leave += (_, _) => CommitMetadata();
-        profileBox.SelectedIndexChanged+=(_,_)=>{if(!updating)CommitMetadata();};
-        mpCompatibility.CheckedChanged+=(_,_)=>{if(!updating)CommitMetadata();};
         autoExport.CheckedChanged+=(_,_)=>{if(!updating)CommitMetadata();};
         canvas.ToolChanged += RefreshToolDisplay;
         StatusStrip strip = new() { BackColor = Color.FromArgb(23, 29, 33), ForeColor = text, SizingGrip = false };

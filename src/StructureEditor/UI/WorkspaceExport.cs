@@ -5,7 +5,6 @@ public partial class MainForm
     private readonly CheckBox autoExport = new() { Text = "保存时自动导出 XML", AutoSize = true, Checked = true };
     private readonly TextBox xmlPathBox = new() { ReadOnly = true, Multiline = true, ScrollBars = ScrollBars.Vertical };
     private readonly Label exportResult = new() { AutoEllipsis = true };
-    private readonly Label MP_compatRecommendation = new() { AutoSize = true };
     private readonly Label MP_exportReviewStatus = new() { AutoSize = true };
     private readonly Label MP_exportDependencySummary = new() { AutoSize = true };
     private readonly TextBox MP_exportReviewDetails = new()
@@ -33,7 +32,7 @@ public partial class MainForm
     {
         if (IsDisposed || Disposing) return;
         MP_exportReviewTimer.Stop();
-        var review = MP_ExportReview.Inspect(document, catalog, document.ExportProfile);
+        var review = MP_ExportReview.Inspect(document, catalog, "Framework");
         if (MP_exportReviewStatus.Text != review.Summary)
             MP_exportReviewStatus.Text = review.Summary;
         MP_exportReviewStatus.ForeColor = review.Errors > 0 ? Color.FromArgb(239, 151, 139)
@@ -52,21 +51,6 @@ public partial class MainForm
         MP_exportReviewDetails.Visible = review.Issues.Count != 0;
         MP_exportPrimary.Enabled = review.CanExport;
 
-        if (document.ExportProfile is "Framework" or "Universal")
-        {
-            bool recommended = MP_ExportReview.MP_CanRecommendDormancy(document, catalog);
-            string message = document.EnableMPCompatibility
-                ? "休眠拓展已启用"
-                : recommended ? "检测到可休眠对象" : "";
-            if (MP_compatRecommendation.Text != message)
-                MP_compatRecommendation.Text = message;
-            MP_compatRecommendation.Visible = recommended && !document.EnableMPCompatibility;
-        }
-        else
-        {
-            if (MP_compatRecommendation.Text.Length != 0) MP_compatRecommendation.Text = "";
-            MP_compatRecommendation.Visible = false;
-        }
     }
 
     private void MP_RecordExportTarget(string path)
@@ -99,7 +83,7 @@ public partial class MainForm
         CommitInspectorEdit(); CommitMetadata();
         string path = StructureStorage.XmlTarget(document, saveLocationChanged ? null : currentFile, OutputFolder);
         CheckWorkspaceExportTarget(path);
-        StructureStorage.ExportXml(document, catalog, path, document.ExportProfile);
+        StructureStorage.ExportXml(document, catalog, path, "Framework");
         MP_RecordExportTarget(path);
         exportResult.ForeColor = muted; exportResult.Text = "XML 已导出"; exportResult.Visible = true; status.Text = "已导出布局：" + path;
         RefreshExportLocation();

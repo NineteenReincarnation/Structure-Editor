@@ -57,7 +57,7 @@ public partial class MainForm
     {
         if (namingPanel == null) return;
         namingSwitchDelay.Stop();
-        bool mp = document.ExportProfile == "MechProtocol";
+        bool mp = document.Category == "MechCluster";
         namingPanel.Visible = mp;
         idBox.ReadOnly = labelBox.ReadOnly = mp && document.Category == "MechCluster" && MPClusterPresets.All.Any(p => document.DefName.StartsWith("MP_Cluster_" + p.Core + "_", StringComparison.Ordinal));
         if (structureIdTitle != null)
@@ -138,7 +138,7 @@ public partial class MainForm
         AddWorkspaceDocument(new()
         {
             DefName = id, Label = MP_ClusterNaming.Label(preset.Label, tier, variant),
-            Category = "MechCluster", ExportProfile = "MechProtocol", XmlExportDirectory = xmlFolder
+            Category = "MechCluster", ExportProfile = "Framework", XmlExportDirectory = xmlFolder
         }, prepared: true);
         status.Text = "空草稿 · 保存后创建文件";
     }
@@ -149,8 +149,9 @@ public partial class MainForm
             throw new InvalidOperationException("工作栏已有同名结构，请切换到对应文档，或分配新编号。");
         if (File.Exists(path) && !SamePath(path, currentFile) && path.EndsWith(".json", StringComparison.OrdinalIgnoreCase) && StructureDocument.Load(path).DefName != document.DefName)
             throw new InvalidOperationException("目标工程属于另一份结构，请更换文件。");
-        if (document.ExportProfile != "MechProtocol") return;
-        _ = document.ToXml(true);
+        if (document.Category != "MechCluster") return;
+        if (!document.DefName.StartsWith("MP_",StringComparison.Ordinal))
+            throw new InvalidOperationException("机械集群 DefName 必须以 MP_ 开头。");
         string error = document.Category == "MechCluster" ? MPClusterPresets.Validate(document.DefName, document.Label) : null;
         if (error != null) throw new InvalidOperationException(error);
         string xmlTarget = StructureStorage.XmlTarget(document, path, OutputFolder);
