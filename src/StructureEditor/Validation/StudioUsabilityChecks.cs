@@ -65,6 +65,10 @@ internal static class StudioUsabilityChecks
             BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
         var documentHost = (Panel)typeof(MainForm).GetField("MP_documentHost",
             BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
+        var materialPicker = (ComboBox)typeof(MainForm).GetField("materialBox",
+            BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
+        need(materialPicker.DrawMode == DrawMode.OwnerDrawFixed && materialPicker.ItemHeight >= 30,
+            "Material choices should show a material texture or swatch beside the localized name");
         need(buttons.Count(b => b.Text == "新建") == 1
             && buttons.Count(b => b.Text == "打开…") == 1
             && !documentBar.Items.Cast<ToolStripItem>().Any(b => b.Text.Contains("新建") || b.Text.Contains("打开")),
@@ -82,6 +86,11 @@ internal static class StudioUsabilityChecks
         need(MechClusterCatalog.Entries.Count == 22 && MechClusterCatalog.Entries.All(e => catalog.Find("Building", e.Key)?.ClusterWikiEntry == true && catalog.Find("Building", e.Key).ClusterGroup == e.Value.Group), "All 22 Wiki building types must map to installed game Defs");
         var wikiItems = catalog.Query(null, null, null, null, true).Where(i => i.ClusterWikiEntry).ToList();
         need(wikiItems.Count(i => i.ClusterGroup == "杂项") == 9 && wikiItems.Count(i => i.ClusterGroup == "控制器") == 9 && wikiItems.Count(i => i.ClusterGroup == "炮塔") == 4, "Wiki taxonomy must preserve its 9 miscellaneous, 9 controller and 4 turret entries");
+        need(catalog.Find("Building", "Wall")?.ClusterGroup == "防御设施",
+            "Steel walls must be available in the mech-cluster defensive palette");
+        if (catalog.Find("Building", "Barricade") is CatalogItem barricade)
+            need(barricade.ClusterGroup == "防御设施",
+                "Native barricades must be available in the mech-cluster defensive palette");
         need(catalog.Find("Building", "Turret_MiniTurret").ClusterGroup == null, "An ordinary player turret must not leak into the Wiki cluster list");
         need(catalog.Query(null, null, "杂项", "机械装配器", true).Any(i => i.DefName == "MechAssembler"), "Wiki aliases must be searchable when local game translations differ");
         var royalControllers = catalog.Query(null, "Royalty", "控制器", null, true).ToList();
@@ -89,7 +98,7 @@ internal static class StudioUsabilityChecks
         var scopeBox = (ComboBox)typeof(MainForm).GetField("scopeBox", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
         var kindBox = (ComboBox)typeof(MainForm).GetField("kindBox", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
         scopeBox.SelectedIndex = 4;
-        need(groupBox.Items.Cast<string>().Skip(1).SequenceEqual(MechClusterCatalog.Groups) && !kindBox.Enabled, "The dedicated cluster scope must expose the Wiki's three headings");
+        need(groupBox.Items.Cast<string>().Skip(1).SequenceEqual(MechClusterCatalog.Groups) && !kindBox.Enabled, "The cluster scope includes defensive structures and the 22 dedicated Royalty devices");
         need(palette.Items.Count >= 22 && palette.Items.Cast<CatalogItem>().All(i => i.ClusterGroup != null), "The independent cluster scope must exclude unrelated material");
         groupBox.SelectedItem = "控制器";
         need(palette.Items.Cast<CatalogItem>().Count(i => i.ClusterWikiEntry) == 9 && palette.Items.Cast<CatalogItem>().All(i => i.ClusterGroup == "控制器"), "Wiki heading selection must filter the live catalog");

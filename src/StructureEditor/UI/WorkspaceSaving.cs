@@ -118,6 +118,7 @@ public partial class MainForm
         if (MP_libraryLoaded) MP_ReloadLibrary();
         exportResult.Text=result.ExportError!=null?"工程已保存；XML 未更新：\n"+result.ExportError:result.XmlPath!=null?"XML 已更新：\n"+result.XmlPath:"工程已保存（自动导出已关闭）。";
         exportResult.ForeColor=result.ExportError==null?muted:Color.Salmon;
+        exportResult.Visible = true;
         status.Text=result.ExportError!=null?"工程已保存；XML 导出失败："+result.ExportError:result.XmlPath!=null?"工程和 XML 已保存："+result.XmlPath:"已保存工程："+path;
         if(result.ExportError!=null) MessageBox.Show(this,"JSON 工程已保存。XML 未更新：\n\n"+result.ExportError+"\n\n可在右侧“导出”页修改格式或目录后重试。","自动导出失败",MessageBoxButtons.OK,MessageBoxIcon.Warning);
         return true;

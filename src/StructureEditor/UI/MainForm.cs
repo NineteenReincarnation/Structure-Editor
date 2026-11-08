@@ -176,7 +176,7 @@ public partial class MainForm : Form
         else
         {
             selectedName.Text = "未选择对象";
-            selectedInfo.Text = "选择素材或画布中的对象。";
+            selectedInfo.Text = "";
             MP_materialLabel.Visible = materialBox.Visible = false;
             MP_rotationLabel.Visible = rotationBox.Visible = false;
             MP_dormancyLabel.Visible = dormancyBox.Visible = dormancyInfo.Visible = false;
@@ -226,7 +226,7 @@ public partial class MainForm : Form
             var states = supported.Select(i => i.StartDormant).Distinct().ToList();
             bool? setting = placed == null ? canvas.BrushDormant : supported.FirstOrDefault()?.StartDormant;
             dormancyBox.SelectedIndex = states.Count > 1 ? 3 : setting == true ? 1 : setting == false ? 2 : 0;
-            dormancyInfo.Text = "MP 休眠初态；受攻击或触发器影响仍会唤醒。";
+            dormancyInfo.Text = ""; dormancyInfo.Visible = false;
         }
         finally { updating = false; }
     }
@@ -256,10 +256,16 @@ public partial class MainForm : Form
             "Universal" => 3, _ => 0
         };
         mpCompatibility.Checked = document.EnableMPCompatibility;
-        mpCompatibility.Enabled = document.ExportProfile is "Framework" or "Universal";
-        autoExport.Checked = document.AutoExportOnSave; exportResult.Text = "";
+        bool supportsExtension = document.ExportProfile is "Framework" or "Universal";
+        mpCompatibility.Enabled = supportsExtension;
+        mpCompatibility.Visible = supportsExtension;
+        autoExport.Checked = document.AutoExportOnSave;
+        exportResult.Text = "";
+        exportResult.Visible = false;
         dormant.Enabled = document.ExportProfile == "MechProtocol"
-            || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal") && document.EnableMPCompatibility);
+            || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal")
+                && document.EnableMPCompatibility);
+        dormant.Visible = dormant.Enabled;
         updating = false;
         UpdateTitle(); UpdateSummary();
         RefreshSaveLocation(); LoadNamingFields();

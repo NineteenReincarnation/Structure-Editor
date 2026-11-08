@@ -44,6 +44,7 @@ public class CatalogItem
 public class MaterialItem
 {
     public string Appearance { get; set; } = "Smooth";
+    public string Texture { get; set; }
     public string PackageId { get; set; }
     public string DefName { get; set; }
     public string Label { get; set; }
@@ -238,6 +239,9 @@ public class Catalog : IDisposable
                 if (type == "ThingDef" && def.Element("stuffProps") != null)
                     Materials.Add(new MaterialItem { DefName = id, Label = Label(type, id, def), PackageId = sourceOrigins.GetValueOrDefault(pair.Key)?.PackageId,
                         Appearance = (string)def.Element("stuffProps")?.Element("appearance") ?? "Smooth",
+                        Texture = (string)def.Element("graphicData")?.Element("texPath")
+                            ?? (string)def.Element("uiIconPath")
+                            ?? (string)def.Element("graphicData")?.Element("graphicPath"),
                         Categories = def.Element("stuffProps")?.Element("categories")?.Elements("li").Select(x => x.Value).ToList() ?? new(),
                         Color = ParseColor((string)def.Element("stuffProps")?.Element("color")) });
                 if (type == "ThingDef" && (string)def.Element("category") == "Building") AddBuilding(def, pair.Key);
