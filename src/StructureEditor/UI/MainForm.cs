@@ -113,16 +113,21 @@ public partial class MainForm : Form
             .ThenBy(i => i.Pack == "Core" ? 0 : 1).ThenBy(i => i.Label).ToArray();
         // Avoid clearing/repainting the owner-drawn list when the result set is identical.
         // This matters when users cycle layers or repeatedly change selection.
-        if (palette.Items.Count == results.Length &&
-            results.Where((item, index) => !ReferenceEquals(palette.Items[index], item)).Any() == false)
+        bool identical = palette.Items.Count == results.Length;
+        for (int i = 0; identical && i < results.Length; i++)
+            identical = ReferenceEquals(palette.Items[i], results[i]);
+        if (identical)
+        {
+            libraryInfo.Text = $"{results.Length} 个素材";
             return;
+        }
         CatalogItem previous = palette.SelectedItem as CatalogItem;
         palette.BeginUpdate();
         try
         {
             MP_rebuildingPalette = true;
             palette.Items.Clear();
-            palette.Items.AddRange(results.Cast<object>().ToArray());
+            palette.Items.AddRange(results);
             if (previous != null && results.Contains(previous)) palette.SelectedItem = previous;
         }
         finally
