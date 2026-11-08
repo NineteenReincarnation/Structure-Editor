@@ -215,7 +215,7 @@ public partial class MainForm
         Row(metadata, BuildClusterNamingPanel());
         structureIdTitle = new() { Text = "结构标识", ForeColor = muted, AutoSize = true }; Row(metadata, structureIdTitle); Row(metadata, idBox, 29);
         structureLabelTitle = new() { Text = "显示名称", ForeColor = muted, AutoSize = true }; Row(metadata, structureLabelTitle); Row(metadata, labelBox, 29);
-        profileBox.DropDownStyle=ComboBoxStyle.DropDownList;profileBox.Items.AddRange(new object[]{"Structure Framework（主格式）","原版 PrefabDef（兼容）","MechProtocol（兼容）"});profileBox.SelectedIndex=0;
+        profileBox.DropDownStyle=ComboBoxStyle.DropDownList;profileBox.Items.AddRange(new object[]{"Structure Framework（扩展）","原版 PrefabDef（默认）","MechProtocol（专用）"});profileBox.SelectedIndex=1;
         Field(exports,"XML 目标格式",profileBox);mpCompatibility.Text="启用 MP 扩展（逐对象休眠）";mpCompatibility.AutoSize=true;Row(exports,mpCompatibility);
         Row(exports,autoExport);
         Row(exports,new Label { Text="XML 输出文件",ForeColor=muted,AutoSize=true });Row(exports,xmlPathBox,108);

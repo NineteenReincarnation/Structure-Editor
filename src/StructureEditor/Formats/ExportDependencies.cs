@@ -30,7 +30,13 @@ internal static class ExportDependencies
     }
     public static XDocument Xml(StructureDocument document,Catalog catalog,string profile)
     {
-        XElement root=profile switch{"VanillaPrefab"=>PrefabCodec.Export(document,catalog),"MechProtocol"=>Legacy(document),_=>FrameworkCodec.Export(document,catalog)};
+        XElement root=profile switch
+        {
+            "VanillaPrefab"=>PrefabCodec.Export(document,catalog),
+            "MechProtocol"=>Legacy(document),
+            "Framework"=>FrameworkCodec.Export(document,catalog),
+            _=>throw new InvalidOperationException("未知的 XML 导出格式：" + profile)
+        };
         var required=Resolve(document,catalog,profile);
         return new XDocument(new XDeclaration("1.0","utf-8",null),new XComment("Requires: "+string.Join(", ",required.Select(s=>s.PackageId))),new XElement("Defs",root));
     }

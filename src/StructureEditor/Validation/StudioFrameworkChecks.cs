@@ -18,6 +18,8 @@ internal static class StudioFrameworkChecks
         need(restored.Items.Count==3&&restored.Items[1].Rotation==1&&restored.Items[0].X==-1,"Framework XML must roundtrip exact object coordinates and rotations");
         var deps=ExportDependencies.Resolve(room,catalog,"Framework");
         need(deps.Count==1&&deps[0].PackageId==FrameworkCodec.PackageId,"A Core-only framework structure needs only the framework package");
+        need(room.ExportProfile == "VanillaPrefab" && !room.EnableMPCompatibility,
+            "A new JSON project defaults to unextended native PrefabDef");
         var prefab=ExportDependencies.Xml(room,catalog,"VanillaPrefab");string prefabFile=Path.Combine(folder,"SF_PrefabRoundtrip.xml");prefab.Save(prefabFile);
         var native=StructureDocument.Load(prefabFile,catalog);
         need(native.Items.Count==3&&native.Items[0].X==-1&&native.Items.First(i=>i.DefName=="Door").Rotation==1,"Prefab compatibility preserves coordinates through its origin comment");
@@ -25,6 +27,15 @@ internal static class StudioFrameworkChecks
         var unit=room.Copy();unit.Items.Add(new(){Kind="Pawn",DefName="Mech_Scyther",X=5});bool blocked=false;
         try{PrefabCodec.Export(unit,catalog);}catch(InvalidOperationException){blocked=true;}
         need(blocked&&unit.Items.Count==4,"Unsupported native pawn export must be rejected without deleting the pawn");
+        var dormant = room.Copy(); dormant.StartDormant = true; blocked = false;
+        try { PrefabCodec.Export(dormant,catalog); } catch(InvalidOperationException) { blocked = true; }
+        need(blocked && dormant.StartDormant, "Native export must reject unsupported dormancy without discarding JSON state");
+        var tagged = room.Copy(); tagged.FrameworkTags.Add("unsafe-to-drop"); blocked = false;
+        try { PrefabCodec.Export(tagged,catalog); } catch(InvalidOperationException) { blocked = true; }
+        need(blocked && tagged.FrameworkTags.Count == 1, "Native export must reject framework-only tags instead of silently dropping them");
+        var explicitFramework = room.Copy(); explicitFramework.ExportProfile = "Framework";
+        need(ExportDependencies.Xml(explicitFramework,catalog,explicitFramework.ExportProfile).Root?.Element("StructureFramework.StructureDef") != null,
+            "Explicit framework projects remain framework exports");
         var sleeper=new StructureDocument{DefName="SF_Sleeper",EnableMPCompatibility=true,Items=new(){new(){Kind="Building",DefName="MechCapsule",StartDormant=true}}};
         var mp=FrameworkCodec.Export(sleeper,catalog);
         need(mp.ToString().Contains("StructureFramework.Integrations.MPDormancyModifier")&&mp.Element("requiredPackages").Value.Contains("Anno.MechProtocol"),"MP sleep states are emitted only as an explicit optional integration");

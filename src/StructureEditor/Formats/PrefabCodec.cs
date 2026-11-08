@@ -10,6 +10,12 @@ internal static class PrefabCodec
         _=document.ToXml();
         if(document.Items.Any(i=>i.Kind=="Pawn"))throw new InvalidOperationException("原版 PrefabDef 不支持 PawnKind 编组；请使用框架或 MP 兼容导出，未删除任何单位。");
         if(document.Items.Any(i=>i.FrameworkModifiers?.Count>0))throw new InvalidOperationException("原版 PrefabDef 无法保存框架对象扩展，请使用框架导出。");
+        if (document.StartDormant || document.Items.Any(i=>i.StartDormant == true)
+            || document.EnableMPCompatibility)
+            throw new InvalidOperationException("原版 PrefabDef 不能表达机械体初始休眠或 MP 拓展。请关闭兼容配置并清除休眠设置，或选择 MP / Framework 格式。JSON 工程不会被修改。");
+        if (!string.IsNullOrWhiteSpace(document.FrameworkPlacement)
+            || document.FrameworkTags?.Count > 0)
+            throw new InvalidOperationException("原版 PrefabDef 无法保存 Structure Framework 的专用生成参数和标签，请切换到 Framework 格式。");
         if(document.Items.Count==0)throw new InvalidOperationException("结构为空。");
         Rectangle bounds=StructureDocument.Footprint(document.Items[0],catalog);
         foreach(var item in document.Items.Skip(1))bounds=Rectangle.Union(bounds,StructureDocument.Footprint(item,catalog));

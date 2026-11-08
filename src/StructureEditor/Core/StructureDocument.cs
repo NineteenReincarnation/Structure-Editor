@@ -27,7 +27,7 @@ public class StructureDocument
     public string Description { get; set; } = "使用 Structure Editor 创建的结构布局。";
     public string Category { get; set; } = "General";
     public bool StartDormant { get; set; }
-    public string ExportProfile { get; set; } = "Framework";
+    public string ExportProfile { get; set; } = "VanillaPrefab";
     public bool AutoExportOnSave { get; set; } = true;
     public string XmlExportDirectory { get; set; }
     public bool EnableMPCompatibility { get; set; }
@@ -97,7 +97,13 @@ public class StructureDocument
             loaded.Items ??= new();
             using var properties=JsonDocument.Parse(json);
             if(!properties.RootElement.TryGetProperty(nameof(ExportProfile),out _))
+            {
+                // Files saved before export profiles existed used the old Framework
+                // behavior. Keep their historical output, although NEW projects
+                // default to vanilla PrefabDef.
+                loaded.ExportProfile = "Framework";
                 loaded.EnableMPCompatibility=loaded.StartDormant || loaded.Items.Any(i=>i.StartDormant==true);
+            }
             return loaded;
         }
         XElement root = XDocument.Load(path).Root!;

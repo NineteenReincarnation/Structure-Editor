@@ -21,16 +21,28 @@ internal static class StudioExportChecks
             typeof(MainForm).GetField("currentFile", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(form, project);
             bool Save() => (bool)typeof(MainForm).GetMethod("SaveDocument", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(form, new object[] { false })!;
             IEnumerable<Control> Children(Control control) { foreach (Control child in control.Controls) { yield return child; foreach (Control nested in Children(child)) yield return nested; } }
-            var tabs = Children(form).OfType<TabControl>().Single(t => t.TabPages.Cast<TabPage>().Any(p => p.Text == "导出"));
-            var exportPage = tabs.TabPages.Cast<TabPage>().Single(p => p.Text == "导出"); tabs.SelectedTab = exportPage;
+            var tabs = Children(form).OfType<MP_SectionTabs>().Single(t => Children(t).OfType<TabPage>().Any(p => p.Text == "导出"));
+            var exportPage = Children(tabs).OfType<TabPage>().Single(p => p.Text == "导出");
+            need(tabs.SelectPage(exportPage), "Export tab remains accessible with the custom dark tab bar");
             var profile = (ComboBox)Field("profileBox"); var auto = (CheckBox)Field("autoExport");
-            need(Children(exportPage).Contains(profile) && auto.Checked, "Right export page contains format selector and defaults save-time XML export on");
+            need(Children(exportPage).Contains(profile) && auto.Checked && profile.SelectedIndex == 1,
+                "New projects default to the original PrefabDef XML and automatic save-time export");
             need(Children(exportPage).OfType<Button>().Any(b => b.Text == "立即导出 XML") && Children(exportPage).OfType<Button>().Any(b => b.Text == "更改 XML 目录…"), "Export page exposes direct export and directory selection");
             need(Save() && File.Exists(Path.Combine(root, doc.DefName + ".xml")), "Actual SaveDocument saves project and XML together without an export dialog");
             string xmlFile = Path.Combine(root, doc.DefName + ".xml");
-            need(XDocument.Load(xmlFile).Root!.Element("StructureFramework.StructureDef") != null, "Save exports selected framework XML");
+            var nativeXml = XDocument.Load(xmlFile);
+            need(nativeXml.Root!.Elements().Single().Name.LocalName == "PrefabDef",
+                "Default save emits an original RimWorld PrefabDef, not a custom class");
+            var vanilla = nativeXml.Root.Elements().Single();
+            need(vanilla.Elements().All(e => new[] { "defName", "label", "description", "rotations", "size", "edgeOnly", "things", "terrain" }.Contains(e.Name.LocalName))
+                && vanilla.Element("things")?.Element("Wall")?.Element("positions") != null,
+                "Default XML uses only vanilla PrefabDef fields and native thing placement fields");
+            profile.SelectedIndex = 0; Save();
+            need(XDocument.Load(xmlFile).Root!.Element("StructureFramework.StructureDef") != null,
+                "Explicit Structure Framework selection remains supported");
             profile.SelectedIndex = 1; Save();
-            need(XDocument.Load(xmlFile).Root!.Element("PrefabDef") != null, "Save follows native Prefab format selection");
+            need(XDocument.Load(xmlFile).Root!.Element("PrefabDef") != null,
+                "Explicit native PrefabDef selection remains supported");
             profile.SelectedIndex = 2; Save();
             need(XDocument.Load(xmlFile).Root!.Element("MechProtocol.MP_StructureDef") != null, "Save follows MechProtocol format selection");
             string previousXml = File.ReadAllText(xmlFile); auto.Checked = false;
@@ -55,7 +67,10 @@ internal static class StudioExportChecks
             var failed = StructureStorage.SaveProject(invalid, catalog, invalidProject);
             need(failed.ExportError != null && StructureDocument.Load(invalidProject).Items.Count == 2 && File.ReadAllText(customResult.XmlPath) == oldXml, "Rejected export preserves JSON edits and leaves last successful XML untouched");
             string oldProject = Path.Combine(root, "Old.structure.json"); File.WriteAllText(oldProject, "{\"FormatVersion\":1,\"DefName\":\"SE_Old\",\"Items\":[]}");
-            need(StructureDocument.Load(oldProject).AutoExportOnSave && StructureDocument.Load(oldProject).XmlExportDirectory == null, "Older projects default auto export on without a fixed machine-specific directory");
+            need(StructureDocument.Load(oldProject).AutoExportOnSave
+                && StructureDocument.Load(oldProject).XmlExportDirectory == null
+                && StructureDocument.Load(oldProject).ExportProfile == "Framework",
+                "Historical JSON projects without a profile retain their previous Framework output");
             form.Size = new(1450, 900); StudioInteractionChecks.RenderWorkspace(form, Path.Combine(folder, "export-page.png"));
             form.Size = new(1060, 720); StudioInteractionChecks.RenderWorkspace(form, Path.Combine(folder, "export-page-compact.png"));
         }
