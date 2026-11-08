@@ -44,6 +44,12 @@ jobs:
         shell: pwsh
         run: ./scripts/build.ps1
 
+      - name: Smoke-test editor startup (WinForms tab hosts)
+        shell: pwsh
+        run: |
+          dotnet ./app/StructureEditor.dll --ui-smoke-test
+          if ($LASTEXITCODE -ne 0) { throw "WinForms startup smoke test failed." }
+
       - name: Commit app files to main and legacy default branch
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         shell: pwsh

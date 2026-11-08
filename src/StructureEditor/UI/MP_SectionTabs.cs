@@ -5,7 +5,7 @@ namespace StructureEditor;
 internal sealed class MP_SectionTabs : UserControl
 {
     private readonly FlowLayoutPanel header;
-    private readonly Panel content;
+    private readonly TabControl content;
     private readonly List<(TabPage Page, Button Button)> pages = new();
     private int selection = -1;
 
@@ -19,14 +19,16 @@ internal sealed class MP_SectionTabs : UserControl
             if (value < 0 || value >= pages.Count) return;
             if (selection == value) return;
             selection = value;
+            // WinForms requires TabPage to be parented by a TabControl.
+            // Let the native host own visibility and keyboard selection;
+            // the separate dark buttons provide the visible tab header.
+            if (content.SelectedIndex != value) content.SelectedIndex = value;
             for (int i = 0; i < pages.Count; i++)
             {
-                pages[i].Page.Visible = i == value;
                 pages[i].Button.BackColor = i == value
                     ? Color.FromArgb(54, 84, 99) : Color.FromArgb(37, 50, 59);
                 pages[i].Button.ForeColor = i == value
                     ? Color.FromArgb(243, 247, 249) : Color.FromArgb(170, 193, 205);
-                if (i == value) pages[i].Page.BringToFront();
             }
             SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -35,7 +37,22 @@ internal sealed class MP_SectionTabs : UserControl
     internal MP_SectionTabs()
     {
         BackColor = Color.FromArgb(33, 43, 52);
-        content = new Panel { Dock = DockStyle.Fill, BackColor = BackColor };
+        content = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            BackColor = BackColor,
+            ForeColor = Color.FromArgb(224, 234, 240),
+            Appearance = TabAppearance.FlatButtons,
+            SizeMode = TabSizeMode.Fixed,
+            ItemSize = new Size(1, 1),
+            Multiline = false,
+            TabStop = false
+        };
+        content.SelectedIndexChanged += (_, _) =>
+        {
+            if (content.SelectedIndex >= 0 && content.SelectedIndex != selection)
+                SelectedIndex = content.SelectedIndex;
+        };
         header = new FlowLayoutPanel
         {
             Dock = DockStyle.Top, Height = 31, WrapContents = false,
@@ -57,9 +74,7 @@ internal sealed class MP_SectionTabs : UserControl
     internal void AddPage(TabPage page)
     {
         int index = pages.Count;
-        page.Dock = DockStyle.Fill;
         page.Margin = Padding.Empty;
-        page.Visible = false;
         page.BackColor = BackColor;
         var button = new Button
         {
@@ -77,7 +92,7 @@ internal sealed class MP_SectionTabs : UserControl
         button.FlatAppearance.MouseDownBackColor = Color.FromArgb(67, 96, 110);
         button.Click += (_, _) => SelectedIndex = index;
         pages.Add((page, button));
-        content.Controls.Add(page);
+        content.TabPages.Add(page);
         header.Controls.Add(button);
         if (selection == -1) SelectedIndex = 0;
     }

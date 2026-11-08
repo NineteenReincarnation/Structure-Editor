@@ -60,13 +60,33 @@ internal static class Program
                 if (iconArgument >= 0 && iconArgument + 1 >= args.Length) throw new ArgumentException("--icon-image 需要一个 PNG 文件路径。");
                 AppBranding.Prepare(Path.GetFullPath(args[brandingArgument + 1]), iconArgument < 0 ? null : Path.GetFullPath(args[iconArgument + 1])); return;
             }
+            if (args.Contains("--ui-smoke-test"))
+            {
+                using var form = new MainForm();
+                form.CreateControl();
+                static IEnumerable<Control> Descendants(Control parent)
+                {
+                    foreach (Control child in parent.Controls)
+                    {
+                        yield return child;
+                        foreach (Control descendant in Descendants(child)) yield return descendant;
+                    }
+                }
+                var pages = Descendants(form).OfType<TabPage>().ToArray();
+                if (pages.Length < 6 || pages.Any(page => page.Parent is not TabControl))
+                    throw new InvalidOperationException("Workspace tab pages were not attached to TabControls.");
+                var tabs = Descendants(form).OfType<MP_SectionTabs>().ToArray();
+                if (tabs.Length != 2 || tabs.Any(tab => tab.SelectedIndex < 0))
+                    throw new InvalidOperationException("Workspace section tabs failed to initialize.");
+                return;
+            }
             if (args.Contains("--self-test")) { StudioChecks.Run(Paths, args.Contains("--turret-explosions")); return; }
             Application.Run(new MainForm());
         }
         catch (Exception e)
         {
             File.WriteAllText(Path.Combine(DataDirectory, "error.log"), e.ToString());
-            if (args.Contains("--self-test") || args.Contains("--prepare-branding")) { Console.Error.WriteLine(e); Environment.ExitCode = 1; }
+            if (args.Contains("--self-test") || args.Contains("--ui-smoke-test") || args.Contains("--prepare-branding")) { Console.Error.WriteLine(e); Environment.ExitCode = 1; }
             else MessageBox.Show(e.Message + "\n\n详细信息：" + Path.Combine(DataDirectory,"error.log"), "Structure Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }

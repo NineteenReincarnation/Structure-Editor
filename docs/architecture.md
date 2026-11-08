@@ -130,3 +130,8 @@ Structure-Editor/
 - **独立 standalone.zip** 必须保留其自带的 `structures/`、`examples/`、使用说明和第三方许可说明；它属于离线发行件，不是仓库内部第二份可编辑源文件。
 - 原 `Tools/Tests/TurretExplosionChecks.cs` 移到 `src/StructureEditor/Validation/TurretExplosionChecks.cs`，删除 .csproj 手工链入路径，恢复单一的验证代码归属。
 - `dist/`、`migration/`、`branding/`、`Directory.Build.props`、`*.lnk` 已被 Git 忽略，本地旧文件不会因 Git Pull 自动消失；不要自动删除可能含有数据和配置的本地目录。
+
+## 启动崩溃防回归检查
+
+- 自定义深色标签容器 `MP_SectionTabs` 的 `TabPage` 必须由 WinForms `TabControl.TabPages` 承载，不能放进普通 `Panel.Controls`；外层按钮只负责可见的深色标题栏。
+- `Program --ui-smoke-test` 在 Windows 无需加载 RimWorld 游戏目录，即可实例化主窗体并核对全部标签页的父容器；Windows CI 在更新 `app/` 前执行此检查，避免只编译成功却启动即报错。
