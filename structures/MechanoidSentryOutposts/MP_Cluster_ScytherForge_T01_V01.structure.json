@@ -1,0 +1,869 @@
+{
+  "FormatVersion": 1,
+  "DefName": "MP_Cluster_ScytherForge_T01_V01",
+  "Label": "\u98DE\u87B3\u94F8\u5DE2\u00B7I-A",
+  "Description": "\u4F7F\u7528 MechProtocol \u7ED3\u6784\u5DE5\u574A\u521B\u5EFA\u7684\u6807\u51C6\u5316\u7ED3\u6784\u3002",
+  "StartDormant": false,
+  "ExportProfile": "Framework",
+  "AutoExportOnSave": true,
+  "XmlExportDirectory": "d:\\steam\\steamapps\\common\\RimWorld\\Mods\\MechProtocol\\1.7\\Defs\\Structures",
+  "EnableMPCompatibility": true,
+  "TemplateBounds": null,
+  "PrefabRotations": "North",
+  "PrefabEdgeOnly": false,
+  "RequiredPackages": [],
+  "FrameworkPlacement": null,
+  "FrameworkTags": [],
+  "Items": [
+    {
+      "Kind": "Building",
+      "DefName": "MP_ScytherForgeNest",
+      "Stuff": null,
+      "X": 0,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Gloomlight",
+      "Stuff": null,
+      "X": -7,
+      "Z": -3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Gloomlight",
+      "Stuff": null,
+      "X": 7,
+      "Z": -3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Gloomlight",
+      "Stuff": null,
+      "X": 7,
+      "Z": 3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Gloomlight",
+      "Stuff": null,
+      "X": -7,
+      "Z": 3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoChargeBlaster",
+      "Stuff": null,
+      "X": -10,
+      "Z": 6,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoChargeBlaster",
+      "Stuff": null,
+      "X": 9,
+      "Z": 6,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoChargeBlaster",
+      "Stuff": null,
+      "X": 9,
+      "Z": -6,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoChargeBlaster",
+      "Stuff": null,
+      "X": -10,
+      "Z": -6,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoMiniTurret",
+      "Stuff": null,
+      "X": 0,
+      "Z": -9,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoMiniTurret",
+      "Stuff": null,
+      "X": 0,
+      "Z": 9,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoMiniTurret",
+      "Stuff": null,
+      "X": 8,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoMiniTurret",
+      "Stuff": null,
+      "X": -8,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoMiniTurret",
+      "Stuff": null,
+      "X": -10,
+      "Z": 2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoMiniTurret",
+      "Stuff": null,
+      "X": -10,
+      "Z": -2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoMiniTurret",
+      "Stuff": null,
+      "X": 10,
+      "Z": -2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Turret_AutoMiniTurret",
+      "Stuff": null,
+      "X": 10,
+      "Z": 2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 11,
+      "Z": 2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 10,
+      "Z": 3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 11,
+      "Z": 3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 11,
+      "Z": -2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 11,
+      "Z": -3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 10,
+      "Z": -3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -11,
+      "Z": -2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -11,
+      "Z": -3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -10,
+      "Z": -3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -11,
+      "Z": 2,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -11,
+      "Z": 3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -10,
+      "Z": 3,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -1,
+      "Z": 10,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -1,
+      "Z": 9,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 0,
+      "Z": 10,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 1,
+      "Z": 10,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 1,
+      "Z": 9,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -8,
+      "Z": 1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -9,
+      "Z": 1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -9,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -9,
+      "Z": -1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -8,
+      "Z": -1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -11,
+      "Z": -5,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -11,
+      "Z": -6,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -11,
+      "Z": -7,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -10,
+      "Z": -7,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -9,
+      "Z": -7,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 9,
+      "Z": -7,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 10,
+      "Z": -7,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 11,
+      "Z": -7,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 11,
+      "Z": -5,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 11,
+      "Z": -6,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 8,
+      "Z": 1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 9,
+      "Z": 1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 9,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 9,
+      "Z": -1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 8,
+      "Z": -1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -11,
+      "Z": 6,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -11,
+      "Z": 7,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -11,
+      "Z": 8,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -10,
+      "Z": 8,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -9,
+      "Z": 8,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 9,
+      "Z": 8,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 10,
+      "Z": 8,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 11,
+      "Z": 8,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 11,
+      "Z": 7,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 11,
+      "Z": 6,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -1,
+      "Z": -9,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": -1,
+      "Z": -10,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 0,
+      "Z": -10,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 1,
+      "Z": -10,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Barricade",
+      "Stuff": "Steel",
+      "X": 1,
+      "Z": -9,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "MechDropBeacon",
+      "Stuff": null,
+      "X": 0,
+      "Z": -4,
+      "Rotation": 0,
+      "StartDormant": true,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "MechDropBeacon",
+      "Stuff": null,
+      "X": 0,
+      "Z": 4,
+      "Rotation": 0,
+      "StartDormant": true,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "MechCapsule",
+      "Stuff": null,
+      "X": -5,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": true,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "MechCapsule",
+      "Stuff": null,
+      "X": 4,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": true,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Gloomlight",
+      "Stuff": null,
+      "X": 0,
+      "Z": 6,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Gloomlight",
+      "Stuff": null,
+      "X": 0,
+      "Z": -6,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Wall",
+      "Stuff": "Steel",
+      "X": -3,
+      "Z": 1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Wall",
+      "Stuff": "Steel",
+      "X": -3,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Wall",
+      "Stuff": "Steel",
+      "X": -3,
+      "Z": -1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Wall",
+      "Stuff": "Steel",
+      "X": 3,
+      "Z": 1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Wall",
+      "Stuff": "Steel",
+      "X": 3,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "Wall",
+      "Stuff": "Steel",
+      "X": 3,
+      "Z": -1,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "ActivatorProximity",
+      "Stuff": null,
+      "X": 6,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Building",
+      "DefName": "ActivatorProximity",
+      "Stuff": null,
+      "X": -6,
+      "Z": 0,
+      "Rotation": 0,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Pawn",
+      "DefName": "Mech_Scyther",
+      "Stuff": null,
+      "X": 0,
+      "Z": -2,
+      "Rotation": 2,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    },
+    {
+      "Kind": "Pawn",
+      "DefName": "Mech_Scyther",
+      "Stuff": null,
+      "X": 0,
+      "Z": 2,
+      "Rotation": 2,
+      "StartDormant": null,
+      "FrameworkModifiers": []
+    }
+  ]
+}
