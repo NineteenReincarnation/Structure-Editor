@@ -19,20 +19,20 @@ public partial class MainForm
         MP_editLayerSelector.SelectedIndex = (MP_editLayerSelector.SelectedIndex + step +
             MP_editLayerSelector.Items.Count) % MP_editLayerSelector.Items.Count;
     }
-    private Label selectionCount;
     private void BuildWorkspaceUi()
     {
         SuspendLayout();
         ToolStripManager.Renderer = new StudioRenderer();
         MenuStrip menu = BuildMenus(); MainMenuStrip = menu;
         ApplyBranding();
-        // A single continuous row: documents on the left, preview and save
-        // actions on the right. Keep the action width reserved as tabs overflow.
+        // A symmetrical header keeps document tabs centered in the actual
+        // window, independently of the range actions on the right.
         MP_GlassLayout topBar = new()
         {
-            Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1,
+            Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1,
             Margin = Padding.Empty, Padding = Padding.Empty
         };
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 0)); // balance right controls
         topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         topBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         topBar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -63,11 +63,19 @@ public partial class MainForm
         canvas.ShowProximityRanges = true;
         actions.Items.Add(new ToolStripSeparator());
         AddTool(actions, "保存", () => SaveDocument(false));
-        AddTool(actions, "保存位置", SetSaveDirectory);
-        AddTool(actions, "导出预览", ExportPreview);
-
-        topBar.Controls.Add(BuildDocumentBar(), 0, 0);
-        topBar.Controls.Add(actions, 1, 0);
+        // Paths and preview export already live in the unified project panel
+        // and File menu. Avoid duplicating them on the header.
+        topBar.Controls.Add(BuildDocumentBar(), 1, 0);
+        topBar.Controls.Add(actions, 2, 0);
+        void BalanceHeader()
+        {
+            int width = actions.GetPreferredSize(Size.Empty).Width;
+            if (width <= 0) width = actions.Width;
+            if (width > 0 && Math.Abs(topBar.ColumnStyles[0].Width - width) > 1)
+                topBar.ColumnStyles[0].Width = width;
+        }
+        actions.SizeChanged += (_, _) => BalanceHeader();
+        BalanceHeader();
 
         librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 3, SplitterDistance = 278, BackColor = Color.FromArgb(39, 52, 61) };
         inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 284), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 3, SplitterDistance = Math.Max(330, ClientSize.Width - 638), BackColor = librarySplit.BackColor };
@@ -117,9 +125,25 @@ public partial class MainForm
         librarySplit.Panel1.Controls.Add(MP_libraryTabs);
 
         Panel viewport = new() { Dock = DockStyle.Fill };
-        TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(37, 50, 60), ColumnCount = 4 };
-        layerBar.ColumnStyles.Add(new(SizeType.AutoSize)); layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124)); layerBar.ColumnStyles.Add(new(SizeType.Absolute, 110)); layerBar.ColumnStyles.Add(new(SizeType.Percent, 100));
-        layerBar.Controls.Add(new Label { Text = "编辑图层", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new(10, 0, 10, 0), ForeColor = muted }, 0, 0);
+        TableLayoutPanel layerBar = new() { Dock = DockStyle.Top, Height = 36,
+            BackColor = Color.FromArgb(37, 50, 60), ColumnCount = 5 };
+        layerBar.ColumnStyles.Add(new(SizeType.Absolute, 132));
+        layerBar.ColumnStyles.Add(new(SizeType.AutoSize));
+        layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124));
+        layerBar.ColumnStyles.Add(new(SizeType.Absolute, 110));
+        layerBar.ColumnStyles.Add(new(SizeType.Percent, 100));
+        ToolStrip documentActions = new()
+        {
+            Dock = DockStyle.Fill, AutoSize = false, GripStyle = ToolStripGripStyle.Hidden,
+            CanOverflow = false, BackColor = layerBar.BackColor,
+            Margin = Padding.Empty, Padding = new Padding(4, 3, 0, 3)
+        };
+        AddTool(documentActions, "新建", NewDocument);
+        AddTool(documentActions, "打开…", OpenDocument);
+        layerBar.Controls.Add(documentActions, 0, 0);
+        layerBar.Controls.Add(new Label { Text = "编辑图层", AutoSize = true,
+            Anchor = AnchorStyles.Left, Margin = new(10, 0, 10, 0),
+            ForeColor = muted }, 1, 0);
         MP_editLayerSelector = new MP_DarkComboBox() { Dock = DockStyle.Fill, Margin = new(0, 3, 0, 3), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = surface, ForeColor = text };
         MP_editLayerSelector.Items.AddRange(new object[] { "全部", "建筑", "单位", "地形" }); MP_editLayerSelector.SelectedIndex = 0;
         MP_editLayerSelector.SelectedIndexChanged += (_, _) =>
@@ -127,7 +151,6 @@ public partial class MainForm
             canvas.EditLayer = new[] { null, "Building", "Pawn", "Terrain" }[MP_editLayerSelector.SelectedIndex];
             selectionStatus.Text = "编辑图层：" + MP_editLayerSelector.Text;
         };
-        selectionCount = new() { Text = "未选择", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight, Padding = new(0, 0, 12, 0), ForeColor = muted };
         ToolStrip MP_layerVisibilityBar = new()
         {
             Dock = DockStyle.Fill, GripStyle = ToolStripGripStyle.Hidden,
@@ -166,9 +189,8 @@ public partial class MainForm
             }
         };
         MP_layerVisibilityBar.Items.Add(MP_visibleLayers);
-        layerBar.Controls.Add(MP_editLayerSelector, 1, 0);
-        layerBar.Controls.Add(MP_layerVisibilityBar, 2, 0);
-        layerBar.Controls.Add(selectionCount, 3, 0);
+        layerBar.Controls.Add(MP_editLayerSelector, 2, 0);
+        layerBar.Controls.Add(MP_layerVisibilityBar, 3, 0);
         viewport.Controls.Add(canvas); viewport.Controls.Add(layerBar); inspectorSplit.Panel1.Controls.Add(viewport);
 
         MP_SectionTabs tabs = new() { Dock = DockStyle.Fill, BackColor = surface, ForeColor = text };
@@ -194,15 +216,20 @@ public partial class MainForm
         TableLayoutPanel exports = metadata;
         selectedName.Font = new(Font, FontStyle.Bold); Row(objects, selectedName, 65); selectedInfo.ForeColor = muted; Row(objects, selectedInfo, 62);
         materialBox.DropDownStyle = rotationBox.DropDownStyle = ComboBoxStyle.DropDownList;
-        Field(objects, "材质", materialBox);
+        MP_materialLabel = new Label { Text = "材质", ForeColor = muted, AutoSize = true };
+        Row(objects, MP_materialLabel);
+        Row(objects, materialBox, 29);
         rotationBox.Items.AddRange(new object[] { "北 / North", "东 / East", "南 / South", "西 / West" }); rotationBox.SelectedIndex = 0;
         MP_rotationLabel = new Label { Text = "方向", ForeColor = muted, AutoSize = true };
         Row(objects, MP_rotationLabel);
         Row(objects, rotationBox, 29);
         dormancyBox.DropDownStyle = ComboBoxStyle.DropDownList;
         dormancyBox.Items.AddRange(new object[] { "跟随结构默认", "初始休眠", "初始唤醒", "保持各自设置（混合）" }); dormancyBox.SelectedIndex = 0;
-        Field(objects, "初始状态（MP 专用）", dormancyBox);
-        dormancyInfo.ForeColor = muted; Row(objects, dormancyInfo, 58);
+        MP_dormancyLabel = new Label { Text = "初始状态（MP 专用）",
+            ForeColor = muted, AutoSize = true };
+        Row(objects, MP_dormancyLabel);
+        Row(objects, dormancyBox, 29);
+        dormancyInfo.ForeColor = muted; Row(objects, dormancyInfo, 47);
         // Structure owns structure identity and game-facing properties only.
         Row(metadata, new Label { Text = "基本信息", Font = new(Font, FontStyle.Bold),
             ForeColor = Color.FromArgb(200, 220, 230), AutoSize = true });

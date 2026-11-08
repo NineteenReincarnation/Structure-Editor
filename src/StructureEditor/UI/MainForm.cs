@@ -18,7 +18,7 @@ public partial class MainForm : Form
     private readonly ComboBox profileBox = new MP_DarkComboBox();
     private readonly CheckBox mpCompatibility = new();
     private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new(), summary = new();
-    private Label MP_rotationLabel;
+    private Label MP_rotationLabel, MP_materialLabel, MP_dormancyLabel;
     private StructureDocument MP_summaryDocument;
     private int MP_summaryCount = -1;
     private string MP_summaryText;
@@ -173,12 +173,25 @@ public partial class MainForm : Form
     {
         if (canvas.Selected != null && catalog != null) ShowItem(catalog.Find(canvas.Selected.Kind, canvas.Selected.DefName), canvas.Selected);
         else if (canvas.Brush != null) ShowItem(canvas.Brush, null);
-        else { selectedName.Text = "未选择对象"; selectedInfo.Text = "从左侧选择素材，或切换至选择工具。"; if (MP_rotationLabel != null) MP_rotationLabel.Visible = rotationBox.Visible = false; }
+        else
+        {
+            selectedName.Text = "未选择对象";
+            selectedInfo.Text = "选择素材或画布中的对象。";
+            MP_materialLabel.Visible = materialBox.Visible = false;
+            MP_rotationLabel.Visible = rotationBox.Visible = false;
+            MP_dormancyLabel.Visible = dormancyBox.Visible = dormancyInfo.Visible = false;
+        }
         UpdateSummary();
     }
     private void ShowItem(CatalogItem item, PlacedItem placed)
     {
-        if (item == null) return;
+        if (item == null)
+        {
+            MP_materialLabel.Visible = materialBox.Visible = false;
+            MP_rotationLabel.Visible = rotationBox.Visible = false;
+            MP_dormancyLabel.Visible = dormancyBox.Visible = dormancyInfo.Visible = false;
+            return;
+        }
         updating = true;
         try
         {
@@ -192,8 +205,11 @@ public partial class MainForm : Form
             }
             MaterialItem preferred = materialBox.Items.Cast<MaterialItem>().FirstOrDefault(m => m.DefName == (placed?.Stuff ?? canvas.BrushStuff));
             if (materialBox.Items.Count > 0) materialBox.SelectedItem = preferred ?? materialBox.Items[0];
-            materialBox.Enabled = materialBox.Items.Count > 0;
-            canvas.BrushStuff = (materialBox.SelectedItem as MaterialItem)?.DefName;
+            bool hasMaterial = materialBox.Items.Count > 0;
+            MP_materialLabel.Visible = materialBox.Visible = hasMaterial;
+            materialBox.Enabled = hasMaterial;
+            canvas.BrushStuff = hasMaterial
+                ? (materialBox.SelectedItem as MaterialItem)?.DefName : null;
             bool canRotate = placed != null && canvas.Selection.Count > 1
                 ? canvas.Selection.Any(selected => catalog.Find(selected.Kind, selected.DefName)?.Rotatable == true)
                 : item.Rotatable;
@@ -203,11 +219,14 @@ public partial class MainForm : Form
             var supported = placed == null ? new List<PlacedItem>() : canvas.Selection.Where(i => catalog.Find(i.Kind, i.DefName)?.CanBeDormant == true).ToList();
             bool mp = document.ExportProfile == "MechProtocol"
                 || ((document.ExportProfile == "Framework" || document.ExportProfile == "Universal") && document.EnableMPCompatibility);
-            dormancyBox.Enabled = mp && (placed == null ? item.CanBeDormant : supported.Count > 0);
+            bool canDormant = placed == null ? item.CanBeDormant : supported.Count > 0;
+            bool showDormancy = mp && canDormant;
+            MP_dormancyLabel.Visible = dormancyBox.Visible = dormancyInfo.Visible = showDormancy;
+            dormancyBox.Enabled = showDormancy;
             var states = supported.Select(i => i.StartDormant).Distinct().ToList();
             bool? setting = placed == null ? canvas.BrushDormant : supported.FirstOrDefault()?.StartDormant;
             dormancyBox.SelectedIndex = states.Count > 1 ? 3 : setting == true ? 1 : setting == false ? 2 : 0;
-            dormancyInfo.Text = !mp ? "逐对象休眠是 MP 专用兼容功能。\n可在“导出”页启用 MP 扩展。" : dormancyBox.Enabled ? "MP 兼容初态；受攻击或触发器影响仍会唤醒。" : "此对象没有休眠组件，无法设置休眠。";
+            dormancyInfo.Text = "MP 休眠初态；受攻击或触发器影响仍会唤醒。";
         }
         finally { updating = false; }
     }
@@ -287,11 +306,6 @@ public partial class MainForm : Form
             MP_summaryCount = document.Items.Count;
         }
         if (summary.Text != MP_summaryText) summary.Text = MP_summaryText;
-        if (selectionCount != null)
-        {
-            string selectionLabel = canvas.Selection.Count == 0 ? "未选择" : $"已选 {canvas.Selection.Count} 个";
-            if (selectionCount.Text != selectionLabel) selectionCount.Text = selectionLabel;
-        }
     }
     private bool AskSave()
     {

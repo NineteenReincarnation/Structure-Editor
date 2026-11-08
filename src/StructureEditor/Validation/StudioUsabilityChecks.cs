@@ -61,7 +61,22 @@ internal static class StudioUsabilityChecks
         void Collect(Control parent) { foreach (Control child in parent.Controls) { controls.Add(child); Collect(child); } }
         Collect(form);
         var buttons = controls.OfType<ToolStrip>().SelectMany(s => s.Items.Cast<ToolStripItem>()).ToList();
-        need(buttons.Any(b => b.Text == "保存") && buttons.Any(b => b.Text == "保存位置") && !buttons.Any(b => b.Text.Contains("设为协议")), "The main toolbar must offer Save and output location without the protocol binding action");
+        var documentBar = (ToolStrip)typeof(MainForm).GetField("documentBar",
+            BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
+        var documentHost = (Panel)typeof(MainForm).GetField("MP_documentHost",
+            BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
+        need(buttons.Count(b => b.Text == "新建") == 1
+            && buttons.Count(b => b.Text == "打开…") == 1
+            && !documentBar.Items.Cast<ToolStripItem>().Any(b => b.Text.Contains("新建") || b.Text.Contains("打开")),
+            "New and Open appear once, before the edit-layer controls rather than among document tabs");
+        need(buttons.Any(b => b.Text == "保存")
+            && !buttons.Any(b => b.Text is "保存位置" or "导出预览" or "选择" or "放置" or "矩形" or "擦除"),
+            "Top bars do not duplicate editor tools or secondary project/export actions");
+        typeof(MainForm).GetMethod("MP_CenterDocumentBar",
+            BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(form, null);
+        if (documentHost.ClientSize.Width > 0)
+            need(Math.Abs(documentBar.Left - (documentHost.Width - documentBar.Width) / 2) <= 1,
+                "Open document tabs are centered within their reserved symmetric header area");
         bool InObjectPage(Control c) { for (Control p = c.Parent; p != null; p = p.Parent) if (p is TabPage page) return page.Text == "对象"; return false; }
         need(!controls.OfType<NumericUpDown>().Any(InObjectPage) && !controls.OfType<Label>().Any(c => c.Text.Contains("双击吸取")), "Object properties must not contain coordinate editors or generic shortcut/help paragraphs");
         need(MechClusterCatalog.Entries.Count == 22 && MechClusterCatalog.Entries.All(e => catalog.Find("Building", e.Key)?.ClusterWikiEntry == true && catalog.Find("Building", e.Key).ClusterGroup == e.Value.Group), "All 22 Wiki building types must map to installed game Defs");

@@ -19,14 +19,44 @@ public partial class MainForm
     private readonly List<WorkspaceDocument> documents = new();
     private WorkspaceDocument activeDocument;
     private ToolStrip documentBar;
+    private Panel MP_documentHost;
     private bool switchingDocument;
 
-    private ToolStrip BuildDocumentBar()
+    // The tab strip is centered in the available symmetric middle column.
+    // It shrinks and uses its built-in overflow when many structures are open.
+    private Control BuildDocumentBar()
     {
-        documentBar = new() { Dock = DockStyle.Fill, AutoSize = false, GripStyle = ToolStripGripStyle.Hidden, BackColor = Color.FromArgb(35, 47, 57), Padding = new(6, 4, 0, 4), CanOverflow = true, Margin = Padding.Empty };
-        AddTool(documentBar, "+ 新建", NewDocument);
-        AddTool(documentBar, "打开…", OpenDocument);
-        return documentBar;
+        documentBar = new ToolStrip
+        {
+            Dock = DockStyle.None, AutoSize = false,
+            GripStyle = ToolStripGripStyle.Hidden,
+            BackColor = Color.FromArgb(35, 47, 57),
+            Padding = new Padding(3, 4, 3, 4),
+            CanOverflow = true, Margin = Padding.Empty
+        };
+        MP_documentHost = new Panel
+        {
+            Dock = DockStyle.Fill, BackColor = Color.Transparent,
+            Margin = Padding.Empty, Padding = Padding.Empty
+        };
+        MP_documentHost.Controls.Add(documentBar);
+        MP_documentHost.SizeChanged += (_, _) => MP_CenterDocumentBar();
+        return MP_documentHost;
+    }
+
+    private void MP_CenterDocumentBar()
+    {
+        if (MP_documentHost == null || documentBar == null ||
+            MP_documentHost.IsDisposed || documentBar.IsDisposed) return;
+        int available = MP_documentHost.ClientSize.Width;
+        if (available <= 0) return;
+        int desired = documentBar.Padding.Horizontal +
+            documentBar.Items.Cast<ToolStripItem>()
+                .Sum(item => Math.Max(1, item.GetPreferredSize(Size.Empty).Width));
+        int width = Math.Min(available, Math.Max(1, desired + 8));
+        var bounds = new Rectangle((available - width) / 2, 0,
+            width, MP_documentHost.ClientSize.Height);
+        if (documentBar.Bounds != bounds) documentBar.Bounds = bounds;
     }
 
     private IEnumerable<string> StructureFolders()
@@ -140,6 +170,7 @@ public partial class MainForm
             // Avoid Windows' large white default tooltip exposing absolute paths.
             session.Tab.ToolTipText = "";
         }
+        MP_CenterDocumentBar();
     }
     internal void SwitchWorkspaceDocument(WorkspaceDocument session)
     {
@@ -191,6 +222,7 @@ public partial class MainForm
         var closing = activeDocument; int index = documents.IndexOf(closing);
         if (documents.Count > 1) SwitchWorkspaceDocument(documents[index == 0 ? 1 : index - 1]);
         documents.Remove(closing); documentBar.Items.Remove(closing.Tab); closing.Tab.Dispose();
+        MP_CenterDocumentBar();
         if (documents.Count == 0)
         {
             activeDocument = null; document = new(); currentFile = null; dirty = false; saveLocationChanged = false;

@@ -85,6 +85,20 @@ internal static class Program
                     || !pages.Any(page => page.Text == "工程")
                     || pages.Any(page => page.Text is "导出" or "结构" or "操作"))
                     throw new InvalidOperationException("Workspace section tabs failed to initialize.");
+                var documentStrip = (ToolStrip)typeof(MainForm).GetField("documentBar",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                    .GetValue(form)!;
+                var documentHost = (Panel)typeof(MainForm).GetField("MP_documentHost",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                    .GetValue(form)!;
+                if (documentStrip.Parent != documentHost
+                    || documentStrip.Items.Cast<ToolStripItem>().Any(item =>
+                        item.Text is "新建" or "打开…"))
+                    throw new InvalidOperationException("Document tabs must be hosted separately from New/Open.");
+                if (Descendants(form).OfType<ToolStrip>()
+                    .SelectMany(strip => strip.Items.Cast<ToolStripItem>())
+                    .Count(item => item.Text == "新建") != 1)
+                    throw new InvalidOperationException("New/Open quick actions must not be duplicated.");
                 return;
             }
             if (args.Contains("--self-test")) { StudioChecks.Run(Paths, args.Contains("--turret-explosions")); return; }
