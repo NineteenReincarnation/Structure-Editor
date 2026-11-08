@@ -18,6 +18,8 @@
 - Document tabs use `MP_DocumentTabButton` with a per-tab close X; preserve unsaved-save confirmation and prevent X-click activation. Ctrl+G/H/J toggle explosion/detection/shield previews, Ctrl+D duplicates objects.
 - Do not regress to native white WinForms tab-header gaps, light palette scrollbars or white combo arrow wells; keep the integrated `MP_SectionTabs` and the dark control surfaces.
 
-- Repository cleanup: keep one canonical editable root `structures/` and root `docs/`. Do not recreate `examples/` or a launcher in the repository root. CI-tracked `app/` contains only runtime files; `build.ps1 -SelfContained` bundles the structure library and license for portable distribution. Run `app/StructureEditor.exe` directly. All validation code stays in `src/StructureEditor/Validation/`.
+- Repository cleanup: keep one canonical editable root `structures/` and root `docs/`. Do not recreate `examples/` or a launcher in the repository root. `build.ps1` and CI publish only the Git-tracked `app/` runtime files. Do not create or upload ZIP archives, portable bundles or dist packages. Run `app/StructureEditor.exe` directly. All validation code stays in `src/StructureEditor/Validation/`.
 
 - **Canonical XML format:** Structure Framework only (`StructureFramework.StructureDef`). Normalize legacy profiles on load; do not reintroduce export format selection or separate MP dormancy toggles. Old PrefabDef and MechProtocol XML remain importable. Generate dormancy modifiers and dependencies automatically for explicit supported states. Keep MP cluster naming independent of export profile.
+
+- Branch cleanup: keep development and CI commits on `main` only; do not push, synchronize, delete, or rename any other branch. The repository owner handles other branches manually.

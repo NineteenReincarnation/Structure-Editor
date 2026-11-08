@@ -6,7 +6,7 @@
 
 ```text
 Structure-Editor/
-├─ .github/workflows/          # Windows 持续集成与打包
+├─ .github/workflows/          # Windows app 编译与同步
 ├─ assets/                     # 本项目自制的 README 展示素材
 ├─ docs/
 │  ├─ architecture.md          # 本文
@@ -14,7 +14,7 @@ Structure-Editor/
 │  ├─ 使用说明.md               # 用户操作说明
 │  └─ changelog/               # 历史版本记录
 ├─ structures/                 # 用户维护的结构工程库，优先读取，JSON/XML 成对保存
-├─ scripts/                    # 构建、打包、验证入口
+├─ scripts/                    # 构建和验证入口
 ├─ app/                        # CI 更新的精简运行程序（不再复制数据/文档）
 ├─ src/StructureEditor/
 │  ├─ App/                     # 程序启动、应用品牌与全局运行设置
@@ -46,8 +46,8 @@ Structure-Editor/
 
 - 目标平台：Windows x64、.NET 10、WinForms；RimWorld 1.7 的素材在运行时从用户的本机安装读取。
 - 固定构建入口：`dotnet build src/StructureEditor/StructureEditor.csproj`。
-- 发布打包：`./scripts/build.ps1 -SelfContained` 生成完整独立安装包，CI 上传到 Artifacts。
-- **Git 拉取即可运行**：每次 `main` 有新提交，Windows CI 另行生成精简的、依赖 .NET 10 Windows Desktop Runtime 的 `app/`，将程序文件版本化提交回 `main`（当前也同步到旧默认分支 `codex/structure-editor`）。用户在 GitHub Desktop 拉取后即可运行 `app/StructureEditor.exe`，不必亲自编译。
+- 发布构建：`./scripts/build.ps1` 只更新 `app/`，不生成 ZIP、`dist/` 压缩包或 Actions Artifact。
+- **Git 拉取即可运行**：`main` 更新后，Windows CI 生成依赖 .NET 10 Windows Desktop Runtime 的 `app/`，并将程序文件提交回 `main`；其他分支不再由 CI 更新。用户拉取 `main` 即可运行 `app/StructureEditor.exe`。
 - `app/` 是唯一允许由 CI 自动纳入版本控制的生成目录；`dist/`、`bin/`、`obj/` 仍不提交。首次从旧的忽略目录迁移时，请先关闭程序并移走本地未被追踪的旧 `app/`，避免 Git 无法覆盖未跟踪文件。
 - 已有内部验证由 `Program --self-test` 入口运行；`Validation/` 中的检查继续随主程序集编译，以避免改变现有验证行为。
 - 不提交 RimWorld 游戏贴图、DLL、个人路径或配置、迁移备份。项目自身的 MIT 许可保留在根目录 `LICENSE`，独立发布包也包含该文件。
@@ -63,7 +63,7 @@ Structure-Editor/
 - 左侧提供「素材库 / 结构库」标签，不再弹出单独的文件选择窗口。选中结构将优先显示同名 PNG（`<DefName>.png` / `<DefName>_preview.png`），无图时使用游戏素材渲染 PNG 到本地预览缓存；双击结构直接打开。
 - JSON 工程和同名 XML 属于同一份结构，左侧只显示一条记录，打开时优先使用可编辑的 `.structure.json`，避免重复或误改导出的 XML。
 - 首次保存新工程默认使用仓库结构库（除非用户选择过另一个保存位置）。编辑已有工程时继续在原有位置保存；可通过「保存位置」修改。
-- `scripts/build.ps1 -SelfContained` 只为独立发布包复制一套 `structures/`，因此单独解压也可读取；普通 `app/` 开发版不再复制结构库，在完整仓库里直接读取根目录唯一的 `structures/`。
+- `scripts/build.ps1` 仅更新仓库内的 `app/` 运行文件；程序在仓库中读取根目录唯一的 `structures/`，不复制素材库也不打包。
 - 不应在 JSON 中保存作者电脑的绝对游戏路径。仓库中的 `structures/Tests/` 是调试布局，`structures/MechanoidSentryOutposts/` 为哨戒阵地。
 
 ### 结构重命名
@@ -126,9 +126,9 @@ Structure-Editor/
 
 - 仓库**唯一启动目标**是 `app/StructureEditor.exe`。移除旧根目录 `启动结构工坊.cmd`；如果旧的个人 Windows 快捷方式原先指向该 CMD，请把目标改成 `app/StructureEditor.exe`。
 - **运行时 app/** 是最小可拉取程序：仅 exe/dll/运行配置及生成标记。不再复制根目录数据和文档，避免重复文件。
-- **独立 standalone.zip** 保留其自带的 `structures/`、使用说明和项目 `LICENSE`；它属于离线发行件，不是仓库内部第二份可编辑源文件。
+- 不提供独立 ZIP 发行件；只保留版本化的 `app/` 和仓库根目录唯一的 `structures/`、`docs/`、`LICENSE`。
 - 原 `Tools/Tests/TurretExplosionChecks.cs` 移到 `src/StructureEditor/Validation/TurretExplosionChecks.cs`，删除 .csproj 手工链入路径，恢复单一的验证代码归属。
-- `dist/`、`branding/`、`Directory.Build.props`、`*.lnk` 及历史迁移目录由 Git 忽略；Git Pull 不会替用户清理本地文件。
+- 历史 `dist/` 目录和其他被忽略的本地文件不会被自动删除；新构建不会再创建压缩包。`branding/`、`*.lnk` 和本地迁移目录不受版本控制。
 
 ## 启动崩溃防回归检查
 

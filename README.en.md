@@ -29,8 +29,7 @@ Open **[`app/StructureEditor.exe`](./app/StructureEditor.exe)** from the reposit
 - `app/`: generated runtime files only; do not edit or store structures here.
 - `structures/`: the single editable JSON/XML structure library.
 - `docs/`: user and engineering documentation; `src/`: code; `scripts/`: build and validation.
-- `dist/` contains ignored local build archives.
-- For use outside the repository, download the CI `standalone.zip`, which includes its own library and usage guide.
+- No ZIP or standalone archives are generated or uploaded. Windows CI updates only `main/app/` with the executable and runtime files; pull `main` and run `app/StructureEditor.exe` from the repository.
 
 ## Key Features
 

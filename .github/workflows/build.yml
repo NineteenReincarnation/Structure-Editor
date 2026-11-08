@@ -5,14 +5,13 @@ on:
     branches: [main]
     paths-ignore:
       - 'app/**'
-  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: editor-build-${{ github.ref }}
+  group: editor-build-main
   cancel-in-progress: false
 
 jobs:
@@ -27,20 +26,8 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Build portable self-contained package
-        shell: pwsh
-        run: ./scripts/build.ps1 -SelfContained
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: StructureEditor-win-x64
-          path: dist/*-standalone.zip
-          if-no-files-found: error
-
-      # Keep a small .NET Desktop Runtime dependent app/ tracked in Git.
-      # This makes a normal GitHub Desktop Pull update StructureEditor.exe.
-      - name: Build application files for Git pull
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      # Build only the app/ files tracked in Git; no release archives.
+      - name: Publish app files
         shell: pwsh
         run: ./scripts/build.ps1
 
@@ -50,14 +37,15 @@ jobs:
           dotnet ./app/StructureEditor.dll --ui-smoke-test
           if ($LASTEXITCODE -ne 0) { throw "WinForms startup smoke test failed." }
 
-      - name: Verify warm catalog cache, invalidation, and lazy ZIP indexing
+      - name: Verify warm catalog cache and lazy asset indexing
         shell: pwsh
         run: |
           dotnet ./app/StructureEditor.dll --catalog-cache-test
           if ($LASTEXITCODE -ne 0) { throw "Catalog cache regression check failed." }
 
-      - name: Commit app files to main and synchronize the legacy default branch
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      # Only main is updated. All other branches remain untouched for
+      # the repository owner to delete manually.
+      - name: Commit app output to main
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -69,48 +57,8 @@ jobs:
             git commit -m "build: sync StructureEditor app files [skip ci]"
             if ($LASTEXITCODE -ne 0) { throw "Failed to commit app output" }
             git push origin HEAD:main
-            if ($LASTEXITCODE -ne 0) { throw "Failed to push app output to main" }
+            if ($LASTEXITCODE -ne 0) { throw "Failed to update main" }
           }
           elseif ($LASTEXITCODE -ne 0) {
-            throw "Cannot check staged app changes"
-          }
-
-          # A clone made from GitHub's historical default branch must also
-          # receive current editor code and DLLs. Do not force-push or discard
-          # an independently modified branch.
-          git fetch origin codex/structure-editor
-          if ($LASTEXITCODE -ne 0) { throw "Failed to fetch legacy default branch" }
-          $mainHead = (git rev-parse HEAD).Trim()
-          $legacyHead = (git rev-parse origin/codex/structure-editor).Trim()
-          git merge-base --is-ancestor $legacyHead $mainHead
-          if ($LASTEXITCODE -eq 0) {
-            git push origin "$mainHead`:refs/heads/codex/structure-editor"
-            if ($LASTEXITCODE -ne 0) { throw "Failed to fast-forward legacy default branch" }
-          }
-          else {
-            $common = (git merge-base $legacyHead $mainHead).Trim()
-            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($common)) {
-              throw "Cannot find common branch ancestor"
-            }
-            # When the legacy branch has no unique content since its merge
-            # base, create a real two-parent merge commit using main's tree.
-            # This advances the default branch without rewriting any history.
-            git diff --quiet $common $legacyHead --
-            if ($LASTEXITCODE -eq 0) {
-              $mainTree = (git rev-parse "${mainHead}^{tree}").Trim()
-              $mergeHead = ("merge: update default branch from main [skip ci]" |
-                git commit-tree $mainTree -p $legacyHead -p $mainHead).Trim()
-              if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($mergeHead)) {
-                throw "Could not create safe branch merge"
-              }
-              git push origin "$mergeHead`:refs/heads/codex/structure-editor"
-              if ($LASTEXITCODE -ne 0) { throw "Could not publish safe branch merge" }
-            }
-            elseif ($LASTEXITCODE -eq 1) {
-              Write-Warning "Legacy default branch has unique changes. Refusing to overwrite; merge it manually or change the GitHub default branch to main."
-              $global:LASTEXITCODE = 0
-            }
-            else {
-              throw "Could not compare legacy branch content"
-            }
+            throw "Cannot inspect staged app changes"
           }
