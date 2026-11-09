@@ -22,14 +22,6 @@
 
 通过网格化编辑界面，你可以像在游戏中建造一样，自由摆放建筑、调整位置、规划阵地，并实时查看整体布局效果。
 
-## 启动与目录
-
-在仓库中直接运行 **[`app/StructureEditor.exe`](./app/StructureEditor.exe)**。GitHub Desktop 拉取 `main` 后，Windows CI 更新的程序就在这里；不需要额外的根目录启动脚本。若想双击根目录的快捷方式，可自行创建一个指向 `app/StructureEditor.exe` 的 Windows 快捷方式（`.lnk` 为个人本地文件，不纳入 Git）。
-
-- `app/`：**仅程序运行文件**，由 CI 生成；不要在这里修改、保存结构工程。
-- `structures/`：**唯一可编辑结构库**，JSON 工程与 XML 以这里为准。
-- `docs/`：使用说明、架构与工程格式；`src/`：源码；`scripts/`：构建/验证脚本。
-- 不再生成或上传 ZIP 压缩包；Windows CI 只更新 `main/app/` 中的可执行文件与运行依赖。请拉取 `main`，在仓库内运行 `app/StructureEditor.exe`。
 
 ## 主要功能
 
