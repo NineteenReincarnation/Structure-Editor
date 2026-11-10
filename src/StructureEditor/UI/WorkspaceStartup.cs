@@ -18,7 +18,7 @@ public partial class MainForm
         textureRefresh.Tick += (_, _) =>
         {
             if (Interlocked.Exchange(ref pendingTextureRefresh, 0) == 0) return;
-            palette.Invalidate(); canvas.RefreshTextures();
+            palette.Invalidate(); MP_cpCatalogList?.Invalidate(); canvas.RefreshTextures();
         };
     }
     private void TextureArrived() => Interlocked.Exchange(ref pendingTextureRefresh, 1);
@@ -79,7 +79,7 @@ public partial class MainForm
                 packBox.SelectedIndex = pack != null && packBox.Items.Contains(pack) ? packBox.Items.IndexOf(pack) : 0;
             }
             finally { filtering = false; }
-            canvas.Document = document; RefreshMetadata(); RefreshPacks(); RefreshGroups(); FilterPalette(); canvas.CenterView();
+            canvas.Document = document; RefreshMetadata(); RefreshPacks(); RefreshGroups(); FilterPalette(); MP_RefreshClusterCpCatalog(); canvas.CenterView();
             if (restoreWorkspace) RestoreWorkspace();
             textureRefresh.Start(); CatalogLoadMilliseconds = timer.ElapsedMilliseconds;
             status.Text = result.Warning ?? $"已读取 {catalog.Items.Count} 项素材 · " +
@@ -123,7 +123,12 @@ public partial class MainForm
         base.OnDpiChanged(e);
         if (IsHandleCreated) BeginInvoke((Action)(() => { if (!IsDisposed) { UpdatePaletteDensity(); FitWorkingArea(false); } }));
     }
-    private void UpdatePaletteDensity() => palette.ItemHeight = Math.Max(48, (int)Math.Round(78 * DeviceDpi / 96f));
+    private void UpdatePaletteDensity()
+    {
+        palette.ItemHeight = Math.Max(48, (int)Math.Round(78 * DeviceDpi / 96f));
+        if (MP_cpCatalogList != null)
+            MP_cpCatalogList.ItemHeight = Math.Max(55, (int)Math.Round(70 * DeviceDpi / 96f));
+    }
     private void StopBackgroundLoading()
     {
         var loading = catalogLoad; catalogLoad = null; loading?.Cancel(); loading?.Dispose(); textureRefresh.Stop(); textureRefresh.Dispose();

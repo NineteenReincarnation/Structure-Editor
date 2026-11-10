@@ -54,6 +54,7 @@ internal static class RuntimeCatalog
                 if(string.IsNullOrWhiteSpace(item.DefName)||item.Kind is not ("Building" or "Pawn" or "Terrain")||item.Width<1||item.Height<1||!seenItems.Add((item.Kind,item.DefName)))throw new InvalidDataException("同步目录包含无效或重复素材。");
                 bool replace=itemPositions.TryGetValue((item.Kind,item.DefName),out int position);var previous=replace?items[position]:null;
                 item.LinkType ??= previous?.LinkType;
+                item.ClusterCombatPower ??= previous?.ClusterCombatPower;
                 item.TurretExplosionRadius ??= previous?.TurretExplosionRadius;
                 item.ProximityTriggerRadius ??= previous?.ProximityTriggerRadius;
                 item.DormantWakeRadius ??= previous?.DormantWakeRadius;

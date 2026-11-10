@@ -17,6 +17,7 @@ public class CatalogItem
     public string ClusterGroup { get; set; }
     public string ClusterWikiName { get; set; }
     public bool ClusterWikiEntry { get; set; }
+    public float? ClusterCombatPower { get; set; }
     public string Texture { get; set; }
     public string Icon { get; set; }
     public string GraphicClass { get; set; }
@@ -333,6 +334,10 @@ public class Catalog : IDisposable
         item.ProximityTriggerRadius = ReadCompRadius(def, "CompProperties_SendSignalOnMotion", "radius");
         item.DormantWakeRadius = ReadCompRadius(def, "CompProperties_WakeUpDormant", "wakeUpCheckRadius", "wakeUpIfAnyTargetClose");
         item.ShieldRadii = MP_ShieldRanges.FromDef(def);
+        string clusterPower = (string)def.Element("building")?.Element("combatPower");
+        if (float.TryParse(clusterPower, NumberStyles.Float, CultureInfo.InvariantCulture, out float combatPower)
+            && float.IsFinite(combatPower) && combatPower >= 0)
+            item.ClusterCombatPower = combatPower;
         MechClusterCatalog.Assign(item, def);
         if (gun != null && raw.TryGetValue("ThingDef:" + gun, out XElement gunNode))
         {

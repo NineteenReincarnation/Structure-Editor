@@ -116,8 +116,11 @@ public partial class MainForm
         materialsPage.Controls.Add(library);
         TabPage structuresPage = new("结构库") { BackColor = surface, Padding = Padding.Empty };
         structuresPage.Controls.Add(MP_CreateStructureLibraryPanel());
+        TabPage cpPage = new("集群 CP") { BackColor = surface, Padding = Padding.Empty };
+        cpPage.Controls.Add(MP_CreateClusterCpCatalog());
         MP_libraryTabs.AddPage(materialsPage);
         MP_libraryTabs.AddPage(structuresPage);
+        MP_libraryTabs.AddPage(cpPage);
         MP_libraryTabs.SelectedIndexChanged += (_, _) =>
         {
             if (MP_libraryTabs.SelectedIndex == 1 && !MP_libraryLoaded) Safe(MP_ReloadLibrary);
@@ -341,7 +344,17 @@ public partial class MainForm
         moreExport.Click += (_, _) => moreMenu.Show(moreExport, new Point(0, moreExport.Height));
         Row(advanced, moreExport, 32);
         MP_exportReviewTimer.Tick += (_, _) => MP_RefreshExportReview();
-        inspectorSplit.Panel2.Controls.Add(tabs);
+        MP_SmoothLayout inspectorColumn = new()
+        {
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2,
+            Padding = Padding.Empty, Margin = Padding.Empty, BackColor = surface
+        };
+        inspectorColumn.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        inspectorColumn.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        inspectorColumn.RowStyles.Add(new RowStyle(SizeType.Absolute, 210));
+        inspectorColumn.Controls.Add(tabs, 0, 0);
+        inspectorColumn.Controls.Add(MP_CreateClusterCpFooter(), 0, 1);
+        inspectorSplit.Panel2.Controls.Add(inspectorColumn);
         foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, dormancyBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
         foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, dormancyBox })
         {

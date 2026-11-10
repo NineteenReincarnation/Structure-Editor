@@ -55,6 +55,7 @@ public partial class MainForm : Form
             dirty = true;
             UpdateTitle();
             MP_ScheduleExportReview();
+            MP_RefreshClusterCpSummary();
         };
         canvas.SelectionChanged += ShowSelection;
         canvas.Hint += message => status.Text = message;
@@ -282,7 +283,7 @@ public partial class MainForm : Form
         dormant.Enabled = true; dormant.Visible = true;
         updating = false;
         UpdateTitle();
-        RefreshSaveLocation(); LoadNamingFields();
+        RefreshSaveLocation(); LoadNamingFields(); MP_RefreshClusterCpSummary();
     }
     private void CommitMetadata()
     {
