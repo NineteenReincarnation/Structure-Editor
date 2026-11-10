@@ -141,6 +141,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             Content = content,
             Background = SurfaceBrush,
+            Margin = new W.Thickness(0, 0, 12, 0),
             VerticalScrollBarVisibility = WC.ScrollBarVisibility.Hidden,
             HorizontalScrollBarVisibility = WC.ScrollBarVisibility.Disabled,
             CanContentScroll = false,
