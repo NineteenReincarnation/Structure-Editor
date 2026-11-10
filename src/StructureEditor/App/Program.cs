@@ -145,8 +145,8 @@ internal static class Program
                         || !section.MP_HasStablePages;
                 }))
                     throw new InvalidOperationException("Tab headers can overlap editor page content.");
-                var pages = Descendants(form).OfType<TabPage>().ToArray();
-                if (pages.Length != 5 || !pages.Any(page => page.Text == "集群 CP")
+                var pages = Descendants(form).OfType<MP_PageSurface>().ToArray();
+                if (pages.Length != 5 || !pages.Any(page => page.Title == "集群 CP")
                     || pages.Any(page => page.Parent is not MP_StablePageHost))
                     throw new InvalidOperationException("Workspace pages must stay on stable host panels.");
                 // Switch twice to exercise the flicker-free page host while
@@ -161,8 +161,8 @@ internal static class Program
                 }
                 var tabs = Descendants(form).OfType<MP_SectionTabs>().ToArray();
                 if (tabs.Length != 2 || tabs.Any(tab => tab.SelectedIndex < 0)
-                    || !pages.Any(page => page.Text == "工程")
-                    || pages.Any(page => page.Text is "导出" or "结构" or "操作"))
+                    || !pages.Any(page => page.Title == "工程")
+                    || pages.Any(page => page.Title is "导出" or "结构" or "操作"))
                     throw new InvalidOperationException("Workspace section tabs failed to initialize.");
                 var documentStrip = (ToolStrip)typeof(MainForm).GetField("documentBar",
                     System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!

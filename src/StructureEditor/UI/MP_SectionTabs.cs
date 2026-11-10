@@ -10,6 +10,7 @@ internal sealed class MP_SectionTabs : UserControl
     private readonly ElementHost header;
     private readonly MP_FluidTabBar bar;
     private readonly List<TabPage> pages = new();
+    private readonly List<MP_PageSurface> surfaces = new();
     private int selection = -1;
 
     internal event EventHandler SelectedIndexChanged;
@@ -22,7 +23,7 @@ internal sealed class MP_SectionTabs : UserControl
         {
             if (value < 0 || value >= pages.Count || selection == value) return;
             selection = value;
-            content.SelectPage(pages[value]);
+            content.SelectPage(surfaces[value]);
             bar.Select(value);
             SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -67,32 +68,47 @@ internal sealed class MP_SectionTabs : UserControl
 
     internal void AddPage(TabPage page)
     {
-        page.Margin = Padding.Empty;
-        page.Padding = Padding.Empty;
-        page.Dock = DockStyle.Fill;
-        page.BackColor = BackColor;
-        // Keep a live page instance (including its WPF ElementHost) so no
-        // expensive visual tree is recreated on each tab switch.
-        page.Visible = false;
+        // TabPage.AssignParent rejects any parent other than TabControl.
+        // Transfer its existing children into an equivalent stable Panel,
+        // retaining AutoScroll, padding, size and each child instance.
+        var surface = new MP_PageSurface(page.Text)
+        {
+            Dock = DockStyle.Fill, BackColor = BackColor,
+            ForeColor = page.ForeColor, Padding = page.Padding,
+            AutoScroll = page.AutoScroll, Visible = false
+        };
+        var children = page.Controls.Cast<Control>().ToArray();
+        foreach (var child in children)
+        {
+            page.Controls.Remove(child);
+            surface.Controls.Add(child);
+        }
         pages.Add(page);
-        content.Controls.Add(page);
+        surfaces.Add(surface);
+        content.Controls.Add(surface);
         bar.AddTab(page.Text);
         if (selection < 0) SelectedIndex = 0;
     }
 
     internal bool MP_HasStablePages =>
         content.Controls.Count == pages.Count
-        && pages.All(page => page.Parent == content)
-        && (selection < 0 || ReferenceEquals(content.ActivePage, pages[selection]))
-        && pages.Count(page => page.Visible) == (selection < 0 ? 0 : 1);
+        && surfaces.All(surface => surface.Parent == content)
+        && (selection < 0 || ReferenceEquals(content.ActivePage, surfaces[selection]))
+        && surfaces.Count(surface => surface.Visible) == (selection < 0 ? 0 : 1);
 }
 
 // WinForms parent uses an opaque double-buffered background. We avoid
 // WM_SETREDRAW and forced Refresh() calls; both produce white/black flashes
 // in the mixed WPF/WinForms rendering stack on some Windows DPI settings.
+internal sealed class MP_PageSurface : Panel
+{
+    internal string Title { get; }
+    internal MP_PageSurface(string title) => Title = title;
+}
+
 internal sealed class MP_StablePageHost : Panel
 {
-    internal TabPage ActivePage { get; private set; }
+    internal MP_PageSurface ActivePage { get; private set; }
 
     internal MP_StablePageHost()
     {
@@ -101,7 +117,7 @@ internal sealed class MP_StablePageHost : Panel
             | ControlStyles.UserPaint, true);
     }
 
-    internal void SelectPage(TabPage target)
+    internal void SelectPage(MP_PageSurface target)
     {
         if (ReferenceEquals(ActivePage, target)) return;
         SuspendLayout();
