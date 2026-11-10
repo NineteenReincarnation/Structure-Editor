@@ -16,12 +16,22 @@ public partial class MainForm
     private readonly System.Windows.Forms.Timer MP_libraryPreviewDelay =
         new() { Interval = 130 };
     private MP_LibraryEntry MP_pendingLibraryPreview;
+    private CancellationTokenSource MP_libraryPreviewCancellation = new();
+    private readonly SemaphoreSlim MP_libraryPreviewGate = new(1, 1);
+
+    private void MP_CancelLibraryPreview()
+    {
+        MP_libraryPreviewCancellation.Cancel();
+        MP_libraryPreviewCancellation.Dispose();
+        MP_libraryPreviewCancellation = new CancellationTokenSource();
+    }
 
     private Control MP_CreateStructureLibraryPanel()
     {
         MP_structureView = new MP_FluidStructureLibrary(
             (file, id) =>
             {
+                MP_CancelLibraryPreview();
                 MP_pendingLibraryPreview = MP_libraryEntries.FirstOrDefault(item =>
                     item.Id == id && SamePath(item.File, file));
                 MP_libraryPreviewDelay.Stop();
@@ -37,12 +47,15 @@ public partial class MainForm
         MP_libraryPreviewDelay.Tick += (_, _) =>
         {
             MP_libraryPreviewDelay.Stop();
-            if (!IsDisposed && !Disposing) MP_ShowLibraryPreview(MP_pendingLibraryPreview);
+            if (!IsDisposed && !Disposing)
+                _ = MP_ShowLibraryPreviewAsync(MP_pendingLibraryPreview);
         };
         Disposed += (_, _) =>
         {
             MP_libraryPreviewDelay.Stop();
             MP_libraryPreviewDelay.Dispose();
+            MP_libraryPreviewCancellation.Cancel();
+            MP_libraryPreviewCancellation.Dispose();
         };
         return new System.Windows.Forms.Integration.ElementHost
         {
@@ -69,6 +82,7 @@ public partial class MainForm
     private void MP_ReloadLibrary()
     {
         MP_libraryPreviewDelay.Stop();
+        MP_CancelLibraryPreview();
         // One editable structure per DefName. Prefer JSON over exported XML.
         MP_libraryEntries = LibraryDefinitions()
             .GroupBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
@@ -90,53 +104,112 @@ public partial class MainForm
             new MP_StructureViewEntry(item.File, item.Id, item.Label, item.HasXml)).ToArray());
     }
 
-    private void MP_ShowLibraryPreview(MP_LibraryEntry entry)
+    // Preview parsing/rendering and disk I/O run on a dedicated STA worker.
+    // StructureCanvas is a WinForms control and must never be constructed on
+    // an arbitrary MTA thread. One worker at a time prevents a fast sequence
+    // of clicks from decoding many full previews concurrently.
+    private async Task MP_ShowLibraryPreviewAsync(MP_LibraryEntry entry)
     {
         if (entry == null || MP_structureView == null) return;
+        CancellationToken token = MP_libraryPreviewCancellation.Token;
+        Catalog previewCatalog = catalog;
+        bool acquired = false;
         try
         {
-            string file = Path.GetFullPath(entry.File);
-            string basename = Path.GetFileNameWithoutExtension(file);
-            if (basename.EndsWith(".structure", StringComparison.OrdinalIgnoreCase))
-                basename = basename[..^".structure".Length];
-            string folder = Path.GetDirectoryName(file)!;
-            string previewFile = new[]
-            {
-                Path.Combine(folder, basename + ".png"),
-                Path.Combine(folder, basename + "_preview.png"),
-                Path.Combine(folder, basename + ".preview.png")
-            }.FirstOrDefault(File.Exists);
-            if (previewFile == null)
-            {
-                string hash = Convert.ToHexString(
-                    SHA256.HashData(Encoding.UTF8.GetBytes(file + "|" + entry.Id)))[..24];
-                string cacheFolder = Path.Combine(Program.DataDirectory, "PreviewCache");
-                Directory.CreateDirectory(cacheFolder);
-                string cacheFile = Path.Combine(cacheFolder, hash + ".png");
-                if (!File.Exists(cacheFile) ||
-                    File.GetLastWriteTimeUtc(cacheFile) < File.GetLastWriteTimeUtc(file))
-                {
-                    if (catalog == null)
-                        throw new InvalidOperationException("请先加载 RimWorld 游戏素材。");
-                    StructureDocument target = StructureDocument.Load(file, catalog, entry.Id);
-                    using var renderer = new StructureCanvas
-                    {
-                        Catalog = catalog, Document = target, AsyncTextures = false,
-                        ShowGrid = false, ShowProximityRanges = false
-                    };
-                    using Bitmap preview = renderer.ExportPreview(420);
-                    preview.Save(cacheFile, ImageFormat.Png);
-                }
-                previewFile = cacheFile;
-            }
-            using Image image = Image.FromFile(previewFile);
-            MP_structureView.SetPreview(entry.Id, image);
+            await MP_libraryPreviewGate.WaitAsync(token);
+            acquired = true;
+            token.ThrowIfCancellationRequested();
+            byte[] bytes = await MP_RenderLibraryPreviewStaAsync(
+                entry.File, entry.Id, previewCatalog, token);
+            if (!token.IsCancellationRequested && !IsDisposed && !Disposing)
+                MP_structureView?.SetPreviewBytes(entry.Id, bytes);
         }
+        catch (OperationCanceledException) { /* A newer selection won. */ }
         catch (Exception)
         {
-            // Keep navigation responsive even when a source thumbnail is missing.
-            MP_structureView.SetPreview(entry.Id, null);
+            if (!token.IsCancellationRequested && !IsDisposed && !Disposing)
+                MP_structureView?.SetPreviewStatus(entry.Id, "无法生成预览");
         }
+        finally
+        {
+            if (acquired) MP_libraryPreviewGate.Release();
+        }
+    }
+
+    private static Task<byte[]> MP_RenderLibraryPreviewStaAsync(
+        string path, string id, Catalog catalogSnapshot, CancellationToken token)
+    {
+        var completion = new TaskCompletionSource<byte[]>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var worker = new Thread(() =>
+        {
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                completion.TrySetResult(MP_ReadOrGeneratePreview(
+                    path, id, catalogSnapshot, token));
+            }
+            catch (OperationCanceledException)
+            {
+                completion.TrySetCanceled(token);
+            }
+            catch (Exception error)
+            {
+                completion.TrySetException(error);
+            }
+        })
+        {
+            IsBackground = true,
+            Name = "MP_StructurePreview",
+            Priority = ThreadPriority.BelowNormal
+        };
+        worker.SetApartmentState(ApartmentState.STA);
+        worker.Start();
+        return completion.Task;
+    }
+
+    private static byte[] MP_ReadOrGeneratePreview(
+        string input, string id, Catalog catalogSnapshot, CancellationToken token)
+    {
+        string file = Path.GetFullPath(input);
+        string basename = Path.GetFileNameWithoutExtension(file);
+        if (basename.EndsWith(".structure", StringComparison.OrdinalIgnoreCase))
+            basename = basename[..^".structure".Length];
+        string folder = Path.GetDirectoryName(file)!;
+        string previewFile = new[]
+        {
+            Path.Combine(folder, basename + ".png"),
+            Path.Combine(folder, basename + "_preview.png"),
+            Path.Combine(folder, basename + ".preview.png")
+        }.FirstOrDefault(File.Exists);
+        if (previewFile == null)
+        {
+            string hash = Convert.ToHexString(
+                SHA256.HashData(Encoding.UTF8.GetBytes(file + "|" + id)))[..24];
+            string cacheFolder = Path.Combine(Program.DataDirectory, "PreviewCache");
+            Directory.CreateDirectory(cacheFolder);
+            string cacheFile = Path.Combine(cacheFolder, hash + ".png");
+            if (!File.Exists(cacheFile) ||
+                File.GetLastWriteTimeUtc(cacheFile) < File.GetLastWriteTimeUtc(file))
+            {
+                token.ThrowIfCancellationRequested();
+                if (catalogSnapshot == null)
+                    throw new InvalidOperationException("请先加载 RimWorld 游戏素材。");
+                StructureDocument target = StructureDocument.Load(file, catalogSnapshot, id);
+                token.ThrowIfCancellationRequested();
+                using var renderer = new StructureCanvas
+                {
+                    Catalog = catalogSnapshot, Document = target, AsyncTextures = false,
+                    ShowGrid = false, ShowProximityRanges = false
+                };
+                using Bitmap bitmap = renderer.ExportPreview(420);
+                token.ThrowIfCancellationRequested();
+                bitmap.Save(cacheFile, ImageFormat.Png);
+            }
+            previewFile = cacheFile;
+        }
+        token.ThrowIfCancellationRequested();
+        return File.ReadAllBytes(previewFile);
     }
 
     private void MP_RenameLibraryEntry(MP_LibraryEntry entry)
