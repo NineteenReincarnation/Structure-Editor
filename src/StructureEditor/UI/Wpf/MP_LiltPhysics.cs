@@ -61,6 +61,16 @@ internal sealed class MP_LiltValue
         Changed?.Invoke();
     }
 
+    // lilt Value.Shift: keep the target unchanged, let the row spring back.
+    internal void Shift(double distance)
+    {
+        if (!MP_Motion.Enabled || Math.Abs(distance) < .001) return;
+        Current += distance;
+        Active = true;
+        MP_LiltClock.Activate(this);
+        Changed?.Invoke();
+    }
+
     internal void Kick(double velocity)
     {
         if (!MP_Motion.Enabled) return;
@@ -269,5 +279,56 @@ internal sealed class MP_LiltScroll
     {
         proxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
         position.Jump(offset);
+    }
+}
+
+// Port of lilt widget.Scroll.wave: each row gets a response that grows with
+// its distance from the selected row, giving the scrolling list a soft wave.
+// RenderTransforms avoid relayout and never affect the underlying item model.
+internal sealed class MP_LiltWaveScroll
+{
+    private sealed class RowState
+    {
+        internal MP_LiltValue Value;
+        internal WM.TranslateTransform Transform;
+    }
+    private readonly Dictionary<W.UIElement, RowState> tracked = new();
+
+    internal void Shift(IEnumerable<W.UIElement> rows, int focus, double delta)
+    {
+        if (!MP_Motion.Enabled || Math.Abs(delta) < .01) return;
+        int index = 0;
+        foreach (var row in rows)
+        {
+            if (!row.IsVisible)
+            {
+                index++;
+                continue;
+            }
+            if (!tracked.TryGetValue(row, out RowState state))
+            {
+                var transform = row.RenderTransform as WM.TranslateTransform
+                    ?? new WM.TranslateTransform();
+                row.RenderTransform = transform;
+                state = new RowState { Transform = transform };
+                RowState captured = state;
+                state.Value = new MP_LiltValue(0, MP_LiltSpring.Default,
+                    () => captured.Transform.Y = captured.Value.Current);
+                tracked[row] = state;
+            }
+            int distance = focus < 0 ? 0 : Math.Min(7, Math.Abs(index - focus));
+            state.Value.Spring = new MP_LiltSpring(
+                MP_LiltSpring.Default.Response * (1 + .2 * distance),
+                MP_LiltSpring.Default.Damping);
+            state.Value.Shift(delta);
+            index++;
+        }
+    }
+
+    internal void Reset()
+    {
+        foreach (var state in tracked.Values)
+            state.Value.Jump(0);
+        tracked.Clear();
     }
 }

@@ -31,6 +31,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
     private readonly WM.TranslateTransform entranceTransform = new();
     private readonly MP_ScrollOffsetProxy scrollProxy;
     private readonly MP_LiltScroll scrollMotion;
+    private readonly MP_LiltWaveScroll rowWave = new();
     private readonly System.Windows.Threading.DispatcherTimer filterDelay = new()
     {
         Interval = TimeSpan.FromMilliseconds(135)
@@ -150,6 +151,9 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             if (e.ExtentHeightChange != 0 || e.ViewportHeightChange != 0)
                 scrollTarget = Math.Clamp(scrollTarget, 0, Math.Max(0, scroller.ScrollableHeight));
+            if (Math.Abs(e.VerticalChange) > .001)
+                rowWave.Shift(rows.Children.OfType<W.UIElement>(), currentIndex,
+                    e.VerticalChange);
             RefreshImages();
             UpdateScrollIndicator();
         };
@@ -315,6 +319,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         visible = next;
         images.Clear();
         rowText.Clear();
+        rowWave.Reset();
         rows.Children.Clear();
         double max = Math.Max(1, next.Length == 0
             ? 0 : next.Max(item => item.ClusterCombatPower.GetValueOrDefault()));

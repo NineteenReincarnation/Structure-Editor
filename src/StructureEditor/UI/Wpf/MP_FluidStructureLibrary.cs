@@ -36,6 +36,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private MP_StructureViewEntry active;
     private MP_ScrollOffsetProxy scrollProxy;
     private readonly MP_LiltScroll scrollMotion;
+    private readonly MP_LiltWaveScroll rowWave = new();
     private double scrollTarget;
 
     private static WM.SolidColorBrush Solid(byte r, byte g, byte b)
@@ -142,9 +143,14 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         };
         scrollProxy = new MP_ScrollOffsetProxy(scroll);
         scrollMotion = new MP_LiltScroll(scrollProxy);
-        scroll.ScrollChanged += (_, _) =>
+        scroll.ScrollChanged += (_, change) =>
         {
             scrollTarget = Math.Clamp(scrollTarget, 0, Math.Max(0, scroll.ScrollableHeight));
+            int focus = active != null && leafRows.TryGetValue(active.Id, out var selectedRow)
+                ? rows.Children.IndexOf(selectedRow) : -1;
+            if (Math.Abs(change.VerticalChange) > .001)
+                rowWave.Shift(rows.Children.OfType<W.UIElement>(), focus,
+                    change.VerticalChange);
         };
         scroll.PreviewMouseWheel += (_, e) =>
         {
@@ -221,7 +227,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             e.Handled = true;
         };
         Loaded += (_, _) => UpdateSlider(false);
-        Unloaded += (_, _) => filterDelay.Stop();
+        Unloaded += (_, _) => { filterDelay.Stop(); rowWave.Reset(); };
     }
 
     internal void FocusSearch() => search.Focus();
@@ -266,6 +272,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 e.File.Contains(query, StringComparison.OrdinalIgnoreCase))
             .ToArray();
         count.Text = $"STRUCTURE INDEX  /  {visible.Length:00}";
+        rowWave.Reset();
         rows.Children.Clear();
         leafRows.Clear();
         leafInks.Clear();
