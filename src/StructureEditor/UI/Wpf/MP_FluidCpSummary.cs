@@ -11,11 +11,12 @@ namespace StructureEditor;
 internal sealed class MP_FluidCpSummary : WC.UserControl
 {
     private readonly MP_PixelReadout total;
-    private readonly WC.TextBlock subtitle;
+    private readonly WC.TextBlock subtitle, headerTitle;
     private readonly WC.StackPanel lines;
     private readonly WM.ScaleTransform fillScale = new();
     private readonly MP_FloatProxy proxy;
     private float displayed;
+    private float lastGoal = float.NaN;
     private MP_ClusterCombatPower.Row[] last;
 
     private static WM.SolidColorBrush Brush(byte r, byte g, byte b)
@@ -45,13 +46,16 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
             VerticalAlignment = W.VerticalAlignment.Center,
             Orientation = WC.Orientation.Vertical
         };
-        left.Children.Add(new WC.TextBlock
+        headerTitle = new WC.TextBlock
         {
             Text = "结构消耗  /  CP",
+            ToolTip = "当前结构的建筑 CP 总计（不计墙和路障）",
+            TextTrimming = W.TextTrimming.CharacterEllipsis,
             Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Accent),
             FontFamily = MP_LiltTheme.WpfFont,
             FontWeight = W.FontWeights.Normal, FontSize = 14
-        });
+        };
+        left.Children.Add(headerTitle);
         subtitle = new WC.TextBlock
         {
             Text = "不计墙和路障", Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Secondary),
@@ -70,6 +74,12 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
             RenderTransform = new WM.ScaleTransform(1, 1)
         };
         WC.Grid.SetColumn(total, 1); header.Children.Add(total);
+        SizeChanged += (_, _) =>
+        {
+            bool compact = ActualWidth < 265;
+            headerTitle.Text = compact ? "CP 合计" : "结构消耗  /  CP";
+            total.PixelSize = ActualWidth < 205 ? 1 : 2;
+        };
         WC.Grid.SetRow(header, 0); body.Children.Add(header);
 
         var rail = new WC.Grid
@@ -92,6 +102,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         var scroller = new WC.ScrollViewer
         {
             Content = lines, Background = Background,
+            Margin = new W.Thickness(0, 0, 8, 0),
             VerticalScrollBarVisibility = WC.ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = WC.ScrollBarVisibility.Disabled
         };
@@ -115,8 +126,12 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
     {
         rows ??= Array.Empty<MP_ClusterCombatPower.Row>();
         float goal = MP_ClusterCombatPower.Total(rows);
-        if (Math.Abs(goal - displayed) > .001f)
+        // Only restart the spring when the TARGET changes. During a normal
+        // 260ms count-up, displayed is between old and new goals; checking it
+        // would restart the same animation on every metadata refresh.
+        if (float.IsNaN(lastGoal) || Math.Abs(goal - lastGoal) > .001f)
         {
+            lastGoal = goal;
             double from = displayed;
             proxy.BeginAnimation(MP_FloatProxy.ValueProperty, null);
             proxy.Value = goal;
@@ -140,8 +155,10 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         bool same = last != null && rows.Length == last.Length;
         for (int i = 0; same && i < rows.Length; i++)
             same = ReferenceEquals(rows[i].Item, last[i].Item)
-                && rows[i].Count == last[i].Count;
+                && rows[i].Count == last[i].Count
+                && Math.Abs(rows[i].Total - last[i].Total) < .001f;
         if (same) return;
+        bool hadItems = last?.Length > 0;
         last = rows.ToArray();
         lines.Children.Clear();
         subtitle.Text = rows.Length == 0 ? "不计墙和路障"
@@ -156,20 +173,25 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
             });
         else
             foreach (var line in rows) lines.Children.Add(CreateRow(line));
-        fillScale.BeginAnimation(WM.ScaleTransform.ScaleXProperty, null);
-        fillScale.ScaleX = rows.Length == 0 ? 0 : 1;
-        if (MP_Motion.Enabled && IsVisible)
+        bool hasItems = rows.Length > 0;
+        if (hadItems != hasItems)
         {
-            fillScale.BeginAnimation(WM.ScaleTransform.ScaleXProperty,
-                new WA.DoubleAnimation(0, rows.Length == 0 ? 0 : 1,
-                    TimeSpan.FromMilliseconds(220))
-                {
-                    EasingFunction = new WA.CubicEase
-                        { EasingMode = WA.EasingMode.EaseOut }
-                });
-            lines.BeginAnimation(OpacityProperty,
-                new WA.DoubleAnimation(.5, 1, TimeSpan.FromMilliseconds(185)));
+            float to = hasItems ? 1f : 0f;
+            fillScale.BeginAnimation(WM.ScaleTransform.ScaleXProperty, null);
+            fillScale.ScaleX = to;
+            if (MP_Motion.Enabled && IsVisible)
+                fillScale.BeginAnimation(WM.ScaleTransform.ScaleXProperty,
+                    new WA.DoubleAnimation(hadItems ? 1d : 0d, to,
+                        TimeSpan.FromMilliseconds(180))
+                    {
+                        EasingFunction = new WA.CubicEase
+                            { EasingMode = WA.EasingMode.EaseOut }
+                    });
         }
+        // Text and rows remain opaque; repeated full-panel fades caused
+        // visible flashes when the inspector refreshed during editing.
+        lines.BeginAnimation(OpacityProperty, null);
+        lines.Opacity = 1;
     }
 
     private WC.Border CreateRow(MP_ClusterCombatPower.Row row)
@@ -185,9 +207,11 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
             { Width = new W.GridLength(1, W.GridUnitType.Star) });
         layout.ColumnDefinitions.Add(new WC.ColumnDefinition
             { Width = W.GridLength.Auto });
+        string fullName = (row.Item.ClusterWikiName ?? row.Item.Label)
+            + " ×" + row.Count;
         var name = new WC.TextBlock
         {
-            Text = (row.Item.ClusterWikiName ?? row.Item.Label) + " ×" + row.Count,
+            Text = fullName, ToolTip = fullName,
             Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Text),
             FontFamily = MP_LiltTheme.WpfFont,
             FontSize = 13, VerticalAlignment = W.VerticalAlignment.Center,
@@ -204,6 +228,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         WC.Grid.SetColumn(value, 1);
         layout.Children.Add(name); layout.Children.Add(value);
         host.Child = layout;
+        host.ToolTip = $"{fullName}   /   {row.Total:0.##} CP";
         host.MouseEnter += (_, _) => Animate(bg,
             MP_StudioTheme.WpfOpacity(35, MP_StudioTheme.Text));
         host.MouseLeave += (_, _) => Animate(bg,
@@ -213,16 +238,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
 
     private static void Animate(WM.SolidColorBrush brush, WM.Color color)
     {
-        var from = brush.Color;
-        brush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
-        brush.Color = color;
-        if (MP_Motion.Enabled)
-            brush.BeginAnimation(WM.SolidColorBrush.ColorProperty,
-                new WA.ColorAnimation(from, color, TimeSpan.FromMilliseconds(145))
-                {
-                    EasingFunction = new WA.CubicEase
-                        { EasingMode = WA.EasingMode.EaseOut }
-                });
+        MP_WpfMotion.Tint(brush, color, 145);
     }
 }
 
