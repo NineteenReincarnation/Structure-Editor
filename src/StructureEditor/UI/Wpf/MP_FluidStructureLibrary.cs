@@ -30,6 +30,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly System.Windows.Threading.DispatcherTimer filterDelay =
         new() { Interval = TimeSpan.FromMilliseconds(150) };
     private readonly Dictionary<string, WC.Border> leafRows = new(StringComparer.Ordinal);
+    private readonly List<MP_StructureViewEntry> keyboardRows = new();
     private readonly Dictionary<string, WM.SolidColorBrush> leafInks = new(StringComparer.Ordinal);
     private readonly HashSet<string> collapsed = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<MP_StructureViewEntry> entries = Array.Empty<MP_StructureViewEntry>();
@@ -219,7 +220,26 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         Content = layout;
         PreviewKeyDown += (_, e) =>
         {
-            if (active == null || e.OriginalSource is WC.TextBox) return;
+            if (e.OriginalSource is WC.TextBox) return;
+            if (e.Key is WI.Key.Down or WI.Key.Up)
+            {
+                if (keyboardRows.Count == 0) return;
+                int current = keyboardRows.FindIndex(item =>
+                    active != null && item.Id == active.Id);
+                int target = e.Key == WI.Key.Down
+                    ? Math.Min(keyboardRows.Count - 1, current + 1)
+                    : current < 0 ? keyboardRows.Count - 1 : Math.Max(0, current - 1);
+                MP_StructureViewEntry next = keyboardRows[target];
+                Select(next);
+                if (leafRows.TryGetValue(next.Id, out WC.Border focusRow))
+                {
+                    focusRow.BringIntoView();
+                    focusRow.Focus();
+                }
+                e.Handled = true;
+                return;
+            }
+            if (active == null) return;
             if (e.Key == WI.Key.Enter)
                 openCallback?.Invoke(active.File, active.Id);
             else if (e.Key == WI.Key.F2)
@@ -276,6 +296,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         rowWave.Reset();
         rows.Children.Clear();
         leafRows.Clear();
+        keyboardRows.Clear();
         leafInks.Clear();
 
         foreach (var group in visible.GroupBy(e => IsProject(e.File) ? "项目结构" : "其他位置"))
@@ -289,7 +310,10 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                     rows.Children.Add(Folder(key, folder.Key, folder.Count()));
                 if (!showFolder || !collapsed.Contains(key) || query.Length > 0)
                     foreach (var entry in folder)
+                    {
+                        keyboardRows.Add(entry);
                         rows.Children.Add(Leaf(entry, showFolder ? 1 : 0));
+                    }
             }
         }
         if (visible.Length == 0)
@@ -427,7 +451,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             Height = 40, Margin = new W.Thickness(2, 1, 2, 1),
             CornerRadius = new W.CornerRadius(3),
             Background = Solid(0, 73, 125, 149),
-            Cursor = WI.Cursors.Hand
+            Cursor = WI.Cursors.Hand,
+            Focusable = true
         };
         var content = new WC.Grid { Margin = new W.Thickness(8 + level * 8, 0, 6, 0) };
         content.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(13) });
@@ -469,6 +494,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             travellingCursor.Release();
             if (row.IsMouseOver)
             {
+                row.Focus();
                 Select(entry);
                 if (e.ClickCount >= 2) openCallback?.Invoke(entry.File, entry.Id);
             }
