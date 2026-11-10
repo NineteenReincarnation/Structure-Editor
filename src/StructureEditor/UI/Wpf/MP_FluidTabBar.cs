@@ -153,7 +153,11 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         host.MouseLeftButtonUp += (_, e) =>
         {
             travellingCursor.Release();
-            if (host.IsMouseOver) activate?.Invoke(index);
+            if (host.IsMouseOver)
+            {
+                if (index != active) MP_UiSound.Play(MP_UiSound.Cue.Navigate);
+                activate?.Invoke(index);
+            }
             e.Handled = true;
         };
         host.MouseLeave += (_, _) => travellingCursor.Release();

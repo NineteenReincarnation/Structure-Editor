@@ -297,6 +297,7 @@ public class StudioPaths
 {
     public List<WorkspaceReference> OpenDocuments { get; set; } = new();
     public bool AutoLoadActiveMods { get; set; } = true;
+    public bool MP_UiSoundsEnabled { get; set; } = true;
     public string ModsConfigPath { get; set; }
     public string GameRoot { get; set; }
     // Read old preferences without requiring the old mod or exposing it as a built-in dependency.

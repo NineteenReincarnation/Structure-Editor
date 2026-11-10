@@ -77,7 +77,10 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         list.SelectionChanged += (_, _) =>
         {
             if (selecting) return;
+            int oldIndex = selectedIndex;
             selectedIndex = list.SelectedIndex;
+            if (oldIndex != selectedIndex && selectedIndex >= 0)
+                MP_UiSound.Play(MP_UiSound.Cue.Navigate);
             RefreshSelectedRows();
             UpdateSelection(true);
             if (list.SelectedItem is CatalogItem item) activate?.Invoke(item);

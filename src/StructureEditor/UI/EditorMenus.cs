@@ -28,6 +28,18 @@ public partial class MainForm
         var deleteAction = AddMenuAction(edit, "删除", canvas.DeleteSelected, Keys.Delete); edit.DropDownItems.Add(new ToolStripSeparator()); AddMenuAction(edit, "全选", canvas.SelectAll, Keys.Control | Keys.A); var deselectAction = AddMenuAction(edit, "取消选择", canvas.ClearSelection, Keys.Control | Keys.Shift | Keys.A);
         edit.DropDownOpening += (_, _) => { undoAction.Enabled = undo.Count > 0; redoAction.Enabled = redo.Count > 0; pasteAction.Enabled = copied.Count > 0; foreach (var item in new[] { cutAction, copyAction, duplicateAction, deleteAction, deselectAction }) item.Enabled = canvas.Selection.Count > 0; };
         edit.DropDownItems.Add(new ToolStripSeparator()); ToolStripMenuItem prefs = new("首选项"); edit.DropDownItems.Add(prefs); AddMenuAction(prefs, "游戏目录…", SetPaths); AddMenuAction(prefs, "素材来源…", ShowSources);
+        ToolStripMenuItem soundToggle = new("交互音效")
+        {
+            CheckOnClick = true, Checked = Program.Paths?.MP_UiSoundsEnabled ?? true,
+            ForeColor = text, ToolTipText = "柔和的按键反馈音，可随时关闭"
+        };
+        soundToggle.CheckedChanged += (_, _) =>
+        {
+            Program.Paths.MP_UiSoundsEnabled = soundToggle.Checked;
+            Program.SavePaths();
+            if (soundToggle.Checked) MP_UiSound.Play(MP_UiSound.Cue.Confirm);
+        };
+        prefs.DropDownItems.Add(soundToggle);
         AddMenuAction(edit,"重新读取素材",LoadCatalog,Keys.F5);
         AddMenuAction(objects, "顺时针旋转 90°", canvas.Rotate, Keys.R); AddMenuAction(objects, "吸取为放置笔刷", canvas.Eyedropper, Keys.I); AddMenuAction(objects, "加入 / 取消收藏", ToggleFavorite); AddMenuAction(objects, "居中显示所选", canvas.CenterSelection, Keys.Control | Keys.Home);
         AddMenuAction(view, "适合窗口", canvas.CenterView, Keys.Control | Keys.D0); AddMenuAction(view, "实际大小（100%）", () => canvas.ZoomAtCenter(1, true), Keys.Control | Keys.D1); AddMenuAction(view, "放大", () => canvas.ZoomAtCenter(1.2f), Keys.Control | Keys.Oemplus); AddMenuAction(view, "缩小", () => canvas.ZoomAtCenter(1 / 1.2f), Keys.Control | Keys.OemMinus); AddMenuAction(view, "显示 / 隐藏网格", () => { canvas.ShowGrid = !canvas.ShowGrid; canvas.Invalidate(); }, Keys.G);

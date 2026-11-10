@@ -579,6 +579,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         {
             row.Focus();
             Toggle();
+            MP_UiSound.Play(MP_UiSound.Cue.Toggle);
             e.Handled = true;
         };
         return row;
@@ -683,6 +684,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             {
                 row.Focus();
                 Select(entry);
+                MP_UiSound.Play(MP_UiSound.Cue.Navigate);
                 if (e.ClickCount >= 2) openCallback?.Invoke(entry.File, entry.Id);
             }
             e.Handled = true;

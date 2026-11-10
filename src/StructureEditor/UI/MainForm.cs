@@ -98,7 +98,12 @@ public partial class MainForm : Form
             Padding = new Padding(5, 1, 5, 1),
             Margin = new Padding(2, 0, 2, 0)
         };
-        button.Click += (_, _) => Safe(action); strip.Items.Add(button);
+        button.Click += (_, _) =>
+        {
+            MP_UiSound.Play(MP_UiSound.Cue.Confirm);
+            Safe(action);
+        };
+        strip.Items.Add(button);
     }
     private void Safe(Action action)
     {
