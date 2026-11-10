@@ -72,6 +72,14 @@ internal static class Program
                     Math.Abs(MP_Motion.EaseOut(.5f) - .875f) > 0.00001f ||
                     MP_Motion.Blend(Color.Black, Color.White, 1f) != Color.FromArgb(255, 255, 255))
                     throw new InvalidOperationException("Motion easing/color contract failed.");
+                // Ported lilt 240 Hz spring integration must converge and
+                // preserve velocity when its target changes mid-flight.
+                var spring = new MP_LiltValue(0, MP_LiltSpring.Default);
+                spring.Set(100);
+                for (int sample = 0; sample < 240; sample++)
+                    spring.Step(1d / 240);
+                if (!double.IsFinite(spring.Current) || Math.Abs(spring.Current - 100) > .2)
+                    throw new InvalidOperationException("lilt spring physics did not converge.");
                 using var form = new MainForm();
                 form.CreateControl();
                 static IEnumerable<Control> Descendants(Control parent)

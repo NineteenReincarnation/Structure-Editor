@@ -17,7 +17,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     private readonly WC.ListBox list;
     private readonly WC.Grid layout;
     private readonly WC.Border selection;
-    private readonly WM.TranslateTransform selectionOffset = new();
+    private readonly MP_LiltCursor travellingCursor;
     private readonly Action<CatalogItem> activate;
     private readonly MP_WpfTextureCache textures = new();
     private WC.ScrollViewer scroller;
@@ -34,6 +34,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     internal MP_FluidAssetPalette(Action<CatalogItem> onActivate)
     {
         activate = onActivate;
+        MP_LiltTheme.Apply(this);
         Background = Surface;
         layout = new WC.Grid { Background = Surface, ClipToBounds = true };
         var rowFactory = new W.FrameworkElementFactory(typeof(MP_FluidAssetRow));
@@ -109,11 +110,11 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
             BorderBrush = Solid(140, 125, 205, 220),
             BorderThickness = new W.Thickness(1),
             CornerRadius = new W.CornerRadius(5),
-            RenderTransform = selectionOffset,
             HorizontalAlignment = W.HorizontalAlignment.Stretch,
             VerticalAlignment = W.VerticalAlignment.Top,
             IsHitTestVisible = false, Visibility = W.Visibility.Collapsed
         };
+        travellingCursor = new MP_LiltCursor(selection, false);
         WC.Panel.SetZIndex(list, 0);
         WC.Panel.SetZIndex(selection, 1);
         layout.Children.Add(list);
@@ -248,19 +249,8 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         if (!double.IsFinite(nextY)) return;
         bool wasVisible = selection.Visibility == W.Visibility.Visible;
         selection.Visibility = W.Visibility.Visible;
-        if (!wasVisible || !animate || !MP_Motion.Enabled)
-        {
-            selectionOffset.BeginAnimation(WM.TranslateTransform.YProperty, null);
-            selectionOffset.Y = nextY;
-            return;
-        }
-        double from = selectionOffset.Y;
-        selectionOffset.BeginAnimation(WM.TranslateTransform.YProperty, null);
-        selectionOffset.Y = nextY;
-        selectionOffset.BeginAnimation(WM.TranslateTransform.YProperty,
-            new WA.DoubleAnimation(from, nextY, TimeSpan.FromMilliseconds(240))
-            { EasingFunction = new WA.BackEase
-                { Amplitude = .13, EasingMode = WA.EasingMode.EaseOut } });
+        travellingCursor.Move(nextY, RowHeight - 5,
+            immediate: !wasVisible || !animate || !MP_Motion.Enabled);
     }
 
     private void ScrollTo(double destination)
@@ -357,7 +347,7 @@ public sealed class MP_FluidAssetRow : WC.Border
 
     private static WC.TextBlock Label(double size, WM.Brush color) => new()
     {
-        FontFamily = new WM.FontFamily("Microsoft YaHei UI"), FontSize = size,
+        FontFamily = MP_LiltTheme.WpfFont, FontSize = size,
         Foreground = color, TextTrimming = W.TextTrimming.CharacterEllipsis,
         VerticalAlignment = W.VerticalAlignment.Center
     };

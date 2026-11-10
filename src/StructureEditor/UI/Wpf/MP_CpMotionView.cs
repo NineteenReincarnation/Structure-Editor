@@ -27,7 +27,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
     private readonly WC.StackPanel rows;
     private readonly WC.Grid content;
     private readonly WC.Border selectionVisual;
-    private readonly WM.TranslateTransform selectionTransform = new();
+    private readonly MP_LiltCursor travellingCursor;
     private readonly WM.TranslateTransform entranceTransform = new();
     private readonly MP_ScrollOffsetProxy scrollProxy;
     private readonly System.Windows.Threading.DispatcherTimer filterDelay = new()
@@ -60,6 +60,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
     internal MP_CpMotionView(Action<CatalogItem> onActivate)
     {
         activate = onActivate;
+        MP_LiltTheme.Apply(this);
         this.Background = SurfaceBrush; // visual resource shared across lists
         Focusable = true;
         var root = new WC.Grid
@@ -78,7 +79,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
             Background = Brush(Color(43, 58, 68)), Foreground = MainText,
             BorderBrush = Brush(Color(66, 91, 104)), BorderThickness = new W.Thickness(1),
             Padding = new W.Thickness(9, 5, 6, 3),
-            FontSize = 12.5, FontFamily = new WM.FontFamily("Microsoft YaHei UI"),
+            FontSize = 12.5, FontFamily = MP_LiltTheme.WpfFont,
             CaretBrush = Accent, SelectionBrush = Brush(Color(98, 177, 195)),
             VerticalContentAlignment = W.VerticalAlignment.Center
         };
@@ -117,7 +118,6 @@ internal sealed class MP_CpMotionView : WC.UserControl
             BorderBrush = Brush(Color(141, 120, 195, 212)),
             BorderThickness = new W.Thickness(1), CornerRadius = new W.CornerRadius(5),
             Margin = new W.Thickness(2, 3, 2, 0), Height = RowHeight - 6,
-            RenderTransform = selectionTransform,
             VerticalAlignment = W.VerticalAlignment.Top,
             Visibility = W.Visibility.Collapsed,
             IsHitTestVisible = false,
@@ -127,7 +127,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
                 Color = Color(90, 198, 222)
             }
         };
-        content = new WC.Grid { Background = Background };
+        travellingCursor = new MP_LiltCursor(selectionVisual, false);
+        content = new WC.Grid { Background = SurfaceBrush };
         WC.Panel.SetZIndex(selectionVisual, 0);
         WC.Panel.SetZIndex(rows, 1);
         content.Children.Add(selectionVisual); content.Children.Add(rows);
@@ -327,9 +328,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
         if (selectedAt < 0) selectionVisual.Visibility = W.Visibility.Collapsed;
         else
         {
-            selectionTransform.BeginAnimation(WM.TranslateTransform.YProperty, null);
-            selectionTransform.Y = selectedAt * RowHeight;
             selectionVisual.Visibility = W.Visibility.Visible;
+            travellingCursor.Move(selectedAt * RowHeight, RowHeight - 6, immediate: true);
         }
         scrollTarget = 0;
         scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
@@ -446,8 +446,17 @@ internal sealed class MP_CpMotionView : WC.UserControl
         };
         row.MouseLeftButtonDown += (_, e) =>
         {
-            Select(index); row.Focus(); e.Handled = true;
+            travellingCursor.Press();
+            row.Focus();
+            e.Handled = true;
         };
+        row.MouseLeftButtonUp += (_, e) =>
+        {
+            travellingCursor.Release();
+            if (row.IsMouseOver) Select(index);
+            e.Handled = true;
+        };
+        row.MouseLeave += (_, _) => travellingCursor.Release();
         row.Focusable = true;
         return row;
     }
@@ -478,19 +487,14 @@ internal sealed class MP_CpMotionView : WC.UserControl
         UpdateRowContrast(index);
         selectionVisual.Visibility = W.Visibility.Visible;
         double target = index * RowHeight;
-        double from = selectionTransform.Y;
-        if (!hadSelection)
+        travellingCursor.Move(target, RowHeight - 6, immediate: !hadSelection);
+        if (!hadSelection && MP_Motion.Enabled)
         {
-            selectionTransform.BeginAnimation(WM.TranslateTransform.YProperty, null);
-            selectionTransform.Y = target;
             selectionVisual.BeginAnimation(OpacityProperty, null);
             selectionVisual.Opacity = 1;
-            if (MP_Motion.Enabled)
-                selectionVisual.BeginAnimation(OpacityProperty, new WA.DoubleAnimation(
-                    0.25, 1d, TimeSpan.FromMilliseconds(175)));
+            selectionVisual.BeginAnimation(OpacityProperty, new WA.DoubleAnimation(
+                0.25, 1d, TimeSpan.FromMilliseconds(175)));
         }
-        else MP_WpfMotion.Translate(selectionTransform,
-            WM.TranslateTransform.YProperty, target, 245);
         double top = index * RowHeight;
         double bottom = top + RowHeight;
         double viewTop = scroller.VerticalOffset, viewBottom = viewTop + scroller.ViewportHeight;

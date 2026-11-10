@@ -24,6 +24,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
 
     internal MP_FluidCpSummary()
     {
+        MP_LiltTheme.Apply(this);
         Background = Brush(28, 40, 49);
         var body = new WC.Grid
         {
@@ -47,13 +48,13 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         {
             Text = "当前结构 · 建筑 CP",
             Foreground = Brush(157, 184, 196),
-            FontFamily = new WM.FontFamily("Microsoft YaHei UI"),
+            FontFamily = MP_LiltTheme.WpfFont,
             FontWeight = W.FontWeights.Medium, FontSize = 12
         });
         subtitle = new WC.TextBlock
         {
             Text = "不计墙和路障", Foreground = Brush(105, 141, 154),
-            FontFamily = new WM.FontFamily("Microsoft YaHei UI"), FontSize = 10,
+            FontFamily = MP_LiltTheme.WpfFont, FontSize = 10,
             Margin = new W.Thickness(0, 3, 0, 0)
         };
         left.Children.Add(subtitle);
@@ -62,7 +63,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         {
             Text = "0 CP", Foreground = Brush(172, 225, 238),
             Effect = MP_LcdVisual.Glow(.18),
-            FontFamily = new WM.FontFamily("Microsoft YaHei UI"),
+            FontFamily = MP_LiltTheme.WpfFont,
             FontWeight = W.FontWeights.SemiBold, FontSize = 21,
             VerticalAlignment = W.VerticalAlignment.Center,
             HorizontalAlignment = W.HorizontalAlignment.Right,
@@ -145,7 +146,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
             lines.Children.Add(new WC.TextBlock
             {
                 Text = "暂无计入 CP 的设施", FontSize = 11,
-                FontFamily = new WM.FontFamily("Microsoft YaHei UI"),
+                FontFamily = MP_LiltTheme.WpfFont,
                 Foreground = Brush(121, 155, 170),
                 Margin = new W.Thickness(0, 19, 0, 0)
             });
@@ -184,7 +185,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         {
             Text = (row.Item.ClusterWikiName ?? row.Item.Label) + " ×" + row.Count,
             Foreground = Brush(207, 231, 238),
-            FontFamily = new WM.FontFamily("Microsoft YaHei UI"),
+            FontFamily = MP_LiltTheme.WpfFont,
             FontSize = 11.5, VerticalAlignment = W.VerticalAlignment.Center,
             TextTrimming = W.TextTrimming.CharacterEllipsis
         };
