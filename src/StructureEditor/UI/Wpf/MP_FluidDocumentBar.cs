@@ -14,6 +14,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
 {
     private readonly Action<int, bool> invoke;
     private readonly WC.Grid layer;
+    private readonly WC.ScrollViewer scrollingTabs;
     private readonly WC.StackPanel slots;
     private readonly WC.Border capsule;
     private readonly MP_LiltCursor travellingCursor;
@@ -60,7 +61,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
         WC.Panel.SetZIndex(capsule, 0);
         layer.Children.Add(capsule);
         layer.Children.Add(slots);
-        var scroll = new WC.ScrollViewer
+        scrollingTabs = new WC.ScrollViewer
         {
             Content = layer,
             HorizontalAlignment = W.HorizontalAlignment.Stretch,
@@ -69,13 +70,14 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
             VerticalScrollBarVisibility = WC.ScrollBarVisibility.Disabled,
             CanContentScroll = false
         };
-        scroll.PreviewMouseWheel += (_, e) =>
+        scrollingTabs.PreviewMouseWheel += (_, e) =>
         {
-            scroll.ScrollToHorizontalOffset(Math.Clamp(
-                scroll.HorizontalOffset - e.Delta * .4, 0, scroll.ScrollableWidth));
+            scrollingTabs.ScrollToHorizontalOffset(Math.Clamp(
+                scrollingTabs.HorizontalOffset - e.Delta * .4,
+                0, scrollingTabs.ScrollableWidth));
             e.Handled = true;
         };
-        Content = scroll;
+        Content = scrollingTabs;
         Loaded += (_, _) => Move(false);
         SizeChanged += (_, _) => Move(false);
     }
@@ -211,6 +213,21 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
         capsule.Visibility = W.Visibility.Visible;
         travellingCursor.Move(x, w, immediate: !animate || !wasReady);
         ready = true;
+        // Keep the selected document accessible on narrow windows; an
+        // active tab must never be hidden underneath the fixed right tools.
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (active < 0 || active >= visuals.Count ||
+                scrollingTabs.ViewportWidth <= 0) return;
+            double start = 0;
+            for (int i = 0; i < active; i++) start += visuals[i].Container.Width;
+            double end = start + visuals[active].Container.Width;
+            if (start < scrollingTabs.HorizontalOffset)
+                scrollingTabs.ScrollToHorizontalOffset(start);
+            else if (end > scrollingTabs.HorizontalOffset + scrollingTabs.ViewportWidth)
+                scrollingTabs.ScrollToHorizontalOffset(
+                    Math.Max(0, end - scrollingTabs.ViewportWidth));
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private static void AnimateColor(WM.SolidColorBrush brush, WM.Color to)
