@@ -118,6 +118,7 @@ internal static class StudioInteractionChecks
             foreach (Control child in parent.Controls.Cast<Control>().Reverse())
             {
                 if (parent is TabControl tabs && child != tabs.SelectedTab) continue;
+                if (child is MP_PageSurface page && !page.MP_IsActive) continue;
                 if (child is SplitterPanel panel && panel.Parent is SplitContainer split && (panel == split.Panel1 ? split.Panel1Collapsed : split.Panel2Collapsed)) continue;
                 if (child.Width <= 0 || child.Height <= 0) continue;
                 Point position = new(offset.X + child.Left, offset.Y + child.Top);
