@@ -326,8 +326,10 @@ public partial class StructureCanvas
             // background. Never swap the mechanoid for an oversized text label:
             // leave a quiet geometric silhouette until the sprite arrives.
             RectangleF footprint = ScreenRect(rect);
+            // Draw a subdued placeholder while a sprite is decoding, never
+            // a near-opaque white tile during rapid scrolling or panning.
             using SolidBrush fallback = new(Color.FromArgb(
-                Math.Clamp((int)(alpha * 170), 0, 255), color));
+                Math.Clamp((int)(alpha * 62), 0, 255), color));
             using Pen outline = new(Color.FromArgb(
                 Math.Clamp((int)(alpha * 150), 0, 255), 24, 34, 39), 1);
             g.FillRectangle(fallback, footprint);

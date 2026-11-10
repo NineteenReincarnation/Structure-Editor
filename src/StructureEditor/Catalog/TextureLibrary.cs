@@ -23,6 +23,11 @@ public class TextureLibrary : IDisposable
     private readonly Dictionary<string, Source> sources = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Bitmap> cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(string, int), Bitmap> requests = new();
+    // Background decoding takes the synchronous lock. Previously Request()
+    // returned null even for already decoded sprites whenever that lock was
+    // busy; moving/scrolling quickly then painted the empty fallback, making
+    // materials flash pale/white. Publish completed images on a lock-free path.
+    private readonly ConcurrentDictionary<(string, int), Bitmap> readyRequests = new();
     private readonly ConcurrentDictionary<(string, string), string> appearancePaths = new();
     private readonly Dictionary<ZipArchive, Dictionary<string, long>> offsets = new();
     public int SourceCount => sources.Count;
@@ -80,9 +85,18 @@ public class TextureLibrary : IDisposable
     public Bitmap Request(string path, int rotation = 2)
     {
         if (disposed || string.IsNullOrWhiteSpace(path)) return null;
+        if (readyRequests.TryGetValue((path, rotation), out Bitmap finished))
+            return finished;
         if (Monitor.TryEnter(sync))
         {
-            try { if (requests.TryGetValue((path, rotation), out var ready)) return ready; }
+            try
+            {
+                if (requests.TryGetValue((path, rotation), out var ready))
+                {
+                    if (ready != null) readyRequests.TryAdd((path, rotation), ready);
+                    return ready;
+                }
+            }
             finally { Monitor.Exit(sync); }
         }
         if (pending.TryAdd((path, rotation), 0)) { queue.Enqueue((path, rotation)); StartWorker(); }
@@ -108,7 +122,11 @@ public class TextureLibrary : IDisposable
     private Bitmap GetCore(string path, int rotation)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
-        if (requests.TryGetValue((path, rotation), out var requested)) return requested;
+        if (requests.TryGetValue((path, rotation), out var requested))
+        {
+            if (requested != null) readyRequests.TryAdd((path, rotation), requested);
+            return requested;
+        }
         string key = Key(path);
         if (!sources.ContainsKey(key))
         {
@@ -118,7 +136,12 @@ public class TextureLibrary : IDisposable
             else if (sources.ContainsKey(key + "_south")) key += "_south";
             else key = sources.Keys.FirstOrDefault(k => k.StartsWith(key + "/", StringComparison.OrdinalIgnoreCase)) ?? key;
         }
-        if (cache.TryGetValue(key, out Bitmap ready)) { requests[(path, rotation)] = ready; return ready; }
+        if (cache.TryGetValue(key, out Bitmap ready))
+        {
+            requests[(path, rotation)] = ready;
+            if (ready != null) readyRequests.TryAdd((path, rotation), ready);
+            return ready;
+        }
         if (!sources.TryGetValue(key, out Source source)) { requests[(path, rotation)] = null; return null; }
         try
         {
@@ -130,6 +153,7 @@ public class TextureLibrary : IDisposable
             else { using MemoryStream ms = new(bytes); using Bitmap original = new(ms); image = new Bitmap(original); }
             cache[key] = image;
             requests[(path, rotation)] = image;
+            readyRequests.TryAdd((path, rotation), image);
             return image;
         }
         catch (Exception e) { Errors.Add(key + ": " + e); cache[key] = null; requests[(path, rotation)] = null; return null; }
@@ -236,6 +260,7 @@ public class TextureLibrary : IDisposable
         lock (sync)
         {
             if (disposed) return; disposed = true;
+            readyRequests.Clear();
             foreach (Bitmap bitmap in cache.Values) bitmap?.Dispose();
             foreach (ZipArchive zip in archives) zip.Dispose();
             queue.Clear(); pending.Clear(); TextureReady = null;
