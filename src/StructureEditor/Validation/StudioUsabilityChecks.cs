@@ -69,8 +69,8 @@ internal static class StudioUsabilityChecks
             BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
         need(materialPicker.DrawMode == DrawMode.OwnerDrawFixed && materialPicker.ItemHeight >= 30,
             "Material choices should show a material texture or swatch beside the localized name");
-        need(buttons.Count(b => b.ToolTipText.StartsWith("新建结构")) == 1
-            && buttons.Count(b => b.ToolTipText.StartsWith("打开结构")) == 1
+        need(buttons.Count(b => b.ToolTipText?.StartsWith("新建结构") == true) == 1
+            && buttons.Count(b => b.ToolTipText?.StartsWith("打开结构") == true) == 1
             && !documentBar.Items.Cast<ToolStripItem>().Any(
                 b => b.Text.Contains("新建") || b.Text.Contains("打开")),
             "New and Open remain accessible once each, before edit layers, even in compact layout");

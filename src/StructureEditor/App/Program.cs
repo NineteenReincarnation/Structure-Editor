@@ -267,8 +267,8 @@ internal static class Program
                     .SelectMany(strip => strip.Items.Cast<ToolStripItem>()).ToArray();
                 // Compact labels may be 新/开. Command identity is carried by
                 // stable tooltips and must remain exactly one of each.
-                if (quickActions.Count(item => item.ToolTipText.StartsWith("新建结构")) != 1
-                    || quickActions.Count(item => item.ToolTipText.StartsWith("打开结构")) != 1)
+                if (quickActions.Count(item => item.ToolTipText?.StartsWith("新建结构") == true) != 1
+                    || quickActions.Count(item => item.ToolTipText?.StartsWith("打开结构") == true) != 1)
                     throw new InvalidOperationException(
                         "New/Open commands missing or duplicated in compact toolbar.");
                 if (!MP_UiSound.MP_ValidCueData())
