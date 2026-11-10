@@ -196,10 +196,18 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         {
             Entry entry = tabs[i];
             entry.Host.Width = widths[i];
-            // Narrow columns keep short aliases instead of cropped full titles.
-            entry.Caption.Text = widths[i] < 69 && entry.FullTitle == "集群 CP"
-                ? "CP" : entry.FullTitle;
-            entry.Caption.FontSize = widths[i] < 65 ? 14 : 16;
+            // Use meaningful, readable labels when the panel is narrow,
+            // rather than overlapping or cutting off most of the word.
+            entry.Caption.Text = widths[i] < 82
+                ? entry.FullTitle switch
+                {
+                    "素材库" => "素材",
+                    "结构库" => "结构",
+                    "集群 CP" => "CP",
+                    _ => entry.FullTitle
+                }
+                : entry.FullTitle;
+            entry.Caption.FontSize = widths[i] < 73 ? 14 : 16;
         }
         bool resized = Math.Abs(lastAvailable - usable) > .5;
         lastAvailable = usable;

@@ -80,6 +80,16 @@ internal static class Program
                     spring.Step(1d / 240);
                 if (!double.IsFinite(spring.Current) || Math.Abs(spring.Current - 100) > .2)
                     throw new InvalidOperationException("lilt spring physics did not converge.");
+                // The document and canvas bars use the SAME physical row
+                // sizing as the WPF side navigation at all common DPIs.
+                foreach (int dpi in new[] { 96, 120, 144, 192 })
+                {
+                    int height = MP_WorkspaceHeaderCheck(dpi);
+                    if (height != MP_SectionTabs.MP_RequiredHeaderPixels(dpi))
+                        throw new InvalidOperationException("Main toolbar DPI sizing drifted.");
+                }
+                static int MP_WorkspaceHeaderCheck(int dpi)
+                    => MainForm.MP_WorkspaceHeaderPixels(dpi);
                 // Check 96/120/144/192 DPI conversions for hybrid headers.
                 foreach (int dpi in new[] { 96, 120, 144, 192 })
                 {
@@ -121,6 +131,9 @@ internal static class Program
                     throw new InvalidOperationException("Unified editor theme contract failed.");
                 using var form = new MainForm();
                 form.CreateControl();
+                if (!form.MP_WorkspaceHeadersFit)
+                    throw new InvalidOperationException(
+                        "Document or canvas toolbar row clips high-DPI controls.");
                 static IEnumerable<Control> Descendants(Control parent)
                 {
                     foreach (Control child in parent.Controls)

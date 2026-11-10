@@ -12,6 +12,11 @@ public partial class MainForm
     private readonly Font smallFont = MP_LiltTheme.CreateGdiFont(9);
     private ToolStripStatusLabel selectionStatus;
     private SplitContainer librarySplit, inspectorSplit;
+    private MP_SmoothLayout MP_rootLayout;
+    private MP_SmoothLayout MP_canvasToolbar;
+
+    internal static int MP_WorkspaceHeaderPixels(int dpi)
+        => MP_SectionTabs.MP_RequiredHeaderPixels(dpi);
     private ComboBox MP_editLayerSelector;
     private void MP_CycleEditLayer(int step)
     {
@@ -132,8 +137,12 @@ public partial class MainForm
         librarySplit.Panel1.Controls.Add(MP_libraryTabs);
 
         Panel viewport = new() { Dock = DockStyle.Fill };
-        MP_SmoothLayout layerBar = new() { Dock = DockStyle.Top, Height = MP_StudioTheme.HeaderHeight,
-            BackColor = MP_StudioTheme.Toolbar, ColumnCount = 5 };
+        MP_canvasToolbar = new MP_SmoothLayout
+        {
+            Dock = DockStyle.Top, Height = MP_WorkspaceHeaderPixels(DeviceDpi),
+            BackColor = MP_StudioTheme.Toolbar, ColumnCount = 5
+        };
+        MP_SmoothLayout layerBar = MP_canvasToolbar;
         layerBar.ColumnStyles.Add(new(SizeType.Absolute, 132));
         layerBar.ColumnStyles.Add(new(SizeType.AutoSize));
         layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124));
@@ -480,13 +489,43 @@ public partial class MainForm
             SizingGrip = false, Font = Font };
         selectionStatus = new() { BorderSides = ToolStripStatusLabelBorderSides.None, Text = "放置" };
         status.Text = "正在读取游戏素材…"; strip.Items.Add(status); strip.Items.Add(selectionStatus);
-        MP_SmoothLayout workspace = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = surface };
+        MP_rootLayout = new MP_SmoothLayout { Dock = DockStyle.Fill,
+            ColumnCount = 1, RowCount = 4, Margin = Padding.Empty,
+            Padding = Padding.Empty, BackColor = surface };
+        MP_SmoothLayout workspace = MP_rootLayout;
         workspace.ColumnStyles.Add(new(SizeType.Percent, 100));
-        workspace.RowStyles.Add(new(SizeType.AutoSize)); workspace.RowStyles.Add(new(SizeType.Absolute, MP_StudioTheme.HeaderHeight)); workspace.RowStyles.Add(new(SizeType.Percent, 100)); workspace.RowStyles.Add(new(SizeType.AutoSize));
+        workspace.RowStyles.Add(new(SizeType.AutoSize));
+        workspace.RowStyles.Add(new(SizeType.Absolute, MP_WorkspaceHeaderPixels(DeviceDpi)));
+        workspace.RowStyles.Add(new(SizeType.Percent, 100));
+        workspace.RowStyles.Add(new(SizeType.AutoSize));
         menu.Dock = strip.Dock = DockStyle.Fill; menu.Margin = topBar.Margin = librarySplit.Margin = strip.Margin = Padding.Empty;
         workspace.Controls.Add(menu, 0, 0); workspace.Controls.Add(topBar, 0, 1); workspace.Controls.Add(librarySplit, 0, 2); workspace.Controls.Add(strip, 0, 3); Controls.Add(workspace);
+        DpiChanged += (_, _) =>
+        {
+            if (IsDisposed || Disposing) return;
+            // DPI change and WinForms autoscaling may arrive in either order.
+            BeginInvoke(new Action(MP_UpdateWorkspaceHeaderHeights));
+        };
+        MP_UpdateWorkspaceHeaderHeights();
         RefreshToolDisplay(); ResumeLayout(true);
     }
+
+    internal bool MP_WorkspaceHeadersFit =>
+        MP_rootLayout != null && MP_canvasToolbar != null
+        && MP_rootLayout.RowStyles.Count >= 2
+        && MP_rootLayout.RowStyles[1].Height + 1 >=
+            MP_WorkspaceHeaderPixels(DeviceDpi)
+        && MP_canvasToolbar.Height + 1 >= MP_WorkspaceHeaderPixels(DeviceDpi);
+
+    private void MP_UpdateWorkspaceHeaderHeights()
+    {
+        if (MP_rootLayout == null || MP_canvasToolbar == null) return;
+        int pixels = MP_WorkspaceHeaderPixels(DeviceDpi);
+        if (Math.Abs(MP_rootLayout.RowStyles[1].Height - pixels) >= 1f)
+            MP_rootLayout.RowStyles[1].Height = pixels;
+        if (MP_canvasToolbar.Height != pixels) MP_canvasToolbar.Height = pixels;
+    }
+
     private void RefreshToolDisplay()
     {
         if (selectionStatus != null) selectionStatus.Text = canvas.HasStamp ? "整组粘贴 · Q/E 旋转 · 左键放置 / Esc 取消" : canvas.Tool switch
