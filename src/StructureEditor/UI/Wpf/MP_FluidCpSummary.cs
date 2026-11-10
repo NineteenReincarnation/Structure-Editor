@@ -25,7 +25,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
     internal MP_FluidCpSummary()
     {
         MP_LiltTheme.Apply(this);
-        Background = Brush(28, 40, 49);
+        Background = Brush(10, 15, 21);
         var body = new WC.Grid
         {
             Background = Background, Margin = new W.Thickness(11, 7, 11, 5)
@@ -61,10 +61,10 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         header.Children.Add(left);
         total = new WC.TextBlock
         {
-            Text = "0 CP", Foreground = Brush(172, 225, 238),
+            Text = "0 CP", Foreground = Brush(189, 228, 249),
             Effect = MP_LcdVisual.Glow(.18),
             FontFamily = MP_LiltTheme.WpfFont,
-            FontWeight = W.FontWeights.SemiBold, FontSize = 21,
+            FontWeight = W.FontWeights.Normal, FontSize = 24,
             VerticalAlignment = W.VerticalAlignment.Center,
             HorizontalAlignment = W.HorizontalAlignment.Right,
             RenderTransformOrigin = new W.Point(.5, .5),

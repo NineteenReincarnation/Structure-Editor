@@ -45,10 +45,10 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         => new(WM.Color.FromRgb(r, g, b));
     private static WM.SolidColorBrush Solid(byte a, byte r, byte g, byte b)
         => new(WM.Color.FromArgb(a, r, g, b));
-    private static readonly WM.SolidColorBrush Surface = Solid(22, 35, 44);
-    private static readonly WM.SolidColorBrush Text = Solid(201, 239, 246);
-    private static readonly WM.SolidColorBrush Muted = Solid(139, 190, 203);
-    private static readonly WM.SolidColorBrush Cyan = Solid(162, 236, 246);
+    private static readonly WM.SolidColorBrush Surface = Solid(10, 15, 21);
+    private static readonly WM.SolidColorBrush Text = Solid(199, 231, 249);
+    private static readonly WM.SolidColorBrush Muted = Solid(132, 169, 191);
+    private static readonly WM.SolidColorBrush Cyan = Solid(181, 226, 250);
 
     internal MP_FluidStructureLibrary(
         Action<string, string> onSelected,
@@ -80,9 +80,9 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         var searchHost = new WC.Grid { Margin = new W.Thickness(0, 0, 0, 5) };
         search = new WC.TextBox
         {
-            Background = Solid(22, 42, 51), Foreground = Text,
+            Background = Solid(10, 17, 24), Foreground = Text,
             BorderBrush = Solid(66, 91, 103), BorderThickness = new W.Thickness(1),
-            Padding = new W.Thickness(9, 5, 7, 3), FontSize = 12.5,
+            Padding = new W.Thickness(9, 5, 7, 3), FontSize = 16,
             FontFamily = MP_LiltTheme.WpfFont,
             CaretBrush = Cyan, SelectionBrush = Solid(93, 159, 179),
             VerticalContentAlignment = W.VerticalAlignment.Center
@@ -91,7 +91,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         {
             Text = "搜索结构 / DefName",
             Foreground = Muted, IsHitTestVisible = false,
-            FontFamily = search.FontFamily, FontSize = 12,
+            FontFamily = search.FontFamily, FontSize = 16,
             Margin = new W.Thickness(10, 7, 0, 0)
         };
         searchHost.Children.Add(search);
@@ -110,9 +110,9 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         count = new WC.TextBlock
         {
             Text = "结构索引  /  00", Foreground = Cyan,
-            FontSize = 11.3, FontFamily = MP_LiltTheme.WpfFont,
-            FontWeight = W.FontWeights.SemiBold,
-            Effect = MP_LcdVisual.Glow(.19),
+            FontSize = 15, FontFamily = MP_LiltTheme.WpfFont,
+            FontWeight = W.FontWeights.Normal,
+            Effect = MP_LcdVisual.Glow(.05),
             VerticalAlignment = W.VerticalAlignment.Center
         };
         WC.Grid.SetRow(count, 1);
@@ -379,8 +379,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         {
             Text = label, Foreground = strong ? Text : Muted,
             FontFamily = search.FontFamily,
-            FontWeight = strong ? W.FontWeights.SemiBold : W.FontWeights.Normal,
-            FontSize = strong ? 12.1 : 11.6,
+            FontWeight = W.FontWeights.Normal,
+            FontSize = 16,
             VerticalAlignment = W.VerticalAlignment.Center,
             TextTrimming = W.TextTrimming.CharacterEllipsis
         };
@@ -390,8 +390,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         return new WC.Border
         {
             Height = 34, Margin = new W.Thickness(0, 6, 1, 3),
-            Background = Solid(25, 45, 56),
-            BorderBrush = Solid(69, 136, 153),
+            Background = Solid(16, 26, 35),
+            BorderBrush = Solid(49, 89, 112),
             BorderThickness = new W.Thickness(2, 0, 0, 1),
             CornerRadius = new W.CornerRadius(1),
             Child = body
@@ -415,7 +415,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         };
         var title = new WC.TextBlock
         {
-            Text = name, Foreground = Muted, FontSize = 11.6,
+            Text = name, Foreground = Muted, FontSize = 16,
             FontFamily = search.FontFamily,
             VerticalAlignment = W.VerticalAlignment.Center,
             TextTrimming = W.TextTrimming.CharacterEllipsis
@@ -424,7 +424,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         {
             Text = amount.ToString("00"),
             FontFamily = MP_LiltTheme.WpfFont,
-            FontSize = 10.5, Foreground = Solid(120, 179, 198),
+            FontSize = 14, Foreground = Solid(120, 179, 198),
             VerticalAlignment = W.VerticalAlignment.Center,
             Margin = new W.Thickness(7, 0, 1, 0)
         };
@@ -478,7 +478,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         var text = new WC.TextBlock
         {
             Text = entry.Label,
-            Foreground = ink, FontSize = 12.2,
+            Foreground = ink, FontSize = 16,
             FontFamily = search.FontFamily,
             VerticalAlignment = W.VerticalAlignment.Center,
             TextTrimming = W.TextTrimming.CharacterEllipsis

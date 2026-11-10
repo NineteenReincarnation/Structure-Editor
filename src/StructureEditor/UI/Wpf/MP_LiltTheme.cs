@@ -28,8 +28,10 @@ internal static class MP_LiltTheme
     {
         if (element is null) return;
         if (element is System.Windows.Controls.Control control) control.FontFamily = WpfFont;
-        if (HasUnifont)
-            WM.TextOptions.SetTextRenderingMode(element, WM.TextRenderingMode.Aliased);
+        element.SnapsToDevicePixels = true;
+        element.UseLayoutRounding = true;
+        WM.TextOptions.SetTextRenderingMode(element, WM.TextRenderingMode.Aliased);
         WM.TextOptions.SetTextFormattingMode(element, WM.TextFormattingMode.Display);
+        WM.RenderOptions.SetEdgeMode(element, WM.EdgeMode.Aliased);
     }
 }

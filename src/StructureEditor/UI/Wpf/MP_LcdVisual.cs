@@ -11,15 +11,15 @@ internal static class MP_LcdVisual
         => new()
         {
             Color = WM.Color.FromRgb(134, 231, 247),
-            BlurRadius = 5,
+            BlurRadius = 2,
             ShadowDepth = 0,
-            Opacity = Math.Clamp(intensity, 0d, .5d)
+            Opacity = Math.Clamp(intensity * .12, 0d, .06d)
         };
 
     internal static void GlowSelected(WM.Effects.DropShadowEffect effect, bool selected)
     {
         if (effect == null) return;
-        double target = selected ? 0 : .25;
+        double target = selected ? 0 : .025;
         double from = effect.Opacity;
         effect.BeginAnimation(WM.Effects.DropShadowEffect.OpacityProperty, null);
         effect.Opacity = target;

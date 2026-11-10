@@ -31,12 +31,12 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     {
         invoke = onAction;
         MP_LiltTheme.Apply(this);
-        Background = Brush(35, 47, 57);
+        Background = Brush(10, 15, 21);
         HorizontalAlignment = W.HorizontalAlignment.Stretch;
         VerticalAlignment = W.VerticalAlignment.Stretch;
         layer = new WC.Grid
         {
-            Height = 32, HorizontalAlignment = W.HorizontalAlignment.Center,
+            Height = 32, HorizontalAlignment = W.HorizontalAlignment.Left,
             VerticalAlignment = W.VerticalAlignment.Center
         };
         capsule = new WC.Border
@@ -46,8 +46,8 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
             Margin = new W.Thickness(2, 0, 2, 0),
             VerticalAlignment = W.VerticalAlignment.Center,
             HorizontalAlignment = W.HorizontalAlignment.Left,
-            CornerRadius = new W.CornerRadius(4),
-            Background = Brush(201, 136, 209, 225),
+            CornerRadius = new W.CornerRadius(0),
+            Background = Brush(255, 188, 228, 249),
             BorderBrush = Brush(143, 145, 220, 232),
             BorderThickness = new W.Thickness(1),
             Visibility = W.Visibility.Collapsed,
@@ -104,7 +104,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                     Text = entry.Title,
                     Foreground = Brush(202, 226, 235),
                     FontFamily = MP_LiltTheme.WpfFont,
-                    FontSize = 12.3, FontWeight = W.FontWeights.Medium,
+                    FontSize = 16, FontWeight = W.FontWeights.Normal,
                     TextTrimming = W.TextTrimming.CharacterEllipsis,
                     HorizontalAlignment = W.HorizontalAlignment.Center,
                     VerticalAlignment = W.VerticalAlignment.Center
@@ -112,7 +112,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 content.Children.Add(text);
                 var close = new WC.Border
                 {
-                    Width = 22, Height = 23, CornerRadius = new W.CornerRadius(3),
+                    Width = 22, Height = 23, CornerRadius = new W.CornerRadius(0),
                     Background = Brush(0, 96, 159, 173),
                     Cursor = WI.Cursors.Hand,
                     ToolTip = "关闭结构"
@@ -135,10 +135,10 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 };
                 WC.Grid.SetColumn(close, 1);
                 content.Children.Add(close);
-                double estimatedWidth = entry.Title.Sum(c => c > 127 ? 12.5 : 7.7) + 38;
+                double estimatedWidth = entry.Title.Sum(c => c > 127 ? 16 : 8.5) + 43;
                 var container = new WC.Border
                 {
-                    Width = Math.Clamp(estimatedWidth, 98, 193), Height = 31,
+                    Width = Math.Clamp(estimatedWidth, 102, 240), Height = 31,
                     Background = Brush(0, 85, 140, 156),
                     Cursor = WI.Cursors.Hand,
                     Child = content

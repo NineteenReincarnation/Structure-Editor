@@ -45,9 +45,9 @@ internal sealed class MP_FluidTabBar : WC.UserControl
     private int active = -1;
     private bool laidOut;
     private double lastAvailable;
-    private static readonly WM.Color Muted = WM.Color.FromRgb(142, 205, 220);
-    private static readonly WM.Color ActiveText = WM.Color.FromRgb(15, 47, 57);
-    private static readonly WM.Color ActiveBackground = WM.Color.FromRgb(162, 239, 247);
+    private static readonly WM.Color Muted = WM.Color.FromRgb(149, 185, 207);
+    private static readonly WM.Color ActiveText = WM.Color.FromRgb(9, 22, 32);
+    private static readonly WM.Color ActiveBackground = WM.Color.FromRgb(188, 228, 249);
 
     internal MP_FluidTabBar(Action<int> onActivate)
     {
@@ -56,7 +56,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         Height = 39;
         var surface = new WC.Grid
         {
-            Background = new WM.SolidColorBrush(WM.Color.FromRgb(20, 34, 44)),
+            Background = new WM.SolidColorBrush(WM.Color.FromRgb(10, 15, 21)),
             ClipToBounds = true
         };
         surface.RowDefinitions.Add(new WC.RowDefinition
@@ -71,10 +71,10 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         };
         activeCapsule = new WC.Border
         {
-            Width = 70, Height = 30, Margin = new W.Thickness(3, 0, 3, 0),
+            Width = 70, Height = 31, Margin = new W.Thickness(3, 0, 3, 0),
             HorizontalAlignment = W.HorizontalAlignment.Left,
             VerticalAlignment = W.VerticalAlignment.Center,
-            CornerRadius = new W.CornerRadius(3),
+            CornerRadius = new W.CornerRadius(0),
             Background = new WM.SolidColorBrush(ActiveBackground),
             BorderBrush = new WM.SolidColorBrush(WM.Color.FromRgb(202, 244, 249)),
             BorderThickness = new W.Thickness(.8),
@@ -94,7 +94,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         surface.Children.Add(panel);
         baseline = new WC.Border
         {
-            Background = new WM.SolidColorBrush(WM.Color.FromRgb(55, 116, 132)),
+            Background = new WM.SolidColorBrush(WM.Color.FromRgb(52, 88, 109)),
             Height = 1
         };
         WC.Grid.SetRow(baseline, 1);
@@ -114,8 +114,8 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             Text = title,
             Foreground = foreground,
             FontFamily = MP_LiltTheme.WpfFont,
-            FontSize = 12.5,
-            FontWeight = W.FontWeights.Medium,
+            FontSize = 16,
+            FontWeight = W.FontWeights.Normal,
             TextTrimming = W.TextTrimming.CharacterEllipsis,
             HorizontalAlignment = W.HorizontalAlignment.Center,
             VerticalAlignment = W.VerticalAlignment.Center,
@@ -123,7 +123,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             Effect = glow,
             Margin = new W.Thickness(6, 0, 6, 0)
         };
-        double desired = Math.Max(71, title.Sum(c => c > 127 ? 12.5 : 7.5) + 29);
+        double desired = Math.Max(71, title.Sum(c => c > 127 ? 16 : 9) + 20);
         var host = new WC.Border
         {
             Width = desired, Height = 35,
@@ -194,7 +194,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             // Narrow columns keep short aliases instead of cropped full titles.
             entry.Caption.Text = widths[i] < 69 && entry.FullTitle == "集群 CP"
                 ? "CP" : entry.FullTitle;
-            entry.Caption.FontSize = widths[i] < 64 ? 11.3 : 12.5;
+            entry.Caption.FontSize = widths[i] < 65 ? 14 : 16;
         }
         bool resized = Math.Abs(lastAvailable - usable) > .5;
         lastAvailable = usable;
