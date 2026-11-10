@@ -289,7 +289,8 @@ internal sealed class MP_LiltScroll
         if (edge == null || !MP_Motion.Enabled || Math.Abs(rawOverrun) < .001)
             return;
         double resisted = MP_LiltSpring.RubberBand(rawOverrun, viewportHeight);
-        edge.Bump(Math.Clamp(resisted * .085, -6, 6));
+        // Content responds opposite to the requested scroll direction.
+        edge.Bump(Math.Clamp(-resisted * .085, -6, 6));
     }
 
     internal void To(double offset)
