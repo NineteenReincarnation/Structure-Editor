@@ -77,10 +77,10 @@ public partial class MainForm
         actions.SizeChanged += (_, _) => BalanceHeader();
         BalanceHeader();
 
-        librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 3, SplitterDistance = 278, BackColor = Color.FromArgb(39, 52, 61) };
-        inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 284), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 3, SplitterDistance = Math.Max(330, ClientSize.Width - 638), BackColor = librarySplit.BackColor };
+        librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 5, SplitterDistance = 306, BackColor = Color.FromArgb(39, 52, 61) };
+        inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 284), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 5, SplitterDistance = Math.Max(330, ClientSize.Width - 664), BackColor = librarySplit.BackColor };
         librarySplit.Panel2.Controls.Add(inspectorSplit);
-        librarySplit.Panel1MinSize = 235; librarySplit.Panel2MinSize = 540;
+        librarySplit.Panel1MinSize = 245; librarySplit.Panel2MinSize = 540;
         inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 320;
 
         Panel library = new() { Dock = DockStyle.Fill, BackColor = surface, Padding = new(10) };

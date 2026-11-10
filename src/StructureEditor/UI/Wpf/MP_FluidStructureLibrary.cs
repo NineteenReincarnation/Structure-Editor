@@ -30,6 +30,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly System.Windows.Threading.DispatcherTimer filterDelay =
         new() { Interval = TimeSpan.FromMilliseconds(150) };
     private readonly Dictionary<string, WC.Border> leafRows = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, WM.SolidColorBrush> leafInks = new(StringComparer.Ordinal);
     private readonly HashSet<string> collapsed = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<MP_StructureViewEntry> entries = Array.Empty<MP_StructureViewEntry>();
     private MP_StructureViewEntry active;
@@ -103,8 +104,9 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
 
         count = new WC.TextBlock
         {
-            Text = "结构库", Foreground = Muted,
-            FontSize = 11.5, FontFamily = search.FontFamily,
+            Text = "结构索引  /  00", Foreground = Cyan,
+            FontSize = 11.3, FontFamily = new WM.FontFamily("Consolas"),
+            FontWeight = W.FontWeights.SemiBold,
             VerticalAlignment = W.VerticalAlignment.Center
         };
         WC.Grid.SetRow(count, 1);
@@ -114,17 +116,18 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         slider = new WC.Border
         {
             Height = 35, Margin = new W.Thickness(2, 0, 2, 0),
-            BorderBrush = Solid(125, 128, 203, 219),
-            Background = Solid(62, 86, 157, 181),
+            BorderBrush = Solid(190, 201, 241, 247),
+            Background = Solid(212, 140, 213, 231),
             BorderThickness = new W.Thickness(1),
-            CornerRadius = new W.CornerRadius(5),
+            CornerRadius = new W.CornerRadius(3),
             VerticalAlignment = W.VerticalAlignment.Top,
             RenderTransform = sliderOffset,
             Visibility = W.Visibility.Collapsed,
             IsHitTestVisible = false
         };
-        WC.Panel.SetZIndex(rows, 0);
-        WC.Panel.SetZIndex(slider, 1);
+        // The moving plate must sit BEHIND its text, not obscure it.
+        WC.Panel.SetZIndex(slider, 0);
+        WC.Panel.SetZIndex(rows, 1);
         rowLayer.Children.Add(rows); rowLayer.Children.Add(slider);
         scroll = new WC.ScrollViewer
         {
@@ -254,9 +257,10 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 e.Id.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 e.File.Contains(query, StringComparison.OrdinalIgnoreCase))
             .ToArray();
-        count.Text = $"{visible.Length} 个结构";
+        count.Text = $"STRUCTURE INDEX  /  {visible.Length:00}";
         rows.Children.Clear();
         leafRows.Clear();
+        leafInks.Clear();
 
         foreach (var group in visible.GroupBy(e => IsProject(e.File) ? "项目结构" : "其他位置"))
         {
@@ -276,8 +280,11 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             rows.Children.Add(Heading(query.Length > 0 ? "没有匹配的结构" : "暂无结构文件", 0, false));
 
         scrollTarget = Math.Clamp(scroll.VerticalOffset, 0, Math.Max(0, scroll.ScrollableHeight));
-        rows.Dispatcher.BeginInvoke(new Action(() => UpdateSlider(false)),
-            System.Windows.Threading.DispatcherPriority.Loaded);
+        rows.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            RefreshSelectedInk();
+            UpdateSlider(false);
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
         if (MP_Motion.Enabled && IsVisible)
             rows.BeginAnimation(OpacityProperty,
                 new WA.DoubleAnimation(.65, 1d, TimeSpan.FromMilliseconds(165))
@@ -309,35 +316,84 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
 
     private WC.Border Heading(string label, int level, bool strong)
     {
-        var text = new WC.TextBlock
+        // Narrow cyan marker, technical index and hairline separator resemble
+        // an electronic library readout rather than a native TreeView node.
+        var body = new WC.Grid { Margin = new W.Thickness(6, 0, 5, 0) };
+        body.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(26) });
+        body.ColumnDefinitions.Add(new WC.ColumnDefinition
+            { Width = new W.GridLength(1, W.GridUnitType.Star) });
+        var index = new WC.TextBlock
         {
-            Text = label, Foreground = strong ? Cyan : Muted,
-            FontFamily = search.FontFamily, FontWeight = strong
-                ? W.FontWeights.SemiBold : W.FontWeights.Normal,
-            FontSize = strong ? 12 : 11.5,
-            VerticalAlignment = W.VerticalAlignment.Center,
-            Margin = new W.Thickness(9 + level * 12, 0, 0, 0)
+            Text = label == "项目结构" ? "01" : label == "其他位置" ? "02" : "--",
+            Foreground = Cyan, FontFamily = new WM.FontFamily("Consolas"),
+            FontSize = 10.5, FontWeight = W.FontWeights.SemiBold,
+            VerticalAlignment = W.VerticalAlignment.Center
         };
-        return new WC.Border { Child = text, Height = 30 };
+        var title = new WC.TextBlock
+        {
+            Text = label, Foreground = strong ? Text : Muted,
+            FontFamily = search.FontFamily,
+            FontWeight = strong ? W.FontWeights.SemiBold : W.FontWeights.Normal,
+            FontSize = strong ? 12.1 : 11.6,
+            VerticalAlignment = W.VerticalAlignment.Center,
+            TextTrimming = W.TextTrimming.CharacterEllipsis
+        };
+        WC.Grid.SetColumn(title, 1);
+        body.Children.Add(index);
+        body.Children.Add(title);
+        return new WC.Border
+        {
+            Height = 34, Margin = new W.Thickness(0, 6, 1, 3),
+            Background = Solid(29, 43, 54),
+            BorderBrush = Solid(60, 94, 109),
+            BorderThickness = new W.Thickness(2, 0, 0, 1),
+            CornerRadius = new W.CornerRadius(1),
+            Child = body
+        };
     }
 
     private WC.Border Folder(string key, string name, int amount)
     {
         bool folded = collapsed.Contains(key);
-        var text = new WC.TextBlock
+        var hover = Solid(0, 80, 154, 174);
+        var grid = new WC.Grid { Margin = new W.Thickness(8, 0, 8, 0) };
+        grid.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(23) });
+        grid.ColumnDefinitions.Add(new WC.ColumnDefinition
+            { Width = new W.GridLength(1, W.GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = W.GridLength.Auto });
+        var chevron = new WC.TextBlock
         {
-            Text = (folded ? "▸  " : "▾  ") + name + $"  ({amount})",
-            Foreground = Muted, FontSize = 11.5, FontFamily = search.FontFamily,
+            Text = folded ? "▸" : "▾", Foreground = Cyan,
+            FontSize = 12.5, VerticalAlignment = W.VerticalAlignment.Center,
+            HorizontalAlignment = W.HorizontalAlignment.Center
+        };
+        var title = new WC.TextBlock
+        {
+            Text = name, Foreground = Muted, FontSize = 11.6,
+            FontFamily = search.FontFamily,
             VerticalAlignment = W.VerticalAlignment.Center,
-            Margin = new W.Thickness(9, 0, 0, 0),
             TextTrimming = W.TextTrimming.CharacterEllipsis
         };
+        var total = new WC.TextBlock
+        {
+            Text = amount.ToString("00"),
+            FontFamily = new WM.FontFamily("Consolas"),
+            FontSize = 10.5, Foreground = Solid(120, 179, 198),
+            VerticalAlignment = W.VerticalAlignment.Center,
+            Margin = new W.Thickness(7, 0, 1, 0)
+        };
+        WC.Grid.SetColumn(title, 1); WC.Grid.SetColumn(total, 2);
+        grid.Children.Add(chevron); grid.Children.Add(title); grid.Children.Add(total);
         var row = new WC.Border
         {
-            Height = 29, Child = text,
-            Background = Solid(0, 0, 0, 0),
-            Cursor = WI.Cursors.Hand
+            Height = 32, Margin = new W.Thickness(0, 1, 0, 1),
+            Background = hover, Cursor = WI.Cursors.Hand,
+            Child = grid
         };
+        row.MouseEnter += (_, _) => MP_WpfMotion.Tint(hover,
+            WM.Color.FromArgb(43, 73, 138, 161), 135);
+        row.MouseLeave += (_, _) => MP_WpfMotion.Tint(hover,
+            WM.Color.FromArgb(0, 73, 138, 161), 120);
         row.MouseLeftButtonUp += (_, e) =>
         {
             if (!collapsed.Add(key)) collapsed.Remove(key);
@@ -351,22 +407,44 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     {
         var row = new WC.Border
         {
-            Height = 37, Margin = new W.Thickness(1, 1, 1, 1),
-            CornerRadius = new W.CornerRadius(4),
-            Background = Solid(0, 68, 112, 128),
+            Height = 40, Margin = new W.Thickness(2, 1, 2, 1),
+            CornerRadius = new W.CornerRadius(3),
+            Background = Solid(0, 73, 125, 149),
             Cursor = WI.Cursors.Hand
         };
+        var content = new WC.Grid { Margin = new W.Thickness(8 + level * 8, 0, 6, 0) };
+        content.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(13) });
+        content.ColumnDefinitions.Add(new WC.ColumnDefinition
+            { Width = new W.GridLength(1, W.GridUnitType.Star) });
+        var marker = new WC.Border
+        {
+            Width = 4, Height = 4, CornerRadius = new W.CornerRadius(1),
+            Background = Solid(113, 188, 209),
+            VerticalAlignment = W.VerticalAlignment.Center,
+            HorizontalAlignment = W.HorizontalAlignment.Left,
+            IsHitTestVisible = false
+        };
+        var ink = Solid(212, 230, 237);
+        leafInks[entry.Id] = ink;
         var text = new WC.TextBlock
         {
             Text = entry.Label,
-            Foreground = Text, FontSize = 12.3,
+            Foreground = ink, FontSize = 12.2,
             FontFamily = search.FontFamily,
-            Margin = new W.Thickness(16 + level * 12, 0, 5, 0),
             VerticalAlignment = W.VerticalAlignment.Center,
             TextTrimming = W.TextTrimming.CharacterEllipsis
         };
-        row.Child = text;
+        WC.Grid.SetColumn(text, 1);
+        content.Children.Add(marker);
+        content.Children.Add(text);
+        row.Child = content;
         row.ToolTip = entry.Label + "\n" + entry.Id + "\n" + Path.GetFileName(entry.File);
+        row.MouseEnter += (_, _) =>
+            MP_WpfMotion.Tint((WM.SolidColorBrush)row.Background,
+                WM.Color.FromArgb(37, 74, 131, 150), 120);
+        row.MouseLeave += (_, _) =>
+            MP_WpfMotion.Tint((WM.SolidColorBrush)row.Background,
+                WM.Color.FromArgb(0, 74, 131, 150), 120);
         row.MouseLeftButtonUp += (_, e) =>
         {
             Select(entry);
@@ -387,12 +465,21 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         return row;
     }
 
+    private void RefreshSelectedInk()
+    {
+        foreach (var (id, ink) in leafInks)
+            MP_WpfMotion.Tint(ink, active?.Id == id
+                ? WM.Color.FromRgb(23, 54, 65)
+                : WM.Color.FromRgb(212, 230, 237), 155);
+    }
+
     private void Select(MP_StructureViewEntry entry)
     {
         active = entry;
         previewTitle.Text = entry.Label;
         previewDetail.Text = entry.HasXml ? "JSON / XML" : "结构";
         selectedCallback?.Invoke(entry.File, entry.Id);
+        RefreshSelectedInk();
         UpdateSlider(true);
     }
 
