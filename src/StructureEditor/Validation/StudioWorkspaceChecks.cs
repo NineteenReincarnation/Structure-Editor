@@ -111,7 +111,7 @@ internal static class StudioWorkspaceChecks
             Control inspector = (GroupBox)Field("namingPanel");
             while (inspector != null && inspector is not MP_PageSurface)
                 inspector = inspector.Parent;
-            var section = inspector?.Parent?.Parent as MP_SectionTabs;
+            var section = inspector?.Parent?.Parent?.Parent as MP_SectionTabs;
             need(section != null && section.SelectPage((MP_PageSurface)inspector)
                 && section.MP_SelectedPageTitle == "工程",
                 "Workspace metadata remains selectable after stable-page refactor");
