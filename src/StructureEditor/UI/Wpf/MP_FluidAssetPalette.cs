@@ -30,7 +30,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     private bool selecting;
     private int selectedIndex = -1;
     private double targetScroll;
-    private static readonly WM.SolidColorBrush Surface = Solid(10, 15, 21);
+    private static readonly WM.SolidColorBrush Surface = MP_StudioTheme.Brush(MP_StudioTheme.Panel);
 
     internal MP_FluidAssetPalette(Action<CatalogItem> onActivate)
     {
@@ -58,7 +58,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
             new W.FrameworkElementFactory(typeof(WC.VirtualizingStackPanel)));
         list = new WC.ListBox
         {
-            Background = Surface, Foreground = Solid(224, 234, 240),
+            Background = Surface, Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Text),
             BorderThickness = new W.Thickness(0), Padding = new W.Thickness(4, 3, 4, 4),
             ItemTemplate = itemTemplate, ItemContainerStyle = containerStyle,
             ItemsPanel = panel, FocusVisualStyle = null,

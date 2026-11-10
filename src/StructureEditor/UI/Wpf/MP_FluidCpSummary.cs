@@ -26,10 +26,10 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
     internal MP_FluidCpSummary()
     {
         MP_LiltTheme.Apply(this);
-        Background = Brush(10, 15, 21);
+        Background = MP_StudioTheme.Brush(MP_StudioTheme.Panel);
         var body = new WC.Grid
         {
-            Background = Background, Margin = new W.Thickness(11, 7, 11, 5)
+            Background = Background, Margin = new W.Thickness(12, 11, 12, 7)
         };
         body.RowDefinitions.Add(new WC.RowDefinition { Height = new W.GridLength(48) });
         body.RowDefinitions.Add(new WC.RowDefinition { Height = new W.GridLength(7) });
@@ -47,22 +47,22 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         };
         left.Children.Add(new WC.TextBlock
         {
-            Text = "当前结构 · 建筑 CP",
-            Foreground = Brush(157, 184, 196),
+            Text = "结构消耗  /  CP",
+            Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Accent),
             FontFamily = MP_LiltTheme.WpfFont,
-            FontWeight = W.FontWeights.Medium, FontSize = 12
+            FontWeight = W.FontWeights.Normal, FontSize = 14
         });
         subtitle = new WC.TextBlock
         {
-            Text = "不计墙和路障", Foreground = Brush(105, 141, 154),
-            FontFamily = MP_LiltTheme.WpfFont, FontSize = 10,
+            Text = "不计墙和路障", Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Secondary),
+            FontFamily = MP_LiltTheme.WpfFont, FontSize = 12,
             Margin = new W.Thickness(0, 3, 0, 0)
         };
         left.Children.Add(subtitle);
         header.Children.Add(left);
         total = new MP_PixelReadout
         {
-            Text = "0 CP", Foreground = Brush(189, 228, 249),
+            Text = "0 CP", Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Accent),
             PixelSize = 2,
             VerticalAlignment = W.VerticalAlignment.Center,
             HorizontalAlignment = W.HorizontalAlignment.Right,
@@ -74,12 +74,12 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
 
         var rail = new WC.Grid
         {
-            Background = Brush(48, 64, 75), Height = 3,
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Divider), Height = 2,
             VerticalAlignment = W.VerticalAlignment.Center
         };
         var fill = new WC.Border
         {
-            Background = Brush(113, 183, 201),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Accent),
             HorizontalAlignment = W.HorizontalAlignment.Stretch,
             RenderTransformOrigin = new W.Point(0, .5),
             RenderTransform = fillScale
@@ -96,7 +96,12 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
             HorizontalScrollBarVisibility = WC.ScrollBarVisibility.Disabled
         };
         WC.Grid.SetRow(scroller, 2); body.Children.Add(scroller);
-        Content = body;
+        Content = new WC.Border
+        {
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Divider),
+            BorderThickness = new W.Thickness(0, 1, 0, 0),
+            Background = Background, Child = body
+        };
 
         proxy = new MP_FloatProxy(value =>
         {
@@ -173,7 +178,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         var host = new WC.Border
         {
             Height = 30, Margin = new W.Thickness(0, 1, 0, 1),
-            CornerRadius = new W.CornerRadius(4), Background = bg
+            CornerRadius = new W.CornerRadius(0), Background = bg
         };
         var layout = new WC.Grid { Margin = new W.Thickness(4, 0, 5, 0) };
         layout.ColumnDefinitions.Add(new WC.ColumnDefinition
@@ -183,15 +188,15 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         var name = new WC.TextBlock
         {
             Text = (row.Item.ClusterWikiName ?? row.Item.Label) + " ×" + row.Count,
-            Foreground = Brush(207, 231, 238),
+            Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Text),
             FontFamily = MP_LiltTheme.WpfFont,
-            FontSize = 11.5, VerticalAlignment = W.VerticalAlignment.Center,
+            FontSize = 13, VerticalAlignment = W.VerticalAlignment.Center,
             TextTrimming = W.TextTrimming.CharacterEllipsis
         };
         var value = new WC.TextBlock
         {
             Text = row.Total.ToString("0.##", CultureInfo.InvariantCulture),
-            Foreground = Brush(153, 216, 228), FontSize = 11.5,
+            Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Accent), FontSize = 13,
             FontFamily = name.FontFamily,
             VerticalAlignment = W.VerticalAlignment.Center,
             Margin = new W.Thickness(6, 0, 0, 0)

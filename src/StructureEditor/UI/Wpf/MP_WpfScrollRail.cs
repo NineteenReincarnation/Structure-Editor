@@ -26,12 +26,12 @@ internal sealed class MP_WpfScrollRail : WC.Grid
         Width = 9;
         Margin = new W.Thickness(0, 4, 2, 4);
         HorizontalAlignment = W.HorizontalAlignment.Right;
-        Background = new WM.SolidColorBrush(WM.Color.FromArgb(24, 65, 91, 107));
+        Background = new WM.SolidColorBrush(WM.Color.FromArgb(32, 53, 78, 92));
         Cursor = WI.Cursors.Hand;
         thumb = new WC.Border
         {
             Width = 3, Height = 24,
-            Background = new WM.SolidColorBrush(WM.Color.FromArgb(192, 155, 218, 231)),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Accent),
             CornerRadius = new W.CornerRadius(2),
             HorizontalAlignment = W.HorizontalAlignment.Center,
             VerticalAlignment = W.VerticalAlignment.Top,

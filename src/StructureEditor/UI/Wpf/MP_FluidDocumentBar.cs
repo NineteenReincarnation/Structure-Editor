@@ -32,7 +32,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     {
         invoke = onAction;
         MP_LiltTheme.Apply(this);
-        Background = Brush(10, 15, 21);
+        Background = MP_StudioTheme.Brush(MP_StudioTheme.Toolbar);
         HorizontalAlignment = W.HorizontalAlignment.Stretch;
         VerticalAlignment = W.VerticalAlignment.Stretch;
         layer = new WC.Grid
@@ -49,7 +49,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
             HorizontalAlignment = W.HorizontalAlignment.Left,
             CornerRadius = new W.CornerRadius(0),
             Background = Brush(0, 0, 0, 0),
-            BorderBrush = Brush(255, 188, 228, 249),
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Accent),
             BorderThickness = new W.Thickness(1),
             Visibility = W.Visibility.Collapsed,
             IsHitTestVisible = false
@@ -104,7 +104,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 var text = new WC.TextBlock
                 {
                     Text = entry.Title,
-                    Foreground = Brush(202, 226, 235),
+                    Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Text),
                     FontFamily = MP_LiltTheme.WpfFont,
                     FontSize = 16, FontWeight = W.FontWeights.Normal,
                     TextTrimming = W.TextTrimming.CharacterEllipsis,
@@ -189,10 +189,11 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
             for (int i = 0; i < visuals.Count; i++)
             {
                 MP_WpfMotion.Tint((WM.SolidColorBrush)visuals[i].Title.Foreground,
-                    i == active ? WM.Color.FromRgb(9, 22, 32)
-                        : WM.Color.FromRgb(164, 194, 206), 160);
+                    i == active
+                        ? MP_StudioTheme.WpfColor(MP_StudioTheme.ActiveText)
+                        : MP_StudioTheme.WpfColor(MP_StudioTheme.Secondary), 160);
                 MP_WpfMotion.Tint((WM.SolidColorBrush)visuals[i].Container.Background,
-                    i == active ? WM.Color.FromRgb(188, 228, 249)
+                    i == active ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
                         : WM.Color.FromArgb(0, 85, 140, 156), 155);
             }
             Move(!structureChanged);

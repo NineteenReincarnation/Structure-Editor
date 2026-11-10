@@ -46,10 +46,10 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         => new(WM.Color.FromRgb(r, g, b));
     private static WM.SolidColorBrush Solid(byte a, byte r, byte g, byte b)
         => new(WM.Color.FromArgb(a, r, g, b));
-    private static readonly WM.SolidColorBrush Surface = Solid(10, 15, 21);
-    private static readonly WM.SolidColorBrush Text = Solid(199, 231, 249);
-    private static readonly WM.SolidColorBrush Muted = Solid(132, 169, 191);
-    private static readonly WM.SolidColorBrush Cyan = Solid(181, 226, 250);
+    private static readonly WM.SolidColorBrush Surface = MP_StudioTheme.Brush(MP_StudioTheme.Panel);
+    private static readonly WM.SolidColorBrush Text = MP_StudioTheme.Brush(MP_StudioTheme.Text);
+    private static readonly WM.SolidColorBrush Muted = MP_StudioTheme.Brush(MP_StudioTheme.Secondary);
+    private static readonly WM.SolidColorBrush Cyan = MP_StudioTheme.Brush(MP_StudioTheme.Accent);
 
     internal MP_FluidStructureLibrary(
         Action<string, string> onSelected,
@@ -81,8 +81,9 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         var searchHost = new WC.Grid { Margin = new W.Thickness(0, 0, 0, 5) };
         search = new WC.TextBox
         {
-            Background = Solid(10, 17, 24), Foreground = Text,
-            BorderBrush = Solid(66, 91, 103), BorderThickness = new W.Thickness(1),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Input), Foreground = Text,
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Divider),
+            BorderThickness = new W.Thickness(1),
             Padding = new W.Thickness(9, 5, 7, 3), FontSize = 16,
             FontFamily = MP_LiltTheme.WpfFont,
             CaretBrush = Cyan, SelectionBrush = Solid(93, 159, 179),
@@ -124,7 +125,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             Height = 35, Margin = new W.Thickness(2, 0, 2, 0),
             // Travelling focus is only a stroke; opaque selection stays
             // inside the actual row so it cannot cover folder headings.
-            BorderBrush = Solid(220, 210, 247, 255),
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Accent),
             Background = Solid(0, 0, 0, 0),
             BorderThickness = new W.Thickness(1),
             CornerRadius = new W.CornerRadius(0),
@@ -183,10 +184,12 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
 
         var previewPanel = new WC.Border
         {
-            CornerRadius = new W.CornerRadius(6),
-            Background = Solid(29, 38, 47),
+            CornerRadius = new W.CornerRadius(2),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.PanelRaised),
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Divider),
+            BorderThickness = new W.Thickness(1),
             Margin = new W.Thickness(0, 8, 0, 5),
-            Padding = new W.Thickness(5)
+            Padding = new W.Thickness(6)
         };
         var previewGrid = new WC.Grid { ClipToBounds = true };
         preview = new WC.Image
@@ -208,12 +211,12 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         previewTitle = new WC.TextBlock
         {
             Foreground = Text, FontFamily = search.FontFamily,
-            FontSize = 12, TextTrimming = W.TextTrimming.CharacterEllipsis,
+            FontSize = 14, TextTrimming = W.TextTrimming.CharacterEllipsis,
             VerticalAlignment = W.VerticalAlignment.Center
         };
         previewDetail = new WC.TextBlock
         {
-            Foreground = Muted, FontFamily = search.FontFamily, FontSize = 10,
+            Foreground = Muted, FontFamily = search.FontFamily, FontSize = 12,
             TextTrimming = W.TextTrimming.CharacterEllipsis,
             HorizontalAlignment = W.HorizontalAlignment.Right,
             VerticalAlignment = W.VerticalAlignment.Center
@@ -396,8 +399,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         return new WC.Border
         {
             Height = 34, Margin = new W.Thickness(0, 6, 1, 3),
-            Background = Solid(16, 26, 35),
-            BorderBrush = Solid(49, 89, 112),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.PanelRaised),
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Divider),
             BorderThickness = new W.Thickness(2, 0, 0, 1),
             CornerRadius = new W.CornerRadius(1),
             Child = body
@@ -539,11 +542,11 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         {
             bool selected = active?.Id == id;
             MP_WpfMotion.Tint(ink, selected
-                ? WM.Color.FromRgb(9, 22, 32)
-                : WM.Color.FromRgb(201, 239, 246), 145);
+                ? MP_StudioTheme.WpfColor(MP_StudioTheme.ActiveText)
+                : MP_StudioTheme.WpfColor(MP_StudioTheme.Text), 145);
             if (leafFills.TryGetValue(id, out var fill))
                 MP_WpfMotion.Tint(fill, selected
-                    ? WM.Color.FromRgb(175, 222, 245)
+                    ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
                     : WM.Color.FromArgb(0, 73, 125, 149), 145);
         }
     }

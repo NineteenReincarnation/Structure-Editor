@@ -54,10 +54,10 @@ internal sealed class MP_CpMotionView : WC.UserControl
         brush.Freeze();
         return brush;
     }
-    private static readonly WM.SolidColorBrush SurfaceBrush = Brush(Color(10, 15, 21));
-    private static readonly WM.SolidColorBrush Secondary = Brush(Color(137, 175, 197));
-    private static readonly WM.SolidColorBrush MainText = Brush(Color(202, 233, 249));
-    private static readonly WM.SolidColorBrush Accent = Brush(Color(187, 228, 249));
+    private static readonly WM.SolidColorBrush SurfaceBrush = MP_StudioTheme.Brush(MP_StudioTheme.Panel);
+    private static readonly WM.SolidColorBrush Secondary = MP_StudioTheme.Brush(MP_StudioTheme.Secondary);
+    private static readonly WM.SolidColorBrush MainText = MP_StudioTheme.Brush(MP_StudioTheme.Text);
+    private static readonly WM.SolidColorBrush Accent = MP_StudioTheme.Brush(MP_StudioTheme.Accent);
 
     internal bool MP_HasSafeLayering => scroller.Margin.Right >= 12;
 
@@ -80,8 +80,9 @@ internal sealed class MP_CpMotionView : WC.UserControl
         var searchFrame = new WC.Grid { Margin = new W.Thickness(0, 0, 0, 5) };
         search = new WC.TextBox
         {
-            Background = Brush(Color(11, 19, 28)), Foreground = MainText,
-            BorderBrush = Brush(Color(66, 91, 104)), BorderThickness = new W.Thickness(1),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Input), Foreground = MainText,
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Divider),
+            BorderThickness = new W.Thickness(1),
             Padding = new W.Thickness(9, 5, 6, 3),
             FontSize = 16, FontFamily = MP_LiltTheme.WpfFont,
             CaretBrush = Accent, SelectionBrush = Brush(Color(98, 177, 195)),

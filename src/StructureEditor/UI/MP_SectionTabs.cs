@@ -62,7 +62,7 @@ internal sealed class MP_SectionTabs : UserControl
             BackColor = BackColor, CellBorderStyle = TableLayoutPanelCellBorderStyle.None
         };
         MP_navigationLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        MP_navigationLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 39));
+        MP_navigationLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, MP_StudioTheme.HeaderHeight));
         MP_navigationLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         MP_navigationLayout.Controls.Add(header, 0, 0);
         MP_navigationLayout.Controls.Add(content, 0, 1);

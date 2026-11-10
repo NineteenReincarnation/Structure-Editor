@@ -45,18 +45,18 @@ internal sealed class MP_FluidTabBar : WC.UserControl
     private int active = -1;
     private bool laidOut;
     private double lastAvailable;
-    private static readonly WM.Color Muted = WM.Color.FromRgb(149, 185, 207);
-    private static readonly WM.Color ActiveText = WM.Color.FromRgb(9, 22, 32);
-    private static readonly WM.Color ActiveBackground = WM.Color.FromRgb(188, 228, 249);
+    private static readonly WM.Color Muted = MP_StudioTheme.WpfColor(MP_StudioTheme.Secondary);
+    private static readonly WM.Color ActiveText = MP_StudioTheme.WpfColor(MP_StudioTheme.ActiveText);
+    private static readonly WM.Color ActiveBackground = MP_StudioTheme.WpfColor(MP_StudioTheme.Active);
 
     internal MP_FluidTabBar(Action<int> onActivate)
     {
         activate = onActivate;
         MP_LiltTheme.Apply(this);
-        Height = 39;
+        Height = MP_StudioTheme.HeaderHeight;
         var surface = new WC.Grid
         {
-            Background = new WM.SolidColorBrush(WM.Color.FromRgb(10, 15, 21)),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Toolbar),
             ClipToBounds = true
         };
         surface.RowDefinitions.Add(new WC.RowDefinition
@@ -77,7 +77,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             CornerRadius = new W.CornerRadius(0),
             // Travelling lilt edge never paints over labels on other tabs.
             Background = new WM.SolidColorBrush(WM.Colors.Transparent),
-            BorderBrush = new WM.SolidColorBrush(WM.Color.FromRgb(202, 244, 249)),
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Accent),
             BorderThickness = new W.Thickness(.8),
             IsHitTestVisible = false
         };
@@ -95,7 +95,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         surface.Children.Add(panel);
         baseline = new WC.Border
         {
-            Background = new WM.SolidColorBrush(WM.Color.FromRgb(52, 88, 109)),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Divider),
             Height = 1
         };
         WC.Grid.SetRow(baseline, 1);
