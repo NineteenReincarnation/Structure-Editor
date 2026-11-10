@@ -36,7 +36,7 @@ public partial class MainForm : Form
     public MainForm()
     {
         Text = "Structure Editor · 结构工坊";
-        Font = new Font(MP_LiltTheme.FontName, 9);
+        Font = MP_LiltTheme.CreateGdiFont(9);
         BackColor = surface; ForeColor = text;
         StartPosition = FormStartPosition.CenterScreen;
         Size = new Size(Math.Min(1500, Screen.PrimaryScreen!.WorkingArea.Width - 80), Math.Min(940, Screen.PrimaryScreen.WorkingArea.Height - 60));

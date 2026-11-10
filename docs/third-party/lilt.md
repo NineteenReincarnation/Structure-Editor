@@ -40,3 +40,8 @@ https://unifoundry.com/unifont/index.html
 The editor prefers `Unifont` where installed; it falls back to
 `Microsoft YaHei UI` when unavailable. Font files should not be committed to
 the project. Restart the editor after installing the font.
+
+You may also place the official `unifont.otf` in `app/Fonts/` next to
+`StructureEditor.exe`; the desktop app will load it privately for both WPF
+and WinForms, without installing it system-wide. Restart after copying it.
+Only the loader is included; this repository does not distribute font files.
