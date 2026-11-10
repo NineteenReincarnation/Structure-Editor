@@ -85,7 +85,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
             BorderThickness = new W.Thickness(1),
             Padding = new W.Thickness(9, 5, 6, 3),
             FontSize = 16, FontFamily = MP_LiltTheme.WpfFont,
-            CaretBrush = Accent, SelectionBrush = Brush(Color(98, 177, 195)),
+            CaretBrush = Accent,
+            SelectionBrush = MP_StudioTheme.Brush(85, MP_StudioTheme.Text),
             VerticalContentAlignment = W.VerticalAlignment.Center
         };
         var placeholder = new WC.TextBlock
@@ -120,7 +121,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         selectionVisual = new WC.Border
         {
             Background = Brush(Color(0, 0, 0, 0)),
-            BorderBrush = Brush(Color(200, 188, 228, 249)),
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Text),
             BorderThickness = new W.Thickness(1), CornerRadius = new W.CornerRadius(0),
             Margin = new W.Thickness(2, 3, 2, 0), Height = RowHeight - 6,
             VerticalAlignment = W.VerticalAlignment.Top,
@@ -128,8 +129,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
             IsHitTestVisible = false,
             Effect = new WM.Effects.DropShadowEffect
             {
-                BlurRadius = 11, ShadowDepth = 0, Opacity = .32,
-                Color = Color(90, 198, 222)
+                BlurRadius = 0, ShadowDepth = 0, Opacity = 0,
+                Color = MP_StudioTheme.WpfColor(MP_StudioTheme.Text)
             }
         };
         travellingCursor = new MP_LiltCursor(selectionVisual, false);
@@ -180,12 +181,12 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             Width = 9, HorizontalAlignment = W.HorizontalAlignment.Right,
             Margin = new W.Thickness(0, 3, 0, 3),
-            Background = Brush(Color(24, 58, 81, 95)),
+            Background = MP_StudioTheme.Brush(25, MP_StudioTheme.Text),
             Cursor = WI.Cursors.Hand
         };
         scrollThumb = new WC.Border
         {
-            Background = Brush(Color(145, 184, 222, 234)),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Text),
             CornerRadius = new W.CornerRadius(2),
             Width = 3, Height = 24,
             HorizontalAlignment = W.HorizontalAlignment.Center,
@@ -385,9 +386,9 @@ internal sealed class MP_CpMotionView : WC.UserControl
         images.Add((item, icon));
         WC.Grid.SetColumn(icon, 0); WC.Grid.SetRowSpan(icon, 2); body.Children.Add(icon);
 
-        var nameColor = new WM.SolidColorBrush(Color(224, 234, 240));
-        var defColor = new WM.SolidColorBrush(Color(157, 176, 188));
-        var cpColor = new WM.SolidColorBrush(Color(173, 228, 240));
+        var nameColor = MP_StudioTheme.Brush(MP_StudioTheme.Text);
+        var defColor = MP_StudioTheme.Brush(MP_StudioTheme.Secondary);
+        var cpColor = MP_StudioTheme.Brush(MP_StudioTheme.Text);
         rowText.Add((nameColor, defColor, cpColor));
         var name = new WC.TextBlock
         {
@@ -422,7 +423,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
 
         var track = new WC.Border
         {
-            Background = Brush(Color(53, 70, 80)), Height = 2,
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Divider), Height = 2,
             HorizontalAlignment = W.HorizontalAlignment.Stretch,
             VerticalAlignment = W.VerticalAlignment.Center
         };
@@ -430,7 +431,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         bar.Children.Add(track);
         var fill = new WC.Border
         {
-            Background = Brush(Color(113, 170, 186)),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Text),
             HorizontalAlignment = W.HorizontalAlignment.Left,
             VerticalAlignment = W.VerticalAlignment.Stretch
         };
@@ -444,7 +445,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             if (currentIndex == index) return;
             AnimateColor((WM.SolidColorBrush)row.Background,
-                ((WM.SolidColorBrush)row.Background).Color, Color(45, 67, 99, 113), 140);
+                ((WM.SolidColorBrush)row.Background).Color,
+                MP_StudioTheme.WpfOpacity(38, MP_StudioTheme.Text), 140);
             AnimateMove((WM.TranslateTransform)row.RenderTransform,
                 ((WM.TranslateTransform)row.RenderTransform).X, 2, 135);
         };
@@ -452,7 +454,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             if (currentIndex == index) return;
             AnimateColor((WM.SolidColorBrush)row.Background,
-                ((WM.SolidColorBrush)row.Background).Color, Color(0, 0, 0, 0), 115);
+                ((WM.SolidColorBrush)row.Background).Color,
+                MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 115);
             AnimateMove((WM.TranslateTransform)row.RenderTransform,
                 ((WM.TranslateTransform)row.RenderTransform).X, 0, 115);
         };
@@ -484,14 +487,17 @@ internal sealed class MP_CpMotionView : WC.UserControl
             if (i < rows.Children.Count &&
                 rows.Children[i] is WC.Border row)
                 MP_WpfMotion.Tint((WM.SolidColorBrush)row.Background,
-                    active ? Color(175, 222, 245)
-                        : Color(0, 0, 0, 0), 155);
+                    active ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
+                        : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 155);
             MP_WpfMotion.Tint(rowText[i].Name,
-                active ? Color(23, 54, 64) : Color(224, 234, 240), 160);
+                active ? MP_StudioTheme.WpfColor(MP_StudioTheme.ActiveText)
+                    : MP_StudioTheme.WpfColor(MP_StudioTheme.Text), 160);
             MP_WpfMotion.Tint(rowText[i].Def,
-                active ? Color(38, 74, 85) : Color(157, 176, 188), 160);
+                active ? MP_StudioTheme.WpfColor(MP_StudioTheme.ActiveText)
+                    : MP_StudioTheme.WpfColor(MP_StudioTheme.Secondary), 160);
             MP_WpfMotion.Tint(rowText[i].Cp,
-                active ? Color(23, 71, 87) : Color(173, 228, 240), 160);
+                active ? MP_StudioTheme.WpfColor(MP_StudioTheme.ActiveText)
+                    : MP_StudioTheme.WpfColor(MP_StudioTheme.Text), 160);
         }
     }
 

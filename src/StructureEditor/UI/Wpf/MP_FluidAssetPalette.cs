@@ -111,7 +111,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
             Height = RowHeight - 5, Margin = new W.Thickness(6, 0, 16, 0),
             // The moving cursor may pass other rows. Paint only its outline.
             Background = Solid(0, 0, 0, 0),
-            BorderBrush = Solid(195, 213, 240, 251),
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Text),
             BorderThickness = new W.Thickness(1),
             CornerRadius = new W.CornerRadius(0),
             HorizontalAlignment = W.HorizontalAlignment.Stretch,
@@ -322,7 +322,7 @@ public sealed class MP_FluidAssetRow : WC.Border
     private readonly WC.TextBlock title, def, detail;
     private readonly WM.TranslateTransform offset = new();
     private readonly WM.SolidColorBrush hoverBrush =
-        MP_FluidAssetPalette.Solid(0, 70, 121, 144);
+        MP_StudioTheme.Brush(0, MP_StudioTheme.Text);
     private bool selectedState;
 
     public MP_FluidAssetRow()
@@ -348,9 +348,9 @@ public sealed class MP_FluidAssetRow : WC.Border
         };
         WC.Grid.SetRowSpan(icon, 3);
         layout.Children.Add(icon);
-        title = Label(16, MP_FluidAssetPalette.Solid(226, 237, 241));
-        def = Label(14, MP_FluidAssetPalette.Solid(158, 182, 194));
-        detail = Label(13, MP_FluidAssetPalette.Solid(124, 163, 177));
+        title = Label(16, MP_StudioTheme.Brush(MP_StudioTheme.Text));
+        def = Label(14, MP_StudioTheme.Brush(MP_StudioTheme.Secondary));
+        detail = Label(13, MP_StudioTheme.Brush(MP_StudioTheme.Secondary));
         foreach (var (control, row) in new[] { (title, 0), (def, 1), (detail, 2) })
         {
             WC.Grid.SetColumn(control, 1);
@@ -363,13 +363,13 @@ public sealed class MP_FluidAssetRow : WC.Border
         MouseEnter += (_, _) =>
         {
             if (selectedState) return;
-            AnimColor(WM.Color.FromArgb(40, 72, 131, 151), 145);
+            AnimColor(MP_StudioTheme.WpfOpacity(40, MP_StudioTheme.Text), 145);
             AnimX(2, 140);
         };
         MouseLeave += (_, _) =>
         {
             if (selectedState) return;
-            AnimColor(WM.Color.FromArgb(0, 72, 131, 151), 125);
+            AnimColor(MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 125);
             AnimX(0, 120);
         };
     }
@@ -385,17 +385,17 @@ public sealed class MP_FluidAssetRow : WC.Border
     {
         if (selectedState == next) return;
         selectedState = next;
-        AnimColor(next ? WM.Color.FromRgb(175, 222, 245)
-            : WM.Color.FromArgb(0, 70, 121, 144), 145);
+        AnimColor(next ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
+            : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 145);
         title.Foreground = next
-            ? MP_FluidAssetPalette.Solid(13, 34, 44)
-            : MP_FluidAssetPalette.Solid(226, 237, 241);
+            ? MP_StudioTheme.Brush(MP_StudioTheme.ActiveText)
+            : MP_StudioTheme.Brush(MP_StudioTheme.Text);
         def.Foreground = next
-            ? MP_FluidAssetPalette.Solid(35, 67, 83)
-            : MP_FluidAssetPalette.Solid(158, 182, 194);
+            ? MP_StudioTheme.Brush(MP_StudioTheme.ActiveText)
+            : MP_StudioTheme.Brush(MP_StudioTheme.Secondary);
         detail.Foreground = next
-            ? MP_FluidAssetPalette.Solid(35, 67, 83)
-            : MP_FluidAssetPalette.Solid(124, 163, 177);
+            ? MP_StudioTheme.Brush(MP_StudioTheme.ActiveText)
+            : MP_StudioTheme.Brush(MP_StudioTheme.Secondary);
         if (next) AnimX(0, 0);
     }
 
@@ -410,7 +410,7 @@ public sealed class MP_FluidAssetRow : WC.Border
         // Recycler may reuse an earlier selected row; refresh safely.
         selectedState = false;
         hoverBrush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
-        hoverBrush.Color = WM.Color.FromArgb(0, 70, 121, 144);
+        hoverBrush.Color = MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text);
         W.DependencyObject ancestor = this;
         while (ancestor != null && ancestor is not WC.ListBoxItem)
             ancestor = WM.VisualTreeHelper.GetParent(ancestor);
