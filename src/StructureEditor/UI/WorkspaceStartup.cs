@@ -126,8 +126,7 @@ public partial class MainForm
     private void UpdatePaletteDensity()
     {
         palette.ItemHeight = Math.Max(48, (int)Math.Round(78 * DeviceDpi / 96f));
-        if (MP_cpCatalogList != null)
-            MP_cpCatalogList.ItemHeight = Math.Max(48, (int)Math.Round(52 * DeviceDpi / 96f));
+        // The WPF catalog uses device-independent pixels and handles its own DPI.
     }
     private void StopBackgroundLoading()
     {

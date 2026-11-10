@@ -450,10 +450,11 @@ internal sealed class MP_CpMotionView : WC.UserControl
 
 // One WPF dependency property exposes pixel scrolling to the animation engine;
 // no WinForms timer or forced repaint is needed.
-internal sealed class MP_ScrollOffsetProxy : W.DependencyObject
+internal sealed class MP_ScrollOffsetProxy : WA.Animatable
 {
     private readonly WC.ScrollViewer viewer;
     internal MP_ScrollOffsetProxy(WC.ScrollViewer viewer) => this.viewer = viewer;
+    protected override W.Freezable CreateInstanceCore() => new MP_ScrollOffsetProxy(viewer);
     internal static readonly W.DependencyProperty OffsetProperty =
         W.DependencyProperty.Register(nameof(Offset), typeof(double), typeof(MP_ScrollOffsetProxy),
             new W.PropertyMetadata(0d, (owner, e) =>
