@@ -85,7 +85,7 @@ internal sealed class MP_DarkPaletteScrollbar : Control
         e.Graphics.DrawLine(edge, 0, 0, 0, Height);
         Rectangle thumb = Thumb();
         using var fill = new SolidBrush(dragging ? MP_StudioTheme.Accent
-            : Color.FromArgb(96, 151, 173));
+            : MP_StudioTheme.Secondary);
         e.Graphics.FillRectangle(fill, thumb);
     }
 

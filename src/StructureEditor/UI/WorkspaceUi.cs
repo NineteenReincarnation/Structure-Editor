@@ -544,7 +544,7 @@ public partial class MainForm
             if (level > .001f)
             {
                 using SolidBrush hoverFill = new(Color.FromArgb(
-                    Math.Clamp((int)(level * 82), 0, 255), 105, 178, 207));
+                    Math.Clamp((int)(level * 72), 0, 255), MP_StudioTheme.Text));
                 e.Graphics.FillRectangle(hoverFill, bounds);
             }
         }
@@ -582,7 +582,7 @@ public partial class MainForm
         public override Color ImageMarginGradientBegin => ToolStripDropDownBackground;
         public override Color ImageMarginGradientMiddle => ToolStripDropDownBackground;
         public override Color ImageMarginGradientEnd => ToolStripDropDownBackground;
-        public override Color MenuItemSelected => Color.FromArgb(47, 76, 94);
+        public override Color MenuItemSelected => MP_StudioTheme.Hover;
         public override Color MenuItemSelectedGradientBegin => MenuItemSelected;
         public override Color MenuItemSelectedGradientEnd => MenuItemSelected;
         public override Color MenuItemPressedGradientBegin => MenuItemSelected;
@@ -592,7 +592,7 @@ public partial class MainForm
         public override Color ButtonCheckedGradientBegin => MP_StudioTheme.Active;
         public override Color ButtonCheckedGradientMiddle => ButtonCheckedGradientBegin;
         public override Color ButtonCheckedGradientEnd => ButtonCheckedGradientBegin;
-        public override Color MenuBorder => MP_StudioTheme.Divider;
+        public override Color MenuBorder => MP_StudioTheme.Secondary;
         public override Color ToolStripBorder => MP_StudioTheme.Divider;
     }
 }

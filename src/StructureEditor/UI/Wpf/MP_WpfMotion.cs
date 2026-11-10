@@ -75,19 +75,19 @@ internal static class MP_WpfMotion
     internal static void AttachSearch(WC.TextBox textbox)
     {
         if (textbox == null) return;
-        var border = new WM.SolidColorBrush(WM.Color.FromRgb(66, 91, 104));
+        var border = MP_StudioTheme.Brush(MP_StudioTheme.Divider);
         var shadow = new WM.Effects.DropShadowEffect
         {
-            Color = WM.Color.FromRgb(105, 197, 220),
-            BlurRadius = 8, ShadowDepth = 0, Opacity = 0
+            Color = MP_StudioTheme.WpfColor(MP_StudioTheme.Text),
+            BlurRadius = 1, ShadowDepth = 0, Opacity = 0
         };
         textbox.BorderBrush = border;
         textbox.Effect = shadow;
         void Change(bool focused)
         {
-            Tint(border, focused ? WM.Color.FromRgb(146, 221, 234)
-                : WM.Color.FromRgb(66, 91, 104), 170);
-            double target = focused && MP_Motion.Enabled ? .24 : 0;
+            Tint(border, focused ? MP_StudioTheme.WpfColor(MP_StudioTheme.Accent)
+                : MP_StudioTheme.WpfColor(MP_StudioTheme.Divider), 170);
+            double target = focused && MP_Motion.Enabled ? .08 : 0;
             double from = shadow.Opacity;
             shadow.BeginAnimation(WM.Effects.DropShadowEffect.OpacityProperty, null);
             shadow.Opacity = target;

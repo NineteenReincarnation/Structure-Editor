@@ -10,7 +10,7 @@ internal static class MP_LcdVisual
     internal static WM.Effects.DropShadowEffect Glow(double intensity = .24)
         => new()
         {
-            Color = WM.Color.FromRgb(134, 231, 247),
+            Color = MP_StudioTheme.WpfColor(MP_StudioTheme.Text),
             BlurRadius = 2,
             ShadowDepth = 0,
             Opacity = Math.Clamp(intensity * .12, 0d, .06d)

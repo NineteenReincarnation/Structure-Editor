@@ -82,12 +82,12 @@ public partial class MainForm : Form
         Button button = new MP_AnimatedButton
         {
             Text = caption, Location = new Point(x, y), Size = new Size(width, 29),
-            FlatStyle = FlatStyle.Flat, BackColor = MP_StudioTheme.PanelRaised,
+            FlatStyle = FlatStyle.Flat, BackColor = MP_StudioTheme.Panel,
             ForeColor = text, UseVisualStyleBackColor = false
         };
-        button.FlatAppearance.BorderColor = MP_StudioTheme.Divider;
-        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(50, 80, 97);
-        button.FlatAppearance.MouseDownBackColor = Color.FromArgb(70, 112, 134);
+        button.FlatAppearance.BorderColor = MP_StudioTheme.Accent;
+        button.FlatAppearance.MouseOverBackColor = MP_StudioTheme.Hover;
+        button.FlatAppearance.MouseDownBackColor = MP_StudioTheme.Active;
         return button;
     }
     private void AddTool(ToolStrip strip, string caption, Action action)
@@ -163,9 +163,9 @@ public partial class MainForm : Form
         CatalogItem item = (CatalogItem)palette.Items[e.Index];
         bool selected = (e.State & DrawItemState.Selected) != 0;
         MP_MotionListBox motionList = palette as MP_MotionListBox;
-        Color background = MP_Motion.Blend(surface, Color.FromArgb(44, 62, 72),
+        Color background = MP_Motion.Blend(surface, MP_StudioTheme.Hover,
             motionList?.Hover(e.Index) ?? 0);
-        background = MP_Motion.Blend(background, Color.FromArgb(53, 79, 82),
+        background = MP_Motion.Blend(background, MP_StudioTheme.Active,
             motionList?.Selected(e.Index) ?? (selected ? 1f : 0f));
         using SolidBrush bg = new(background); e.Graphics.FillRectangle(bg, e.Bounds);
         string texturePath = item.Icon ?? catalog.TextureFor(item);
@@ -181,8 +181,8 @@ public partial class MainForm : Form
         }
         string displayName = ClusterScope && !string.IsNullOrEmpty(item.ClusterWikiName) ? item.ClusterWikiName : item.Label;
         if (Program.Paths.Favorites.Contains(CatalogCollections.Key(item))) displayName = "★ " + displayName;
-        TextRenderer.DrawText(e.Graphics, displayName, Font, new Rectangle(e.Bounds.X + Px(58), e.Bounds.Y + Px(9), Math.Max(1, e.Bounds.Width - Px(61)), Px(22)), text, TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
-        TextRenderer.DrawText(e.Graphics, item.DefName, smallFont, new Rectangle(e.Bounds.X + Px(58), e.Bounds.Y + Px(32), Math.Max(1, e.Bounds.Width - Px(61)), Px(22)), muted, TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
+        TextRenderer.DrawText(e.Graphics, displayName, Font, new Rectangle(e.Bounds.X + Px(58), e.Bounds.Y + Px(9), Math.Max(1, e.Bounds.Width - Px(61)), Px(22)), selected ? MP_StudioTheme.ActiveText : text, TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
+        TextRenderer.DrawText(e.Graphics, item.DefName, smallFont, new Rectangle(e.Bounds.X + Px(58), e.Bounds.Y + Px(32), Math.Max(1, e.Bounds.Width - Px(61)), Px(22)), selected ? MP_StudioTheme.ActiveText : muted, TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
         string category = ClusterScope ? item.ClusterGroup + (item.ClusterWikiEntry ? "" : " / 模组扩展") : item.Group;
         TextRenderer.DrawText(e.Graphics, category + " · " + item.Pack, smallFont, new Rectangle(e.Bounds.X + Px(58), e.Bounds.Y + Px(51), Math.Max(1, e.Bounds.Width - Px(61)), Px(18)), muted, TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
     }

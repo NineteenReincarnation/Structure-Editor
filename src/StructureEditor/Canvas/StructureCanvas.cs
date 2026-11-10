@@ -69,12 +69,12 @@ public partial class StructureCanvas
         DrawScene(g, e.ClipRectangle, drawSolids: false);
         if (ShowGrid && cellSize >= 12)
         {
-            using Pen minor = new(Color.FromArgb(42, 107, 132, 146));
+            using Pen minor = new(Color.FromArgb(32, MP_StudioTheme.Text));
             int minX = (int)Math.Floor(-origin.X / cellSize) - 1, maxX = (int)Math.Ceiling((Width - origin.X) / cellSize) + 1;
             int minZ = (int)Math.Floor((origin.Y - Height) / cellSize) - 1, maxZ = (int)Math.Ceiling(origin.Y / cellSize) + 1;
             for (int x = minX; x <= maxX; x++) { float sx = Screen(x + .5f, 0).X; g.DrawLine(minor, sx, 0, sx, Height); }
             for (int z = minZ; z <= maxZ; z++) { float sy = Screen(0, z + .5f).Y; g.DrawLine(minor, 0, sy, Width, sy); }
-            using Pen axis = new(Color.FromArgb(89, 127, 171, 189));
+            using Pen axis = new(Color.FromArgb(70, MP_StudioTheme.Text));
             g.DrawLine(axis, origin.X, 0, origin.X, Height); g.DrawLine(axis, 0, origin.Y, Width, origin.Y);
         }
         DrawSolids(g, e.ClipRectangle);
