@@ -208,6 +208,10 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         RefreshSelectedRows();
     }
 
+    internal bool MP_HasSafeLayering =>
+        selection.Background is WM.SolidColorBrush brush && brush.Color.A == 0
+        && layout.ClipToBounds && list.Margin.Right >= 12;
+
     internal void PlayEntrance()
     {
         if (!IsVisible) return;

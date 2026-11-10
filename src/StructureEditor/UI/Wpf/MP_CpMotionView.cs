@@ -59,6 +59,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
     private static readonly WM.SolidColorBrush MainText = Brush(Color(202, 233, 249));
     private static readonly WM.SolidColorBrush Accent = Brush(Color(187, 228, 249));
 
+    internal bool MP_HasSafeLayering => scroller.Margin.Right >= 12;
+
     internal MP_CpMotionView(Action<CatalogItem> onActivate)
     {
         activate = onActivate;

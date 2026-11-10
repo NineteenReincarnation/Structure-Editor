@@ -257,6 +257,10 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         Unloaded += (_, _) => { filterDelay.Stop(); rowWave.Reset(); };
     }
 
+    internal bool MP_HasSafeLayering =>
+        slider.Background is WM.SolidColorBrush brush && brush.Color.A == 0
+        && rowLayer.ClipToBounds && scroll.Margin.Right >= 12;
+
     internal void FocusSearch() => search.Focus();
 
     internal void ClearSearch()

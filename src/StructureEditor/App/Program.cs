@@ -99,6 +99,19 @@ internal static class Program
                     || wpfHosts.Count(host => host.Child is MP_FluidDocumentBar) != 1
                     || wpfHosts.Count(host => host.Child is MP_FluidTabBar) != 2)
                     throw new InvalidOperationException("WPF editor presentation hosts are missing.");
+                // Selection and rubber-band effects must not mask other
+                // rows, the scrollbar, or the search and preview panels.
+                if (wpfHosts.Select(h => h.Child).OfType<MP_FluidStructureLibrary>()
+                        .Any(h => !h.MP_HasSafeLayering)
+                    || wpfHosts.Select(h => h.Child).OfType<MP_FluidAssetPalette>()
+                        .Any(h => !h.MP_HasSafeLayering)
+                    || wpfHosts.Select(h => h.Child).OfType<MP_CpMotionView>()
+                        .Any(h => !h.MP_HasSafeLayering))
+                    throw new InvalidOperationException("WPF cursor or scrollbar can obscure content.");
+                var readout = new MP_PixelReadout { Text = "INDEX / 09" };
+                readout.Measure(new System.Windows.Size(500, 100));
+                if (readout.DesiredSize.Width <= 0 || readout.DesiredSize.Height <= 0)
+                    throw new InvalidOperationException("Pixel readout layout failed.");
                 // Template realization must have a public zero-argument
                 // constructor so virtualized lists work after catalog load.
                 _ = new MP_FluidAssetRow();
