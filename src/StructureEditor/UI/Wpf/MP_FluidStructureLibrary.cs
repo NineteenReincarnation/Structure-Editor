@@ -229,12 +229,15 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         PreviewKeyDown += (_, e) =>
         {
             if (e.OriginalSource is WC.TextBox) return;
-            if (e.Key is WI.Key.Down or WI.Key.Up)
+            // RimWorld-style W/S navigation is active while a structure row
+            // has focus. Search text boxes retain normal typing.
+            if (e.Key is WI.Key.Down or WI.Key.Up or WI.Key.W or WI.Key.S)
             {
                 if (keyboardRows.Count == 0) return;
                 int current = keyboardRows.FindIndex(item =>
                     active != null && item.Id == active.Id);
-                int target = e.Key == WI.Key.Down
+                bool down = e.Key is WI.Key.Down or WI.Key.S;
+                int target = down
                     ? Math.Min(keyboardRows.Count - 1, current + 1)
                     : current < 0 ? keyboardRows.Count - 1 : Math.Max(0, current - 1);
                 MP_StructureViewEntry next = keyboardRows[target];
@@ -279,9 +282,11 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         MP_StructureViewEntry found = entries.FirstOrDefault(e =>
             e.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
         if (found == null) return;
-        if (!leafRows.ContainsKey(found.Id))
+        string key = (IsProject(found.File) ? "项目结构" : "其他位置")
+            + "/" + GroupPath(found.File);
+        if (collapsed.Contains(key) || !leafRows.ContainsKey(found.Id))
         {
-            collapsed.Clear();
+            collapsed.Remove(key);
             Rebuild();
         }
         Select(found);
@@ -332,14 +337,23 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 var folderChildren = folder
                     .Select(entry => Leaf(entry, showFolder ? 1 : 0)).ToArray();
                 if (showFolder)
-                    rows.Children.Add(Folder(key, folder.Key, folderChildren));
-                bool expanded = !showFolder || !collapsed.Contains(key) || query.Length > 0;
-                foreach (var child in folderChildren)
                 {
-                    child.Visibility = expanded
-                        ? W.Visibility.Visible : W.Visibility.Collapsed;
-                    rows.Children.Add(child);
+                    var folderItems = new WC.StackPanel();
+                    foreach (var child in folderChildren) folderItems.Children.Add(child);
+                    double fullHeight = folderChildren.Length * 44d;
+                    var expansion = new WC.Border
+                    {
+                        Child = folderItems, ClipToBounds = true,
+                        Height = collapsed.Contains(key) && query.Length == 0
+                            ? 0 : fullHeight
+                    };
+                    rows.Children.Add(Folder(key, folder.Key, folderChildren.Length,
+                        expansion, fullHeight));
+                    rows.Children.Add(expansion);
                 }
+                else
+                    foreach (var child in folderChildren)
+                        rows.Children.Add(child);
             }
         }
         if (visible.Length == 0)
@@ -418,7 +432,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     // Folder rows have their own raised surface, outlined folder icon,
     // disclosure arrow and file count. Children are hidden in place instead
     // of destroying and recreating the entire WPF tree on each click.
-    private WC.Border Folder(string key, string name, IReadOnlyList<WC.Border> children)
+    private WC.Border Folder(string key, string name, int count,
+        WC.Border expansion, double fullHeight)
     {
         var hover = MP_StudioTheme.Brush(MP_StudioTheme.PanelRaised);
         var grid = new WC.Grid { Margin = new W.Thickness(7, 0, 7, 0) };
@@ -447,7 +462,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         WC.Grid.SetColumn(title, 2);
         var total = new WC.TextBlock
         {
-            Text = children.Count.ToString("00"),
+            Text = count.ToString("00"),
             FontFamily = MP_LiltTheme.WpfFont, FontSize = 13, Foreground = Muted,
             VerticalAlignment = W.VerticalAlignment.Center,
             Margin = new W.Thickness(7, 0, 0, 0)
@@ -463,7 +478,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             Background = hover, BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Divider),
             BorderThickness = new W.Thickness(1, 0, 0, 1),
             Cursor = WI.Cursors.Hand, Child = grid,
-            ToolTip = $"文件夹：{name}（{children.Count} 个结构）"
+            ToolTip = $"文件夹：{name}（{count} 个结构）"
         };
         row.MouseEnter += (_, _) => hover.Color =
             MP_StudioTheme.WpfColor(MP_StudioTheme.Hover);
@@ -474,13 +489,24 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             bool folded = collapsed.Add(key);
             if (!folded) collapsed.Remove(key);
             arrow.Text = folded ? "▸" : "▾";
-            foreach (var child in children)
-                child.Visibility = folded ? W.Visibility.Collapsed : W.Visibility.Visible;
+            // Expand/collapse a clipped child panel. Never recreate its rows
+            // or use ScaleTransform (which squashes font glyphs/bitmaps).
+            double destination = folded ? 0 : fullHeight;
+            double start = expansion.ActualHeight;
+            expansion.BeginAnimation(W.FrameworkElement.HeightProperty, null);
+            expansion.Height = destination;
+            if (MP_Motion.Enabled && Math.Abs(destination - start) > 0.5)
+                expansion.BeginAnimation(W.FrameworkElement.HeightProperty,
+                    new WA.DoubleAnimation(start, destination,
+                        TimeSpan.FromMilliseconds(205))
+                    {
+                        EasingFunction = new WA.CubicEase
+                            { EasingMode = WA.EasingMode.EaseOut }
+                    });
             RefreshKeyboardRows();
             slider.Visibility = W.Visibility.Collapsed;
-            // After layout shrinks, reset stale spring offsets. Otherwise
-            // the scroll animation keeps aiming beyond the new extent,
-            // producing a bounce/flicker when a folder collapses.
+            // Defer the extent correction until layout has completed, so
+            // a collapsing group cannot leave a stale scroll target.
             rows.Dispatcher.BeginInvoke(new Action(() =>
             {
                 double offset = Math.Clamp(scroll.VerticalOffset, 0,
@@ -517,10 +543,15 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private void RefreshKeyboardRows()
     {
         keyboardRows.Clear();
-        foreach (var child in rows.Children.OfType<WC.Border>())
-            if (child.Tag is MP_StructureViewEntry entry &&
-                child.Visibility == W.Visibility.Visible)
+        bool filtering = !string.IsNullOrWhiteSpace(search.Text);
+        foreach (var entry in visibleEntries)
+        {
+            string key = (IsProject(entry.File) ? "项目结构" : "其他位置")
+                + "/" + GroupPath(entry.File);
+            if (fileRows.ContainsKey(entry.Id) &&
+                (filtering || !collapsed.Contains(key)))
                 keyboardRows.Add(entry);
+        }
     }
 
     private WC.Border Leaf(MP_StructureViewEntry entry, int level)
