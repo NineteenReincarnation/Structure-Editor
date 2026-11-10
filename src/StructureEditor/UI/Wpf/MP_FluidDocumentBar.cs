@@ -18,7 +18,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     private readonly WC.StackPanel slots;
     private readonly WC.Border capsule;
     private readonly MP_LiltCursor travellingCursor;
-    private readonly List<(WC.Border Container, WC.TextBlock Title)> visuals = new();
+    private readonly List<(WC.Border Container, WC.TextBlock Title, WC.TextBlock CloseGlyph)> visuals = new();
     private MP_DocumentVisualState[] current = Array.Empty<MP_DocumentVisualState>();
     private int active = -1;
     private bool ready;
@@ -98,8 +98,8 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 if (next[i].Title == current[i].Title) continue;
                 titlesChanged = true;
                 visuals[i].Title.Text = next[i].Title;
-                double w = next[i].Title.Sum(c => c > 127 ? 16 : 8.5) + 43;
-                visuals[i].Container.Width = Math.Clamp(w, 102, 240);
+                double w = next[i].Title.Sum(c => c > 127 ? 16 : 8.5) + 67;
+                visuals[i].Container.Width = Math.Clamp(w, 118, 255);
                 visuals[i].Container.ToolTip = next[i].Title;
             }
         }
@@ -114,7 +114,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 content.ColumnDefinitions.Add(new WC.ColumnDefinition
                     { Width = new W.GridLength(1, W.GridUnitType.Star) });
                 content.ColumnDefinitions.Add(new WC.ColumnDefinition
-                    { Width = new W.GridLength(24) });
+                    { Width = new W.GridLength(30) });
                 var text = new WC.TextBlock
                 {
                     Text = entry.Title,
@@ -128,33 +128,39 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 content.Children.Add(text);
                 var close = new WC.Border
                 {
-                    Width = 22, Height = 23, CornerRadius = new W.CornerRadius(0),
+                    Width = 27, Height = 25, CornerRadius = new W.CornerRadius(0),
                     Background = MP_StudioTheme.Brush(0, MP_StudioTheme.Text),
-                    Cursor = WI.Cursors.Hand,
-                    ToolTip = "关闭结构"
+                    Cursor = WI.Cursors.Hand, ToolTip = "关闭结构"
                 };
-                close.Child = new WC.TextBlock
+                var closeGlyph = new WC.TextBlock
                 {
-                    Text = "×", FontSize = 16,
+                    Text = "×", FontSize = 19,
+                    FontFamily = MP_LiltTheme.WpfFont,
                     Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Text),
                     HorizontalAlignment = W.HorizontalAlignment.Center,
-                    VerticalAlignment = W.VerticalAlignment.Center
+                    VerticalAlignment = W.VerticalAlignment.Center,
+                    TextAlignment = W.TextAlignment.Center,
+                    IsHitTestVisible = false
                 };
+                close.Child = closeGlyph;
                 close.MouseEnter += (_, _) => AnimateColor((WM.SolidColorBrush)close.Background,
-                    MP_StudioTheme.WpfOpacity(54, MP_StudioTheme.Text));
+                    MP_StudioTheme.WpfOpacity(50, entry.Index == active
+                        ? MP_StudioTheme.ActiveText : MP_StudioTheme.Text));
                 close.MouseLeave += (_, _) => AnimateColor((WM.SolidColorBrush)close.Background,
                     MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text));
                 close.MouseLeftButtonDown += (_, e) =>
                 {
+                    MP_UiSound.Play(MP_UiSound.Cue.Close);
+                    MP_UiSound.Play(MP_UiSound.Cue.Close);
                     invoke?.Invoke(entry.Index, true);
                     e.Handled = true;
                 };
                 WC.Grid.SetColumn(close, 1);
                 content.Children.Add(close);
-                double estimatedWidth = entry.Title.Sum(c => c > 127 ? 16 : 8.5) + 43;
+                double estimatedWidth = entry.Title.Sum(c => c > 127 ? 16 : 8.5) + 67;
                 var container = new WC.Border
                 {
-                    Width = Math.Clamp(estimatedWidth, 102, 240), Height = 31,
+                    Width = Math.Clamp(estimatedWidth, 118, 255), Height = 31,
                     Background = MP_StudioTheme.Brush(0, MP_StudioTheme.Text),
                     Cursor = WI.Cursors.Hand,
                     Child = content
@@ -179,7 +185,11 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 container.MouseLeftButtonUp += (_, e) =>
                 {
                     travellingCursor.Release();
-                    if (container.IsMouseOver) invoke?.Invoke(entry.Index, false);
+                    if (container.IsMouseOver)
+                    {
+                        if (active != entry.Index) MP_UiSound.Play(MP_UiSound.Cue.Navigate);
+                        invoke?.Invoke(entry.Index, false);
+                    }
                     e.Handled = true;
                 };
                 container.MouseLeave += (_, _) => travellingCursor.Release();
@@ -191,7 +201,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 };
                 container.ToolTip = entry.Title;
                 slots.Children.Add(container);
-                visuals.Add((container, text));
+                visuals.Add((container, text, closeGlyph));
             }
             slots.BeginAnimation(OpacityProperty, null);
             slots.Opacity = 1;
@@ -209,6 +219,12 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 MP_WpfMotion.Tint((WM.SolidColorBrush)visuals[i].Container.Background,
                     i == active ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
                         : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 155);
+                // X must invert together with the active tab. Previously a
+                // light glyph on the light selection made Close invisible.
+                MP_WpfMotion.Tint((WM.SolidColorBrush)visuals[i].CloseGlyph.Foreground,
+                    i == active
+                        ? MP_StudioTheme.WpfColor(MP_StudioTheme.ActiveText)
+                        : MP_StudioTheme.WpfColor(MP_StudioTheme.Text), 155);
             }
             Move(!structureChanged && !titlesChanged);
         }
