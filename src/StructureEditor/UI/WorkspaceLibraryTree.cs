@@ -9,6 +9,7 @@ public partial class MainForm
     private sealed record MP_LibraryEntry(string File, string Id, string Label, bool HasXml);
 
     private MP_SectionTabs MP_libraryTabs;
+    private MP_FluidStructureLibrary MP_structureView;
     private MP_DarkTreeView MP_libraryTree;
     private TextBox MP_librarySearch;
     private PictureBox MP_libraryPreview;
@@ -249,14 +250,36 @@ public partial class MainForm
             MP_libraryToolTip?.Dispose();
             MP_libraryPreview.Image?.Dispose(); MP_libraryPreview.Image = null;
         };
-        return layout;
+        // Retain the legacy TreeView as an invisible compatibility model for
+        // rename/preview logic, while WPF owns the visible structure library.
+        MP_structureView = new MP_FluidStructureLibrary(
+            (file, id) =>
+            {
+                var entry = MP_libraryEntries.FirstOrDefault(item =>
+                    item.Id == id && SamePath(item.File, file));
+                MP_pendingLibraryPreview = entry;
+                MP_libraryPreviewDelay.Stop();
+                MP_libraryPreviewDelay.Start();
+            },
+            (file, id) => Safe(() => OpenWorkspaceFile(file, id)),
+            (file, id) =>
+            {
+                var entry = MP_libraryEntries.FirstOrDefault(item =>
+                    item.Id == id && SamePath(item.File, file));
+                if (entry != null) Safe(() => MP_RenameLibraryEntry(entry));
+            });
+        return new System.Windows.Forms.Integration.ElementHost
+        {
+            Dock = DockStyle.Fill, BackColor = surface,
+            Child = MP_structureView, TabStop = true
+        };
     }
 
     private void MP_ShowStructureLibrary()
     {
         MP_libraryTabs.SelectedIndex = 1;
         if (!MP_libraryLoaded) MP_ReloadLibrary();
-        MP_librarySearch.Focus();
+        MP_structureView?.FocusSearch();
     }
 
     private static bool MP_IsProjectStructure(string file)
@@ -288,6 +311,9 @@ public partial class MainForm
             .ThenBy(e => e.Label, StringComparer.CurrentCultureIgnoreCase).ToList();
         MP_libraryLoaded = true;
         MP_RebuildLibraryTree();
+        MP_structureView?.SetEntries(MP_libraryEntries
+            .Select(e => new MP_StructureViewEntry(e.File, e.Id, e.Label, e.HasXml))
+            .ToArray());
     }
 
     private void MP_RebuildLibraryTree()
@@ -442,6 +468,7 @@ public partial class MainForm
         {
             MP_libraryDetails.Text = entry.Label;
         }
+        MP_structureView?.SetPreview(entry.Id, MP_libraryPreview.Image);
     }
     private void MP_RenameLibraryEntry(MP_LibraryEntry entry)
     {
