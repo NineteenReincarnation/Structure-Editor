@@ -240,30 +240,14 @@ public partial class MainForm
         viewport.Controls.Add(canvas); viewport.Controls.Add(layerBar); inspectorSplit.Panel1.Controls.Add(viewport);
 
         MP_SectionTabs tabs = new() { Dock = DockStyle.Fill, BackColor = surface, ForeColor = text };
+        // View composition belongs to one reusable layout component.
+        // The editor's field values, events and command behavior stay here.
         TableLayoutPanel Page(string title)
-        {
-            TabPage tab = new(title) { BackColor = surface, ForeColor = text,
-                Padding = new(MP_StudioTheme.PanelInset), AutoScroll = true };
-            MP_SmoothLayout layout = new() { Dock = DockStyle.Top, AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1,
-                Padding = new(3), Margin = Padding.Empty };
-            layout.ColumnStyles.Add(new(SizeType.Percent, 100));
-            // AutoScroll already measures the docked child. Manually writing
-            // AutoScrollMinSize on every SizeChanged causes repeated relayout
-            // (and clipped controls) when the page width/scrollbar changes.
-            tab.Controls.Add(layout); tabs.AddPage(tab); return layout;
-        }
+            => MP_InspectorLayout.CreatePage(tabs, title, surface, text);
         void Row(TableLayoutPanel panel, Control control, int height = 0)
-        {
-            control.Dock = DockStyle.Top; control.Margin = new(0, 0, 0, 7);
-            if (height > 0) control.Height = height;
-            int row = panel.RowCount++; panel.RowStyles.Add(new(SizeType.AutoSize)); panel.Controls.Add(control, 0, row);
-        }
+            => MP_InspectorLayout.AddRow(panel, control, height);
         void Field(TableLayoutPanel panel, string title, Control control)
-        {
-            Row(panel, new Label { Text = title, ForeColor = muted, AutoSize = true });
-            Row(panel, control, MP_StudioTheme.FieldHeight);
-        }
+            => MP_InspectorLayout.AddField(panel, title, control, muted);
         TableLayoutPanel objects = Page("对象"), metadata = Page("工程");
         TableLayoutPanel exports = metadata;
         // "OBJECT / 对象属性" repeated the tab title and pushed the actual

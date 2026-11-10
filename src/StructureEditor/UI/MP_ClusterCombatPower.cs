@@ -30,7 +30,7 @@ public partial class MainForm
         return new System.Windows.Forms.Integration.ElementHost
         {
             Dock = DockStyle.Fill,
-            BackColor = Color.FromArgb(28, 40, 49),
+            BackColor = MP_StudioTheme.Panel,
             Child = MP_cpSummary, TabStop = false
         };
     }

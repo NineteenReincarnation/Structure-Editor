@@ -19,7 +19,8 @@ public partial class MainForm
             combo.Dock = DockStyle.Fill; combo.Margin = Padding.Empty; combo.DropDownStyle = ComboBoxStyle.DropDownList;
             row.Controls.Add(combo, 1, 0); Row(row);
         }
-        Row(new Label { Text = "素材库", Font = new Font(Font, FontStyle.Bold), AutoSize = true });
+        // The active left tab already says 素材库. Start with the task users
+        // actually perform: search, then progressively narrow the results.
         search.PlaceholderText = "搜索名称 / DefName"; search.BorderStyle = BorderStyle.FixedSingle; Row(search);
         scopeBox.Items.AddRange(new object[] { "全部素材", "常用", "收藏", "最近使用", "机械集群", "玩家模组", "原版与 DLC" }); scopeBox.SelectedIndex = 6;
         kindBox.Items.AddRange(new object[] { "建筑", "单位", "地形", "全部类型" }); kindBox.SelectedIndex = 0;
