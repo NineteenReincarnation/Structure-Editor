@@ -447,7 +447,72 @@ public partial class MainForm
     private void ToggleInspector() => inspectorSplit.Panel2Collapsed = !inspectorSplit.Panel2Collapsed;
     private sealed class StudioRenderer : ToolStripProfessionalRenderer
     {
+        private sealed class ItemFeedback
+        {
+            internal float Level;
+            internal bool Hovering;
+        }
+
+        // ToolStripItem is not a Control, so animate its background on the
+        // owning ToolStrip without spawning per-item timers.
+        private readonly Dictionary<ToolStripItem, ItemFeedback> feedback = new();
+
         public StudioRenderer() : base(new StudioColors()) { RoundedEdges = false; }
+
+        private float FeedbackLevel(ToolStripItem item, ToolStrip owner)
+        {
+            if (!feedback.TryGetValue(item, out ItemFeedback state))
+            {
+                state = new ItemFeedback();
+                feedback[item] = state;
+                item.Disposed += (_, _) => feedback.Remove(item);
+            }
+            bool hovered = item.Selected || item.Pressed;
+            if (state.Hovering != hovered)
+            {
+                state.Hovering = hovered;
+                float from = state.Level;
+                MP_Motion.Tween(owner, "toolbar-" +
+                    System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item),
+                    from, hovered ? 1f : 0f, value =>
+                    {
+                        state.Level = value;
+                        if (!owner.IsDisposed && !item.IsDisposed)
+                            owner.Invalidate(item.Bounds);
+                    }, hovered ? 145 : 110);
+            }
+            return state.Level;
+        }
+
+        private void PaintFeedback(ToolStripItemRenderEventArgs e)
+        {
+            if (e.Item == null || e.ToolStrip == null) return;
+            float level = FeedbackLevel(e.Item, e.ToolStrip);
+            bool checkedItem = e.Item is ToolStripButton button && button.Checked;
+            Rectangle bounds = new(2, 1, Math.Max(1, e.Item.Width - 4),
+                Math.Max(1, e.Item.Height - 2));
+            if (checkedItem)
+            {
+                using SolidBrush checkedFill = new(Color.FromArgb(125, 66, 111, 112));
+                e.Graphics.FillRectangle(checkedFill, bounds);
+            }
+            if (level > .001f)
+            {
+                using SolidBrush hoverFill = new(Color.FromArgb(
+                    Math.Clamp((int)(level * 105), 0, 255), 111, 170, 184));
+                e.Graphics.FillRectangle(hoverFill, bounds);
+            }
+        }
+
+        protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e)
+            => PaintFeedback(e);
+
+        protected override void OnRenderDropDownButtonBackground(ToolStripItemRenderEventArgs e)
+            => PaintFeedback(e);
+
+        protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+            => PaintFeedback(e);
+
         protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
         {
             if (e.ToolStrip is ToolStripDropDown) { base.OnRenderToolStripBackground(e); return; }
