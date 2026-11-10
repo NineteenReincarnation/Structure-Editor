@@ -4,7 +4,7 @@
 - Architecture and module responsibilities: `docs/architecture.md`.
 - Prioritize complete, user-visible functionality over repeated cosmetic changes and unnecessary refactors.
 - Independent Windows editor: never edit MechProtocol to implement an editor feature. Generic flows remain independent; Mod-specific rules stay in `src/StructureEditor/Compatibility/`.
-- The C# source is grouped under `src/StructureEditor/{App,Canvas,Catalog,Core,Formats,UI,Validation,Compatibility}/`. Preserve the `StructureEditor` namespaces and `partial MainForm`/canvas composition unless explicitly changing architecture.
+- The C# source is grouped under `src/StructureEditor/{App,Canvas,Catalog,Core,Formats,UI,Validation,Compatibility}/`. The editor now uses a **WPF-first presentation layer** under `src/StructureEditor/UI/Wpf/`, with WinForms retained only for the structure canvas, native commands and compatibility adapters. Keep the domain logic independent of WPF and preserve `partial MainForm` as a bridge until its remaining functions are migrated.
 - Do not commit game assets or DLLs, local settings, absolute paths, migration backups, or unlicensed third-party resources. The only allowed generated binary exception is the CI-produced `app/` runtime package, tracked by the Windows build workflow so GitHub Desktop pull refreshes the app. Do not hand-edit or manually stage `app/`.
 - Build with `dotnet build src/StructureEditor/StructureEditor.csproj`; textures are loaded from the user's game at runtime.
 - Preserve document compatibility. Newly placed assets default to awake when supported; picked or copied assets keep their original state.
@@ -16,7 +16,8 @@
 - Renaming a library structure must update editable JSON, its linked XML output (including separate configured export directories), matching preview PNGs, and open/recent-document paths. Only edit matching XML Defs; back up sources and never overwrite unrelated files. Keep the `MP_` prefix for newly renamed DefNames.
 
 - Document tabs use `MP_DocumentTabButton` with a per-tab close X; preserve unsaved-save confirmation and prevent X-click activation. Ctrl+G/H/J toggle explosion/detection/shield previews, Ctrl+D duplicates objects.
-- Do not regress to native white WinForms tab-header gaps, light palette scrollbars or white combo arrow wells; keep the integrated `MP_SectionTabs` and the dark control surfaces.
+- Do not regress to native white WinForms tab-header gaps, light palette scrollbars or white combo arrow wells. `MP_SectionTabs` now uses a WPF animated navigation header; WPF owns the visible document, asset, structure-library and CP presentation. Do not reintroduce invisible duplicate WinForms tree/list views or a second code path for placing assets.
+- **Motion language:** follow the supplied cyan LCD UI reference using traveling selection capsules, subtle hover movement and smooth inertial scrolling. Keep the matte dark editor palette, ~120–260 ms interruption-safe eased transitions, composited WPF animation, virtualization, lazy thumbnails, and system Reduce Motion support. UI motion never delays user commands.
 
 - Repository cleanup: keep one canonical editable root `structures/` and root `docs/`. Do not recreate `examples/` or a launcher in the repository root. `build.ps1` and CI publish only the Git-tracked `app/` runtime files. Do not create or upload ZIP archives, portable bundles or dist packages. Run `app/StructureEditor.exe` directly. All validation code stays in `src/StructureEditor/Validation/`.
 

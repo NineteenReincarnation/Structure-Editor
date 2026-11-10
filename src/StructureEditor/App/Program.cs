@@ -82,11 +82,18 @@ internal static class Program
                         foreach (Control descendant in Descendants(child)) yield return descendant;
                     }
                 }
-                if (Descendants(form).OfType<System.Windows.Forms.Integration.ElementHost>()
-                    .Count(host => host.Child is MP_CpMotionView) != 1
-                    || Descendants(form).OfType<System.Windows.Forms.Integration.ElementHost>()
-                    .Count(host => host.Child is MP_FluidAssetPalette) != 1)
-                    throw new InvalidOperationException("WPF cluster catalog island is not hosted.");
+                var wpfHosts = Descendants(form)
+                    .OfType<System.Windows.Forms.Integration.ElementHost>().ToArray();
+                if (wpfHosts.Count(host => host.Child is MP_CpMotionView) != 1
+                    || wpfHosts.Count(host => host.Child is MP_FluidAssetPalette) != 1
+                    || wpfHosts.Count(host => host.Child is MP_FluidStructureLibrary) != 1
+                    || wpfHosts.Count(host => host.Child is MP_FluidCpSummary) != 1
+                    || wpfHosts.Count(host => host.Child is MP_FluidDocumentBar) != 1
+                    || wpfHosts.Count(host => host.Child is MP_FluidTabBar) != 2)
+                    throw new InvalidOperationException("WPF editor presentation hosts are missing.");
+                // Template realization must have a public zero-argument
+                // constructor so virtualized lists work after catalog load.
+                _ = new MP_FluidAssetRow();
                 var pages = Descendants(form).OfType<TabPage>().ToArray();
                 if (pages.Length != 5 || !pages.Any(page => page.Text == "集群 CP")
                     || pages.Any(page => page.Parent is not TabControl))
