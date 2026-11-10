@@ -321,6 +321,7 @@ public sealed class MP_FluidAssetRow : WC.Border
     private readonly WM.SolidColorBrush hoverBrush =
         MP_StudioTheme.Brush(0, MP_StudioTheme.Text);
     private bool selectedState;
+    private CatalogItem boundItem;
 
     public MP_FluidAssetRow()
     {
@@ -398,16 +399,23 @@ public sealed class MP_FluidAssetRow : WC.Border
 
     private void Fill()
     {
-        icon.Source = null;
-        if (DataContext is not CatalogItem item) return;
-        title.Text = item.Label;
-        def.Text = item.DefName;
-        detail.Text = item.Group + " · " + item.Pack;
-        ToolTip = item.Label + "\n" + item.DefName + "\n" + item.Pack;
-        // Recycler may reuse an earlier selected row; refresh safely.
-        selectedState = false;
-        hoverBrush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
-        hoverBrush.Color = MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text);
+        CatalogItem item = DataContext as CatalogItem;
+        if (!ReferenceEquals(boundItem, item))
+        {
+            // Loaded may fire again for the SAME recycled container. Preserve
+            // its image rather than blanking it on each fast scroll/host switch.
+            boundItem = item;
+            icon.Source = null;
+            if (item == null) return;
+            title.Text = item.Label;
+            def.Text = item.DefName;
+            detail.Text = item.Group + " · " + item.Pack;
+            ToolTip = item.Label + "\n" + item.DefName + "\n" + item.Pack;
+            selectedState = false;
+            hoverBrush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
+            hoverBrush.Color = MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text);
+        }
+        if (item == null) return;
         W.DependencyObject ancestor = this;
         while (ancestor != null && ancestor is not WC.ListBoxItem)
             ancestor = WM.VisualTreeHelper.GetParent(ancestor);
@@ -459,7 +467,7 @@ internal sealed class MP_WpfTextureCache
     private readonly Dictionary<string, WB.BitmapSource> cache =
         new(StringComparer.Ordinal);
     private readonly Queue<string> cacheOrder = new();
-    private const int MaxCachedThumbnails = 256;
+    private const int MaxCachedThumbnails = 768;
 
     internal void SetCatalog(Catalog catalog)
     {
@@ -484,21 +492,8 @@ internal sealed class MP_WpfTextureCache
                 LinkedGraphics.IsAtlas(bitmap, path)
                 ? LinkedGraphics.Source(bitmap.Width, bitmap.Height, 0)
                 : new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
-            using var stream = new MemoryStream();
-            if (src.Width != bitmap.Width || src.Height != bitmap.Height)
-            {
-                using System.Drawing.Bitmap crop = bitmap.Clone(src, PixelFormat.Format32bppArgb);
-                crop.Save(stream, ImageFormat.Png);
-            }
-            else bitmap.Save(stream, ImageFormat.Png);
-            stream.Position = 0;
-            var image = new WB.BitmapImage();
-            image.BeginInit();
-            image.CacheOption = WB.BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 96;
-            image.StreamSource = stream;
-            image.EndInit();
-            image.Freeze();
+            WB.BitmapSource image = MP_WpfThumbnailFactory.Create(bitmap, src);
+            if (image == null) return null;
             while (cacheOrder.Count >= MaxCachedThumbnails)
                 cache.Remove(cacheOrder.Dequeue());
             cacheOrder.Enqueue(key);

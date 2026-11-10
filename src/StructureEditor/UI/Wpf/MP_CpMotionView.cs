@@ -526,25 +526,12 @@ internal sealed class MP_CpMotionView : WC.UserControl
         if (bitmap == null) return null;
         try
         {
-            using var data = new MemoryStream();
             System.Drawing.Rectangle region = item.Linked && item.Icon == null &&
                 LinkedGraphics.IsAtlas(bitmap, path)
                 ? LinkedGraphics.Source(bitmap.Width, bitmap.Height, 0)
                 : new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
-            if (region.Width != bitmap.Width || region.Height != bitmap.Height)
-            {
-                using var cropped = bitmap.Clone(region, PixelFormat.Format32bppArgb);
-                cropped.Save(data, ImageFormat.Png);
-            }
-            else bitmap.Save(data, ImageFormat.Png);
-            data.Position = 0;
-            var image = new WB.BitmapImage();
-            image.BeginInit();
-            image.CacheOption = WB.BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 96;
-            image.StreamSource = data;
-            image.EndInit();
-            image.Freeze();
+            WB.BitmapSource image = MP_WpfThumbnailFactory.Create(bitmap, region);
+            if (image == null) return null;
             imageCache[path] = image;
             return image;
         }
