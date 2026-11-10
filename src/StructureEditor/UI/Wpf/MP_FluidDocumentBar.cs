@@ -18,7 +18,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     private readonly WC.StackPanel slots;
     private readonly WC.Border capsule;
     private readonly MP_LiltCursor travellingCursor;
-    private readonly List<(WC.Border Container, WC.TextBlock Title, WC.TextBlock CloseGlyph)> visuals = new();
+    private readonly List<(WC.Border Container, WC.TextBlock Title, System.Windows.Shapes.Path CloseGlyph)> visuals = new();
     private MP_DocumentVisualState[] current = Array.Empty<MP_DocumentVisualState>();
     private int active = -1;
     private bool ready;
@@ -132,14 +132,18 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                     Background = MP_StudioTheme.Brush(0, MP_StudioTheme.Text),
                     Cursor = WI.Cursors.Hand, ToolTip = "关闭结构"
                 };
-                var closeGlyph = new WC.TextBlock
+                // Draw X as vector strokes: Unifont glyph coverage must not
+                // determine whether the document's close action is visible.
+                var closeGlyph = new System.Windows.Shapes.Path
                 {
-                    Text = "×", FontSize = 19,
-                    FontFamily = MP_LiltTheme.WpfFont,
-                    Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Text),
+                    Data = WM.Geometry.Parse("M 3,3 L 13,13 M 13,3 L 3,13"),
+                    Stroke = MP_StudioTheme.Brush(MP_StudioTheme.Text),
+                    StrokeThickness = 1.8,
+                    StrokeStartLineCap = WM.PenLineCap.Square,
+                    StrokeEndLineCap = WM.PenLineCap.Square,
+                    Width = 16, Height = 16, Stretch = WM.Stretch.None,
                     HorizontalAlignment = W.HorizontalAlignment.Center,
                     VerticalAlignment = W.VerticalAlignment.Center,
-                    TextAlignment = W.TextAlignment.Center,
                     IsHitTestVisible = false
                 };
                 close.Child = closeGlyph;
@@ -221,7 +225,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                         : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 155);
                 // X must invert together with the active tab. Previously a
                 // light glyph on the light selection made Close invisible.
-                MP_WpfMotion.Tint((WM.SolidColorBrush)visuals[i].CloseGlyph.Foreground,
+                MP_WpfMotion.Tint((WM.SolidColorBrush)visuals[i].CloseGlyph.Stroke,
                     i == active
                         ? MP_StudioTheme.WpfColor(MP_StudioTheme.ActiveText)
                         : MP_StudioTheme.WpfColor(MP_StudioTheme.Text), 155);
