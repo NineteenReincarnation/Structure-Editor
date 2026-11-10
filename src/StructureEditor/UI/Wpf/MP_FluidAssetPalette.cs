@@ -72,6 +72,18 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
             UpdateSelection(true);
             if (list.SelectedItem is CatalogItem item) activate?.Invoke(item);
         };
+        // Clicking the already selected row must re-enter placement after the
+        // user switched to another editor tool.
+        list.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            W.DependencyObject current = e.OriginalSource as W.DependencyObject;
+            while (current != null && current is not WC.ListBoxItem)
+                current = WM.VisualTreeHelper.GetParent(current);
+            if (current is WC.ListBoxItem container &&
+                ReferenceEquals(container.DataContext, list.SelectedItem) &&
+                list.SelectedItem is CatalogItem selected)
+                activate?.Invoke(selected);
+        };
         list.PreviewMouseWheel += (_, e) =>
         {
             if (!MP_Motion.Enabled || scroller == null) return;
@@ -209,6 +221,13 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         }
         if (list.ItemContainerGenerator.ContainerFromIndex(selectedIndex) is not WC.ListBoxItem container)
         {
+            // Passive scrolling must never force the selected asset back into
+            // view. ScrollIntoView is reserved for explicit keyboard selection.
+            if (!animate || !IsVisible)
+            {
+                selection.Visibility = W.Visibility.Collapsed;
+                return;
+            }
             if (list.IsLoaded)
             {
                 list.ScrollIntoView(items[selectedIndex]);

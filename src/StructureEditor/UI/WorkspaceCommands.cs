@@ -24,13 +24,27 @@ public partial class MainForm
             }
         }
     }
-    internal static bool InputOwnsShortcut(Control input, Keys keyData) => input switch
+    internal static bool InputOwnsShortcut(Control input, Keys keyData)
     {
-        TextBoxBase text => !text.ReadOnly || (keyData & (Keys.Control | Keys.Alt)) != 0,
-        ComboBox combo => combo.DropDownStyle != ComboBoxStyle.DropDownList || combo.DroppedDown,
-        UpDownBase => true,
-        _ => false
-    };
+        // WPF's TextBox lives beyond ElementHost's HWND boundary, so native
+        // ActiveControl/KeyPreview cannot classify it as a WinForms TextBoxBase.
+        // Never steal editing keys or Ctrl+A from a WPF search field.
+        for (Control current = input; current != null; current = current.Parent)
+        {
+            if (current is not System.Windows.Forms.Integration.ElementHost) continue;
+            return System.Windows.Input.Keyboard.FocusedElement is
+                System.Windows.Controls.Primitives.TextBoxBase or
+                System.Windows.Controls.PasswordBox or
+                System.Windows.Controls.ComboBox;
+        }
+        return input switch
+        {
+            TextBoxBase text => !text.ReadOnly || (keyData & (Keys.Control | Keys.Alt)) != 0,
+            ComboBox combo => combo.DropDownStyle != ComboBoxStyle.DropDownList || combo.DroppedDown,
+            UpDownBase => true,
+            _ => false
+        };
+    }
     private bool HandleModeShortcut(Keys keyData)
     {
         if (canvas.HasStamp && (keyData == Keys.Q || keyData == Keys.E))
