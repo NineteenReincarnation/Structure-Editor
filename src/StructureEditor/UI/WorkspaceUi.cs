@@ -143,25 +143,33 @@ public partial class MainForm
             BackColor = MP_StudioTheme.Toolbar, ColumnCount = 5
         };
         MP_SmoothLayout layerBar = MP_canvasToolbar;
+        layerBar.ColumnStyles.Add(new(SizeType.Absolute, 154));
+        layerBar.ColumnStyles.Add(new(SizeType.Absolute, 89));
         layerBar.ColumnStyles.Add(new(SizeType.Absolute, 132));
-        layerBar.ColumnStyles.Add(new(SizeType.AutoSize));
-        layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124));
-        layerBar.ColumnStyles.Add(new(SizeType.Absolute, 110));
+        layerBar.ColumnStyles.Add(new(SizeType.Absolute, 112));
         layerBar.ColumnStyles.Add(new(SizeType.Percent, 100));
         ToolStrip documentActions = new()
         {
             Dock = DockStyle.Fill, AutoSize = false, GripStyle = ToolStripGripStyle.Hidden,
             CanOverflow = false, BackColor = layerBar.BackColor,
-            Margin = Padding.Empty, Padding = new Padding(4, 3, 0, 3)
+            Margin = Padding.Empty, Padding = new Padding(3, 3, 0, 3)
         };
         AddTool(documentActions, "新建", NewDocument);
         AddTool(documentActions, "打开…", OpenDocument);
+        // Both commands remain accessible on a narrow canvas.
+        ToolStripItem createAction = documentActions.Items[0];
+        ToolStripItem openAction = documentActions.Items[1];
+        createAction.ToolTipText = "新建结构  Ctrl+N";
+        openAction.ToolTipText = "打开结构  Ctrl+O";
         layerBar.Controls.Add(documentActions, 0, 0);
         Label MP_layerCaption = new() { Text = "编辑图层", AutoSize = true,
-            Anchor = AnchorStyles.Left, Margin = new(10, 0, 10, 0),
+            Anchor = AnchorStyles.Left, Margin = new(6, 0, 6, 0),
             ForeColor = muted };
         layerBar.Controls.Add(MP_layerCaption, 1, 0);
-        MP_editLayerSelector = new MP_DarkComboBox() { Dock = DockStyle.Fill, Margin = new(0, 5, 0, 5),
+        MP_editLayerSelector = new MP_DarkComboBox()
+        {
+            Dock = DockStyle.Fill, Margin = new(0, 4, 6, 4),
+            AccessibleName = "编辑图层",
             DropDownStyle = ComboBoxStyle.DropDownList,
             BackColor = MP_StudioTheme.Input, ForeColor = text };
         MP_editLayerSelector.Items.AddRange(new object[] { "全部", "建筑", "单位", "地形" }); MP_editLayerSelector.SelectedIndex = 0;
@@ -174,7 +182,7 @@ public partial class MainForm
         {
             Dock = DockStyle.Fill, GripStyle = ToolStripGripStyle.Hidden,
             BackColor = layerBar.BackColor, Margin = Padding.Empty,
-            Padding = new Padding(2, 3, 0, 3)
+            Padding = new Padding(0, 3, 0, 3)
         };
         ToolStripDropDownButton MP_visibleLayers = new("显示图层")
         {
@@ -216,22 +224,26 @@ public partial class MainForm
         {
             int width = layerBar.ClientSize.Width;
             if (width <= 0) return;
-            bool narrow = width < 395;
-            bool compact = width < 480;
-            int actionsWidth = narrow ? 101 : compact ? 116 : 132;
-            int selectorWidth = narrow ? 96 : compact ? 112 : 124;
-            int visibilityWidth = narrow ? 77 : compact ? 94 : 110;
+            // Group related controls from left to right. Never let a
+            // fixed-width group overflow onto the canvas or hide Open.
+            bool tiny = width < 315;
+            bool compact = width < 530;
+            int actionsWidth = tiny ? 80 : compact ? 109 : 154;
+            int captionWidth = compact ? 0 : 89;
+            int selectorWidth = tiny ? 93 : compact ? 109 : 132;
+            int visibilityWidth = tiny ? 78 : compact ? 96 : 112;
             layerBar.SuspendLayout();
             try
             {
                 layerBar.ColumnStyles[0].Width = actionsWidth;
-                layerBar.ColumnStyles[1].SizeType =
-                    compact ? SizeType.Absolute : SizeType.AutoSize;
-                if (compact) layerBar.ColumnStyles[1].Width = 0;
+                layerBar.ColumnStyles[1].SizeType = SizeType.Absolute;
+                layerBar.ColumnStyles[1].Width = captionWidth;
                 MP_layerCaption.Visible = !compact;
                 layerBar.ColumnStyles[2].Width = selectorWidth;
                 layerBar.ColumnStyles[3].Width = visibilityWidth;
-                MP_visibleLayers.Text = narrow ? "图层" : "显示图层";
+                createAction.Text = tiny ? "新" : compact ? "新建" : "新建";
+                openAction.Text = compact ? "开" : "打开…";
+                MP_visibleLayers.Text = compact ? "图层" : "显示图层";
             }
             finally { layerBar.ResumeLayout(false); }
         }
