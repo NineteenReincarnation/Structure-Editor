@@ -23,6 +23,11 @@ internal static class MP_WpfMotion
         bool elastic = true)
     {
         if (transform == null) return;
+        // Compare with the animation BASE (last destination), not the
+        // animated current value. Reapplying an unchanged destination
+        // used to cancel the active clock and produce a visible jump.
+        double oldTarget = (double)transform.GetAnimationBaseValue(axis);
+        if (Math.Abs(oldTarget - destination) < .2) return;
         double origin = (double)transform.GetValue(axis);
         transform.BeginAnimation(axis, null);
         transform.SetValue(axis, destination);
@@ -35,6 +40,9 @@ internal static class MP_WpfMotion
         int ms = Selection)
     {
         if (border == null) return;
+        double oldTarget = (double)border.GetAnimationBaseValue(
+            W.FrameworkElement.WidthProperty);
+        if (Math.Abs(oldTarget - destination) < .2) return;
         double origin = border.Width;
         border.BeginAnimation(W.FrameworkElement.WidthProperty, null);
         border.Width = destination;
@@ -48,7 +56,10 @@ internal static class MP_WpfMotion
         int ms = Hover)
     {
         if (brush == null || brush.IsFrozen) return;
-        var origin = brush.Color;
+        WM.Color priorTarget = (WM.Color)brush.GetAnimationBaseValue(
+            WM.SolidColorBrush.ColorProperty);
+        if (priorTarget == destination) return;
+        WM.Color origin = brush.Color;
         brush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
         brush.Color = destination;
         if (!MP_Motion.Enabled || ms <= 0 || origin == destination) return;
@@ -61,6 +72,9 @@ internal static class MP_WpfMotion
         double destination, int ms = 230)
     {
         if (proxy == null) return;
+        double oldTarget = (double)proxy.GetAnimationBaseValue(
+            MP_ScrollOffsetProxy.OffsetProperty);
+        if (Math.Abs(oldTarget - destination) < .3) return;
         double origin = proxy.Offset;
         proxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
         proxy.Offset = destination;
