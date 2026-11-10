@@ -94,7 +94,7 @@ internal sealed class MP_SectionTabs : UserControl
         content.Controls.Count == pages.Count
         && surfaces.All(surface => surface.Parent == content)
         && (selection < 0 || ReferenceEquals(content.ActivePage, surfaces[selection]))
-        && surfaces.Count(surface => surface.Visible) == (selection < 0 ? 0 : 1);
+        && surfaces.Count(page => page.MP_IsActive) == (selection < 0 ? 0 : 1);
 }
 
 // WinForms parent uses an opaque double-buffered background. We avoid
@@ -103,6 +103,9 @@ internal sealed class MP_SectionTabs : UserControl
 internal sealed class MP_PageSurface : Panel
 {
     internal string Title { get; }
+    // Visibility returns false for every child before MainForm.Show().
+    // Track page selection explicitly so startup checks do not misread it.
+    internal bool MP_IsActive { get; set; }
     internal MP_PageSurface(string title) => Title = title;
 }
 
@@ -125,11 +128,16 @@ internal sealed class MP_StablePageHost : Panel
         {
             // Swap first, then show the new page; never clear the host,
             // dispose pages or invalidate the whole editor window.
-            if (ActivePage != null) ActivePage.Visible = false;
+            if (ActivePage != null)
+            {
+                ActivePage.MP_IsActive = false;
+                ActivePage.Visible = false;
+            }
             ActivePage = target;
             if (target != null)
             {
                 target.Bounds = ClientRectangle;
+                target.MP_IsActive = true;
                 target.Visible = true;
                 target.BringToFront();
             }
