@@ -184,12 +184,10 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         finally { selecting = false; }
         UpdateSelection(false);
         RefreshSelectedRows();
-        if (IsVisible && MP_Motion.Enabled)
-        {
-            list.BeginAnimation(OpacityProperty,
-                new WA.DoubleAnimation(.72, 1d, TimeSpan.FromMilliseconds(165))
-                { EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut } });
-        }
+        // ItemSource replacement already invalidates realized containers.
+        // A whole-list opacity transition doubles the repaint and flickers.
+        list.BeginAnimation(OpacityProperty, null);
+        list.Opacity = 1;
         RefreshVisible();
     }
 
@@ -214,11 +212,10 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
 
     internal void PlayEntrance()
     {
-        if (!IsVisible) return;
-        if (!MP_Motion.Enabled) { Opacity = 1; return; }
-        BeginAnimation(OpacityProperty,
-            new WA.DoubleAnimation(.55, 1d, TimeSpan.FromMilliseconds(185))
-            { EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut } });
+        // ElementHost page switches are instant; never fade the entire
+        // WPF subtree (text and thumbnails otherwise flash on every toggle).
+        BeginAnimation(OpacityProperty, null);
+        Opacity = 1;
     }
 
     internal void RefreshVisible()

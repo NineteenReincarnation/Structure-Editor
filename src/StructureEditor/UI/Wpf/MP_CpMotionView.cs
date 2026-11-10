@@ -31,7 +31,6 @@ internal sealed class MP_CpMotionView : WC.UserControl
     private readonly WM.TranslateTransform entranceTransform = new();
     private readonly MP_ScrollOffsetProxy scrollProxy;
     private readonly MP_LiltScroll scrollMotion;
-    private readonly MP_LiltWaveScroll rowWave = new();
     private readonly System.Windows.Threading.DispatcherTimer filterDelay = new()
     {
         Interval = TimeSpan.FromMilliseconds(135)
@@ -152,14 +151,11 @@ internal sealed class MP_CpMotionView : WC.UserControl
         };
         scrollProxy = new MP_ScrollOffsetProxy(scroller);
         // Keep rubber-band motion clipped by the ScrollViewer viewport.
-        scrollMotion = new MP_LiltScroll(scrollProxy, content);
+        scrollMotion = new MP_LiltScroll(scrollProxy);
         scroller.ScrollChanged += (_, e) =>
         {
             if (e.ExtentHeightChange != 0 || e.ViewportHeightChange != 0)
                 scrollTarget = Math.Clamp(scrollTarget, 0, Math.Max(0, scroller.ScrollableHeight));
-            if (Math.Abs(e.VerticalChange) > .001)
-                rowWave.Shift(rows.Children.OfType<W.UIElement>(), currentIndex,
-                    e.VerticalChange);
             RefreshImages();
             UpdateScrollIndicator();
         };
@@ -301,20 +297,10 @@ internal sealed class MP_CpMotionView : WC.UserControl
 
     internal void PlayEntrance()
     {
-        if (!IsVisible) return;
-        if (!MP_Motion.Enabled) { Opacity = 1; entranceTransform.Y = 0; return; }
+        BeginAnimation(OpacityProperty, null);
+        entranceTransform.BeginAnimation(WM.TranslateTransform.YProperty, null);
         Opacity = 1;
-        entranceTransform.Y = 9;
-        BeginAnimation(OpacityProperty, new WA.DoubleAnimation(0.55, 1.0,
-            TimeSpan.FromMilliseconds(200))
-        {
-            EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut }
-        });
-        entranceTransform.BeginAnimation(WM.TranslateTransform.YProperty,
-            new WA.DoubleAnimation(9d, 0d, TimeSpan.FromMilliseconds(235))
-            {
-                EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut }
-            });
+        entranceTransform.Y = 0;
     }
 
     private void Filter()
@@ -327,7 +313,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
         visible = next;
         images.Clear();
         rowText.Clear();
-        rowWave.Reset();
+        rows.BeginAnimation(OpacityProperty, null);
+        rows.Opacity = 1;
         rows.Children.Clear();
         double max = Math.Max(1, next.Length == 0
             ? 0 : next.Max(item => item.ClusterCombatPower.GetValueOrDefault()));
@@ -347,12 +334,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         scrollTarget = 0;
         scrollMotion.Jump(0);
         RefreshImages();
-        if (MP_Motion.Enabled && IsVisible)
-        {
-            rows.Opacity = 1;
-            rows.BeginAnimation(OpacityProperty,
-                new WA.DoubleAnimation(0.67, 1d, TimeSpan.FromMilliseconds(150)));
-        }
+        // Do not fade all rows whenever the catalog/search changes.
     }
 
     private WC.Border CreateRow(CatalogItem item, int index, double maxCp)

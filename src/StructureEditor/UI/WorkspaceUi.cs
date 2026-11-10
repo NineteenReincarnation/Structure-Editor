@@ -76,10 +76,15 @@ public partial class MainForm
         // Document tabs take remaining width, and their own scroll viewer
         // keeps the active document visible when the action strip grows.
 
-        librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 4, SplitterDistance = 282, BackColor = MP_StudioTheme.Divider };
-        inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 284), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 4, SplitterDistance = Math.Max(330, ClientSize.Width - 664), BackColor = librarySplit.BackColor };
+        librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill,
+            FixedPanel = FixedPanel.Panel1, SplitterWidth = 4,
+            SplitterDistance = 328, BackColor = MP_StudioTheme.Divider };
+        inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 332), ClientSize.Height),
+            Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2,
+            SplitterWidth = 4, SplitterDistance = Math.Max(320, ClientSize.Width - 714),
+            BackColor = librarySplit.BackColor };
         librarySplit.Panel2.Controls.Add(inspectorSplit);
-        librarySplit.Panel1MinSize = 258; librarySplit.Panel2MinSize = 540;
+        librarySplit.Panel1MinSize = 286; librarySplit.Panel2MinSize = 600;
         inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 300;
 
         Panel library = new() { Dock = DockStyle.Fill, BackColor = surface,
@@ -252,11 +257,8 @@ public partial class MainForm
         }
         TableLayoutPanel objects = Page("对象"), metadata = Page("工程");
         TableLayoutPanel exports = metadata;
-        Row(objects, new Label
-        {
-            Text = "OBJECT  /  对象属性", AutoSize = true,
-            ForeColor = MP_StudioTheme.Accent, Font = MP_LiltTheme.CreateGdiFont(8)
-        });
+        // "OBJECT / 对象属性" repeated the tab title and pushed the actual
+        // selected object toward the header. Keep an uncluttered first row.
         selectedName.Font = new(Font, FontStyle.Bold);
         // Content may wrap to three lines for long DefNames at 125/150% DPI.
         // Re-measure when text or available width changes instead of

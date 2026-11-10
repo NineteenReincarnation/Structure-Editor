@@ -85,10 +85,24 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     internal void SetTabs(MP_DocumentVisualState[] next)
     {
         next ??= Array.Empty<MP_DocumentVisualState>();
+        // Dirty-marker/title changes must not destroy the entire document
+        // strip or restart an entry fade. Reuse existing tab visuals.
         bool structureChanged = next.Length != current.Length;
         for (int i = 0; !structureChanged && i < next.Length; i++)
-            structureChanged = next[i].Title != current[i].Title
-                || next[i].Index != current[i].Index;
+            structureChanged = next[i].Index != current[i].Index;
+        bool titlesChanged = false;
+        if (!structureChanged)
+        {
+            for (int i = 0; i < next.Length; i++)
+            {
+                if (next[i].Title == current[i].Title) continue;
+                titlesChanged = true;
+                visuals[i].Title.Text = next[i].Title;
+                double w = next[i].Title.Sum(c => c > 127 ? 16 : 8.5) + 43;
+                visuals[i].Container.Width = Math.Clamp(w, 102, 240);
+                visuals[i].Container.ToolTip = next[i].Title;
+            }
+        }
         current = next;
         if (structureChanged)
         {
@@ -175,12 +189,12 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                     invoke?.Invoke(entry.Index, true);
                     e.Handled = true;
                 };
+                container.ToolTip = entry.Title;
                 slots.Children.Add(container);
                 visuals.Add((container, text));
             }
-            if (MP_Motion.Enabled && IsVisible)
-                slots.BeginAnimation(OpacityProperty,
-                    new WA.DoubleAnimation(.7, 1d, TimeSpan.FromMilliseconds(145)));
+            slots.BeginAnimation(OpacityProperty, null);
+            slots.Opacity = 1;
         }
         int nextActive = Array.FindIndex(next, tab => tab.Active);
         if (nextActive != active || structureChanged)
@@ -196,8 +210,10 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                     i == active ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
                         : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 155);
             }
-            Move(!structureChanged);
+            Move(!structureChanged && !titlesChanged);
         }
+        else if (titlesChanged)
+            Move(false);
     }
 
     private void Move(bool animate)
