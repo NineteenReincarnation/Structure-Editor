@@ -8,6 +8,7 @@ internal sealed class MP_SectionTabs : UserControl
 {
     private readonly MP_StablePageHost content;
     private readonly ElementHost header;
+    private readonly TableLayoutPanel navigationLayout;
     private readonly MP_FluidTabBar bar;
     private readonly List<TabPage> pages = new();
     private readonly List<MP_PageSurface> surfaces = new();
@@ -43,20 +44,52 @@ internal sealed class MP_SectionTabs : UserControl
             Child = bar, Dock = DockStyle.Fill,
             BackColor = MP_StudioTheme.Toolbar, TabStop = false
         };
-        TableLayoutPanel MP_navigationLayout = new()
+        navigationLayout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2,
             Margin = Padding.Empty, Padding = Padding.Empty,
             BackColor = BackColor, CellBorderStyle = TableLayoutPanelCellBorderStyle.None
         };
-        MP_navigationLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        MP_navigationLayout.RowStyles.Add(
+        navigationLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        // WinForms table rows are physical pixels while WPF tab height is
+        // in DIPs. A fixed 40px row clips the 40-DIP tabs at 125%-200% DPI.
+        navigationLayout.RowStyles.Add(
             new RowStyle(SizeType.Absolute, MP_StudioTheme.HeaderHeight));
-        MP_navigationLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        MP_navigationLayout.Controls.Add(header, 0, 0);
-        MP_navigationLayout.Controls.Add(content, 0, 1);
-        Controls.Add(MP_navigationLayout);
+        navigationLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        navigationLayout.Controls.Add(header, 0, 0);
+        navigationLayout.Controls.Add(content, 0, 1);
+        Controls.Add(navigationLayout);
+        UpdateHeaderDpiHeight();
     }
+
+    // WPF's 40 DIP tab strip must have an equally tall physical WinForms row.
+    // The small reserve prevents rounded glyph descenders touching the page.
+    private void UpdateHeaderDpiHeight()
+    {
+        if (navigationLayout == null) return;
+        float factor = Math.Max(1f, DeviceDpi / 96f);
+        float pixels = (float)Math.Ceiling(MP_StudioTheme.HeaderHeight * factor) + 3;
+        RowStyle style = navigationLayout.RowStyles[0];
+        if (Math.Abs(style.Height - pixels) < 0.5f) return;
+        style.Height = pixels;
+        navigationLayout.PerformLayout();
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        UpdateHeaderDpiHeight();
+    }
+
+    protected override void OnDpiChangedAfterParent(EventArgs e)
+    {
+        base.OnDpiChangedAfterParent(e);
+        UpdateHeaderDpiHeight();
+    }
+
+    internal bool MP_HeaderFitsDpi =>
+        navigationLayout != null && navigationLayout.RowStyles[0].Height + 1 >=
+        MP_StudioTheme.HeaderHeight * Math.Max(1f, DeviceDpi / 96f);
 
     internal bool SelectPage(TabPage page)
     {
