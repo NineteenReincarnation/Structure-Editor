@@ -15,6 +15,9 @@
     <ApplicationIcon Condition="Exists('../../branding/StructureEditor.ico')">../../branding/StructureEditor.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+  <ItemGroup>
+    <Using Include="System.IO" />
+  </ItemGroup>
   <ItemGroup Condition="Exists('$(MPClusterNamingSource)')">
     <Compile Remove="Compatibility/MP_ClusterNaming.cs" />
     <Compile Include="$(MPClusterNamingSource)" Link="Compatibility/Shared/MP_ClusterNaming.cs" />

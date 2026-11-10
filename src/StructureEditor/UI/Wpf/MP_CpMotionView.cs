@@ -42,7 +42,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         brush.Freeze();
         return brush;
     }
-    private static readonly WM.SolidColorBrush Background = Brush(Color(33, 43, 52));
+    private static readonly WM.SolidColorBrush SurfaceBrush = Brush(Color(33, 43, 52));
     private static readonly WM.SolidColorBrush Secondary = Brush(Color(157, 176, 188));
     private static readonly WM.SolidColorBrush MainText = Brush(Color(224, 234, 240));
     private static readonly WM.SolidColorBrush Accent = Brush(Color(173, 228, 240));
@@ -50,11 +50,11 @@ internal sealed class MP_CpMotionView : WC.UserControl
     internal MP_CpMotionView(Action<CatalogItem> onActivate)
     {
         activate = onActivate;
-        this.Background = Background; // visual resource shared across lists
+        this.Background = SurfaceBrush; // visual resource shared across lists
         Focusable = true;
         var root = new WC.Grid
         {
-            Background = Background,
+            Background = SurfaceBrush,
             Margin = new W.Thickness(7, 8, 7, 6),
             RenderTransform = entranceTransform
         };
@@ -122,7 +122,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         scroller = new WC.ScrollViewer
         {
             Content = content,
-            Background = Background,
+            Background = SurfaceBrush,
             VerticalScrollBarVisibility = WC.ScrollBarVisibility.Hidden,
             HorizontalScrollBarVisibility = WC.ScrollBarVisibility.Disabled,
             CanContentScroll = false,
