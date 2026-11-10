@@ -35,6 +35,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly Dictionary<string, WM.SolidColorBrush> leafInks = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WM.SolidColorBrush> leafFills = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WC.Border> fileRows = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, WM.SolidColorBrush> fileGlyphInks = new(StringComparer.Ordinal);
     private MP_StructureViewEntry[] visibleEntries = Array.Empty<MP_StructureViewEntry>();
     private readonly HashSet<string> collapsed = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<MP_StructureViewEntry> entries = Array.Empty<MP_StructureViewEntry>();
@@ -266,8 +267,10 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
 
     internal void ClearSearch()
     {
-        filterDelay.Stop();
         search.Clear();
+        // TextChanged starts the timer. Stop it AFTER clearing so a second
+        // delayed rebuild cannot repaint the list again 150ms later.
+        filterDelay.Stop();
         Rebuild();
     }
 
@@ -317,6 +320,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         leafInks.Clear();
         leafFills.Clear();
         fileRows.Clear();
+        fileGlyphInks.Clear();
 
         foreach (var group in visible.GroupBy(e => IsProject(e.File) ? "项目结构" : "其他位置"))
         {
@@ -527,6 +531,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         content.ColumnDefinitions.Add(new WC.ColumnDefinition
             { Width = new W.GridLength(1, W.GridUnitType.Star) });
         var marker = MP_StructureGlyph(false);
+        fileGlyphInks[entry.Id] = (WM.SolidColorBrush)
+            ((System.Windows.Shapes.Path)((WC.Viewbox)marker).Child).Stroke;
         var ink = MP_StudioTheme.Brush(MP_StudioTheme.Text);
         leafInks[entry.Id] = ink;
         leafFills[entry.Id] = (WM.SolidColorBrush)row.Background;
@@ -605,6 +611,10 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 ((WM.SolidColorBrush)border.BorderBrush).Color =
                     selected ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
                     : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text);
+            if (fileGlyphInks.TryGetValue(id, out var glyphInk))
+                glyphInk.Color = selected
+                    ? MP_StudioTheme.WpfColor(MP_StudioTheme.ActiveText)
+                    : MP_StudioTheme.WpfColor(MP_StudioTheme.Text);
         }
     }
 
@@ -614,7 +624,9 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         active = entry;
         previewTitle.Text = entry.Label;
         previewDetail.Text = entry.HasXml ? "JSON / XML" : "结构";
-        RefreshSelectedInk();
+        // Instant inversion is both clearer and more stable than animating
+        // the fill/text separately while the WPF host swaps pages.
+        RefreshSelectedInk(false);
         slider.Visibility = W.Visibility.Collapsed;
         selectedCallback?.Invoke(entry.File, entry.Id);
     }
