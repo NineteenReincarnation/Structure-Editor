@@ -26,6 +26,10 @@ internal sealed class MP_CpMotionView : WC.UserControl
     private readonly WM.TranslateTransform selectionTransform = new();
     private readonly WM.TranslateTransform entranceTransform = new();
     private readonly MP_ScrollOffsetProxy scrollProxy;
+    private readonly System.Windows.Threading.DispatcherTimer filterDelay = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(135)
+    };
     private readonly List<(CatalogItem Item, WC.Image Image)> images = new();
     private readonly Dictionary<string, WB.BitmapSource> imageCache = new(StringComparer.Ordinal);
     private Catalog source;
@@ -79,10 +83,12 @@ internal sealed class MP_CpMotionView : WC.UserControl
             FontFamily = search.FontFamily, FontSize = 12.5,
             IsHitTestVisible = false
         };
+        filterDelay.Tick += (_, _) => { filterDelay.Stop(); Filter(); };
         search.TextChanged += (_, _) =>
         {
             placeholder.Visibility = search.Text.Length == 0 ? W.Visibility.Visible : W.Visibility.Collapsed;
-            Filter();
+            filterDelay.Stop();
+            filterDelay.Start();
         };
         searchFrame.Children.Add(search);
         searchFrame.Children.Add(placeholder);
@@ -134,6 +140,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             if (e.ExtentHeightChange != 0 || e.ViewportHeightChange != 0)
                 scrollTarget = Math.Clamp(scrollTarget, 0, Math.Max(0, scroller.ScrollableHeight));
+            RefreshImages();
         };
         scroller.PreviewMouseWheel += (_, e) =>
         {
@@ -147,6 +154,13 @@ internal sealed class MP_CpMotionView : WC.UserControl
         root.Children.Add(scroller);
         Content = root;
         PreviewKeyDown += OnPreviewKeyDown;
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible) return;
+            RefreshImages();
+            PlayEntrance();
+        };
+        Unloaded += (_, _) => filterDelay.Stop();
     }
 
     private void OnPreviewKeyDown(object sender, WI.KeyEventArgs e)
@@ -180,11 +194,14 @@ internal sealed class MP_CpMotionView : WC.UserControl
 
     internal void RefreshImages()
     {
-        if (source?.Textures == null || !IsVisible) return;
-        foreach (var (item, image) in images)
+        if (source?.Textures == null || !IsVisible || scroller.ViewportHeight <= 0) return;
+        int first = Math.Max(0, (int)(scroller.VerticalOffset / RowHeight) - 1);
+        int last = Math.Min(images.Count,
+            (int)Math.Ceiling((scroller.VerticalOffset + scroller.ViewportHeight) / RowHeight) + 1);
+        for (int i = first; i < last; i++)
         {
-            if (image.Source == null)
-                image.Source = Thumbnail(item);
+            var (item, image) = images[i];
+            if (image.Source == null) image.Source = Thumbnail(item);
         }
     }
 
@@ -235,6 +252,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
         scrollProxy.Offset = 0;
         scroller.ScrollToVerticalOffset(0);
+        RefreshImages();
         if (MP_Motion.Enabled && IsVisible)
         {
             rows.Opacity = 1;
@@ -268,7 +286,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
             Width = 38, Height = 38,
             HorizontalAlignment = W.HorizontalAlignment.Left,
             VerticalAlignment = W.VerticalAlignment.Center,
-            Stretch = WM.Stretch.Uniform, Source = Thumbnail(item),
+            Stretch = WM.Stretch.Uniform,
             SnapsToDevicePixels = true
         };
         images.Add((item, icon));
@@ -327,9 +345,10 @@ internal sealed class MP_CpMotionView : WC.UserControl
 
         row.MouseEnter += (_, _) =>
         {
-            AnimateColor((WM.SolidColorBrush)row.Background, Color(0, 0, 0, 0),
-                Color(45, 67, 99, 113), 140);
-            AnimateMove((WM.TranslateTransform)row.RenderTransform, 0, 2, 135);
+            AnimateColor((WM.SolidColorBrush)row.Background,
+                ((WM.SolidColorBrush)row.Background).Color, Color(45, 67, 99, 113), 140);
+            AnimateMove((WM.TranslateTransform)row.RenderTransform,
+                ((WM.TranslateTransform)row.RenderTransform).X, 2, 135);
         };
         row.MouseLeave += (_, _) =>
         {
