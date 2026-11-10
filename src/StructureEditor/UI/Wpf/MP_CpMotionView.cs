@@ -118,8 +118,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
         rows = new WC.StackPanel { Orientation = WC.Orientation.Vertical };
         selectionVisual = new WC.Border
         {
-            Background = Brush(Color(207, 135, 211, 227)),
-            BorderBrush = Brush(Color(141, 120, 195, 212)),
+            Background = Brush(Color(0, 0, 0, 0)),
+            BorderBrush = Brush(Color(200, 188, 228, 249)),
             BorderThickness = new W.Thickness(1), CornerRadius = new W.CornerRadius(0),
             Margin = new W.Thickness(2, 3, 2, 0), Height = RowHeight - 6,
             VerticalAlignment = W.VerticalAlignment.Top,
@@ -358,7 +358,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             Height = RowHeight - 2,
             Margin = new W.Thickness(0, 1, 0, 1),
-            CornerRadius = new W.CornerRadius(4),
+            CornerRadius = new W.CornerRadius(0),
             Background = new WM.SolidColorBrush(Color(0, 0, 0, 0)),
             Cursor = WI.Cursors.Hand,
             ToolTip = $"{item.ClusterWikiName ?? item.Label}\n{item.DefName}\n{item.Pack} · {(item.ClusterCombatPower.HasValue ? item.ClusterCombatPower.Value.ToString("0.##", CultureInfo.InvariantCulture) + " CP" : "未配置 CP")}",
@@ -391,7 +391,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             Text = item.ClusterWikiName ?? item.Label, Foreground = nameColor,
             TextTrimming = W.TextTrimming.CharacterEllipsis,
-            FontFamily = search.FontFamily, FontSize = 13,
+            FontFamily = search.FontFamily, FontSize = 16,
             VerticalAlignment = W.VerticalAlignment.Center
         };
         WC.Grid.SetRow(name, 0); WC.Grid.SetColumn(name, 1); body.Children.Add(name);
@@ -402,7 +402,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         var def = new WC.TextBlock
         {
             Text = item.DefName, Foreground = defColor,
-            FontFamily = search.FontFamily, FontSize = 11,
+            FontFamily = search.FontFamily, FontSize = 14,
             VerticalAlignment = W.VerticalAlignment.Center,
             TextTrimming = W.TextTrimming.CharacterEllipsis
         };
@@ -411,7 +411,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
             Text = item.ClusterCombatPower.HasValue
                 ? item.ClusterCombatPower.Value.ToString("0.##", CultureInfo.InvariantCulture) + " CP" : "—",
             Foreground = cpColor, Margin = new W.Thickness(7, 0, 0, 0),
-            FontFamily = search.FontFamily, FontSize = 11.2,
+            FontFamily = search.FontFamily, FontSize = 14,
             VerticalAlignment = W.VerticalAlignment.Center
         };
         WC.Grid.SetColumn(cp, 1);
@@ -440,6 +440,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
 
         row.MouseEnter += (_, _) =>
         {
+            if (currentIndex == index) return;
             AnimateColor((WM.SolidColorBrush)row.Background,
                 ((WM.SolidColorBrush)row.Background).Color, Color(45, 67, 99, 113), 140);
             AnimateMove((WM.TranslateTransform)row.RenderTransform,
@@ -447,6 +448,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         };
         row.MouseLeave += (_, _) =>
         {
+            if (currentIndex == index) return;
             AnimateColor((WM.SolidColorBrush)row.Background,
                 ((WM.SolidColorBrush)row.Background).Color, Color(0, 0, 0, 0), 115);
             AnimateMove((WM.TranslateTransform)row.RenderTransform,
@@ -477,6 +479,11 @@ internal sealed class MP_CpMotionView : WC.UserControl
         for (int i = 0; i < rowText.Count; i++)
         {
             bool active = i == selectedIndex;
+            if (i < rows.Children.Count &&
+                rows.Children[i] is WC.Border row)
+                MP_WpfMotion.Tint((WM.SolidColorBrush)row.Background,
+                    active ? Color(175, 222, 245)
+                        : Color(0, 0, 0, 0), 155);
             MP_WpfMotion.Tint(rowText[i].Name,
                 active ? Color(23, 54, 64) : Color(224, 234, 240), 160);
             MP_WpfMotion.Tint(rowText[i].Def,

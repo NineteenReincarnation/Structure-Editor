@@ -75,7 +75,8 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             HorizontalAlignment = W.HorizontalAlignment.Left,
             VerticalAlignment = W.VerticalAlignment.Center,
             CornerRadius = new W.CornerRadius(0),
-            Background = new WM.SolidColorBrush(ActiveBackground),
+            // Travelling lilt edge never paints over labels on other tabs.
+            Background = new WM.SolidColorBrush(WM.Colors.Transparent),
             BorderBrush = new WM.SolidColorBrush(WM.Color.FromRgb(202, 244, 249)),
             BorderThickness = new W.Thickness(.8),
             IsHitTestVisible = false
@@ -139,8 +140,11 @@ internal sealed class MP_FluidTabBar : WC.UserControl
                     WM.Color.FromArgb(52, 86, 154, 177), 120);
         };
         host.MouseLeave += (_, _) =>
-            MP_WpfMotion.Tint((WM.SolidColorBrush)host.Background,
-                WM.Color.FromArgb(0, 86, 154, 177), 120);
+        {
+            if (index != active)
+                MP_WpfMotion.Tint((WM.SolidColorBrush)host.Background,
+                    WM.Color.FromArgb(0, 86, 154, 177), 120);
+        };
         host.MouseLeftButtonDown += (_, e) =>
         {
             travellingCursor.Press();
@@ -171,9 +175,10 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             MP_WpfMotion.Tint(tabs[i].Foreground,
                 i == index ? ActiveText : Muted, 145);
             MP_LcdVisual.GlowSelected(tabs[i].Glow, i == index);
-            if (i == index)
-                MP_WpfMotion.Tint((WM.SolidColorBrush)tabs[i].Host.Background,
-                    WM.Color.FromArgb(0, 111, 183, 205), 110);
+            // Only the active item's own background is inverted.
+            MP_WpfMotion.Tint((WM.SolidColorBrush)tabs[i].Host.Background,
+                i == index ? ActiveBackground
+                    : WM.Color.FromArgb(0, 111, 183, 205), 145);
         }
         Position(true);
     }

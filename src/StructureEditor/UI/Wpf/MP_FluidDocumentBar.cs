@@ -47,8 +47,8 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
             VerticalAlignment = W.VerticalAlignment.Center,
             HorizontalAlignment = W.HorizontalAlignment.Left,
             CornerRadius = new W.CornerRadius(0),
-            Background = Brush(255, 188, 228, 249),
-            BorderBrush = Brush(143, 145, 220, 232),
+            Background = Brush(0, 0, 0, 0),
+            BorderBrush = Brush(255, 188, 228, 249),
             BorderThickness = new W.Thickness(1),
             Visibility = W.Visibility.Collapsed,
             IsHitTestVisible = false
@@ -143,12 +143,18 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                     Cursor = WI.Cursors.Hand,
                     Child = content
                 };
-                container.MouseEnter += (_, _) => AnimateColor(
-                    (WM.SolidColorBrush)container.Background,
-                    WM.Color.FromArgb(42, 123, 187, 205));
-                container.MouseLeave += (_, _) => AnimateColor(
-                    (WM.SolidColorBrush)container.Background,
-                    WM.Color.FromArgb(0, 85, 140, 156));
+                container.MouseEnter += (_, _) =>
+                {
+                    if (entry.Index != active)
+                        AnimateColor((WM.SolidColorBrush)container.Background,
+                            WM.Color.FromArgb(42, 123, 187, 205));
+                };
+                container.MouseLeave += (_, _) =>
+                {
+                    if (entry.Index != active)
+                        AnimateColor((WM.SolidColorBrush)container.Background,
+                            WM.Color.FromArgb(0, 85, 140, 156));
+                };
                 container.MouseLeftButtonDown += (_, e) =>
                 {
                     travellingCursor.Press();
@@ -179,10 +185,14 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
         {
             active = nextActive;
             for (int i = 0; i < visuals.Count; i++)
+            {
                 MP_WpfMotion.Tint((WM.SolidColorBrush)visuals[i].Title.Foreground,
-                    i == active
-                        ? WM.Color.FromRgb(24, 54, 64)
+                    i == active ? WM.Color.FromRgb(9, 22, 32)
                         : WM.Color.FromRgb(164, 194, 206), 160);
+                MP_WpfMotion.Tint((WM.SolidColorBrush)visuals[i].Container.Background,
+                    i == active ? WM.Color.FromRgb(188, 228, 249)
+                        : WM.Color.FromArgb(0, 85, 140, 156), 155);
+            }
             Move(!structureChanged);
         }
     }
