@@ -31,7 +31,9 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly System.Windows.Threading.DispatcherTimer filterDelay =
         new() { Interval = TimeSpan.FromMilliseconds(150) };
     private readonly Dictionary<string, WC.Border> leafRows = new(StringComparer.Ordinal);
-    private readonly List<MP_StructureViewEntry> keyboardRows = new();
+    private readonly List<WC.Border> keyboardNodes = new();
+    private readonly Dictionary<string, Action> folderToggles =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, WM.SolidColorBrush> leafInks = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WM.SolidColorBrush> leafFills = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WC.Border> fileRows = new(StringComparer.Ordinal);
@@ -233,20 +235,29 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             // has focus. Search text boxes retain normal typing.
             if (e.Key is WI.Key.Down or WI.Key.Up or WI.Key.W or WI.Key.S)
             {
-                if (keyboardRows.Count == 0) return;
-                int current = keyboardRows.FindIndex(item =>
-                    active != null && item.Id == active.Id);
+                if (keyboardNodes.Count == 0) return;
+                int current = keyboardNodes.FindIndex(row =>
+                    ReferenceEquals(row, WI.Keyboard.FocusedElement));
+                if (current < 0 && active != null &&
+                    leafRows.TryGetValue(active.Id, out WC.Border selectedRow))
+                    current = keyboardNodes.IndexOf(selectedRow);
                 bool down = e.Key is WI.Key.Down or WI.Key.S;
                 int target = down
-                    ? Math.Min(keyboardRows.Count - 1, current + 1)
-                    : current < 0 ? keyboardRows.Count - 1 : Math.Max(0, current - 1);
-                MP_StructureViewEntry next = keyboardRows[target];
-                Select(next);
-                if (leafRows.TryGetValue(next.Id, out WC.Border focusRow))
-                {
-                    focusRow.BringIntoView();
-                    focusRow.Focus();
-                }
+                    ? Math.Min(keyboardNodes.Count - 1, current + 1)
+                    : current < 0 ? keyboardNodes.Count - 1 : Math.Max(0, current - 1);
+                WC.Border row = keyboardNodes[target];
+                row.BringIntoView();
+                row.Focus();
+                if (row.Tag is MP_StructureViewEntry next) Select(next);
+                e.Handled = true;
+                return;
+            }
+            if (e.Key is WI.Key.Enter or WI.Key.Space &&
+                WI.Keyboard.FocusedElement is WC.Border focused &&
+                focused.Tag is string folderKey &&
+                folderToggles.TryGetValue(folderKey, out Action toggle))
+            {
+                toggle();
                 e.Handled = true;
                 return;
             }
@@ -316,12 +327,14 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 e.File.Contains(query, StringComparison.OrdinalIgnoreCase))
             .ToArray();
         visibleEntries = visible;
+        if (query.Length > 0) collapsed.Clear();
         count.Text = $"INDEX / {visible.Length:00}";
         rows.BeginAnimation(OpacityProperty, null);
         rows.Opacity = 1;
         rows.Children.Clear();
         leafRows.Clear();
-        keyboardRows.Clear();
+        keyboardNodes.Clear();
+        folderToggles.Clear();
         leafInks.Clear();
         leafFills.Clear();
         fileRows.Clear();
@@ -344,8 +357,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                     var expansion = new WC.Border
                     {
                         Child = folderItems, ClipToBounds = true,
-                        Height = collapsed.Contains(key) && query.Length == 0
-                            ? 0 : fullHeight
+                        Tag = key,
+                        Height = collapsed.Contains(key) ? 0 : fullHeight
                     };
                     rows.Children.Add(Folder(key, folder.Key, folderChildren.Length,
                         expansion, fullHeight));
@@ -478,13 +491,24 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             Background = hover, BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Divider),
             BorderThickness = new W.Thickness(1, 0, 0, 1),
             Cursor = WI.Cursors.Hand, Child = grid,
+            Focusable = true, FocusVisualStyle = null, Tag = key,
             ToolTip = $"文件夹：{name}（{count} 个结构）"
         };
         row.MouseEnter += (_, _) => hover.Color =
             MP_StudioTheme.WpfColor(MP_StudioTheme.Hover);
-        row.MouseLeave += (_, _) => hover.Color =
-            MP_StudioTheme.WpfColor(MP_StudioTheme.PanelRaised);
-        row.MouseLeftButtonUp += (_, e) =>
+        row.MouseLeave += (_, _) =>
+        {
+            if (!row.IsKeyboardFocusWithin)
+                hover.Color = MP_StudioTheme.WpfColor(MP_StudioTheme.PanelRaised);
+        };
+        row.GotKeyboardFocus += (_, _) => hover.Color =
+            MP_StudioTheme.WpfColor(MP_StudioTheme.Hover);
+        row.LostKeyboardFocus += (_, _) =>
+        {
+            if (!row.IsMouseOver)
+                hover.Color = MP_StudioTheme.WpfColor(MP_StudioTheme.PanelRaised);
+        };
+        void Toggle()
         {
             bool folded = collapsed.Add(key);
             if (!folded) collapsed.Remove(key);
@@ -514,6 +538,12 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 scrollTarget = offset;
                 scrollMotion.Jump(offset);
             }), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+        folderToggles[key] = Toggle;
+        row.MouseLeftButtonUp += (_, e) =>
+        {
+            row.Focus();
+            Toggle();
             e.Handled = true;
         };
         return row;
@@ -542,15 +572,24 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
 
     private void RefreshKeyboardRows()
     {
-        keyboardRows.Clear();
-        bool filtering = !string.IsNullOrWhiteSpace(search.Text);
-        foreach (var entry in visibleEntries)
+        // Traverse the ACTUAL rendered order, including folder headers.
+        // Using entries sorted by label ignored folder grouping, making
+        // keyboard W/S jump unpredictably across different folders.
+        keyboardNodes.Clear();
+        foreach (var element in rows.Children)
         {
-            string key = (IsProject(entry.File) ? "项目结构" : "其他位置")
-                + "/" + GroupPath(entry.File);
-            if (fileRows.ContainsKey(entry.Id) &&
-                (filtering || !collapsed.Contains(key)))
-                keyboardRows.Add(entry);
+            if (element is not WC.Border node) continue;
+            if (node.Tag is MP_StructureViewEntry)
+                keyboardNodes.Add(node);
+            else if (node.Tag is string folderKey)
+            {
+                if (node.Child is WC.Grid)
+                    keyboardNodes.Add(node);
+                else if (node.Child is WC.StackPanel childPanel &&
+                         !collapsed.Contains(folderKey))
+                    foreach (var child in childPanel.Children.OfType<WC.Border>())
+                        keyboardNodes.Add(child);
+            }
         }
     }
 
