@@ -29,12 +29,12 @@ internal sealed class MP_SectionTabs : UserControl
 
     internal MP_SectionTabs()
     {
-        BackColor = Color.FromArgb(10, 15, 21);
+        BackColor = MP_StudioTheme.Panel;
         content = new MP_BorderlessTabHost
         {
             Dock = DockStyle.Fill,
             BackColor = BackColor,
-            ForeColor = Color.FromArgb(202, 233, 249),
+            ForeColor = MP_StudioTheme.Text,
             Appearance = TabAppearance.FlatButtons,
             SizeMode = TabSizeMode.Fixed,
             ItemSize = new Size(1, 1),
@@ -50,7 +50,7 @@ internal sealed class MP_SectionTabs : UserControl
         header = new ElementHost
         {
             Child = bar, Dock = DockStyle.Fill,
-            BackColor = Color.FromArgb(10, 15, 21), TabStop = false
+            BackColor = MP_StudioTheme.Toolbar, TabStop = false
         };
         // Dock.Fill and BringToFront allowed the tab header to overlay the
         // first input row (visible in the reported screenshot). Two explicit

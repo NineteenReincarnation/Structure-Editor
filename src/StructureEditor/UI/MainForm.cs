@@ -22,9 +22,9 @@ public partial class MainForm : Form
     private MP_FluidAssetPalette MP_assetView;
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Stack<StructureDocument> undo = new(), redo = new();
-    private readonly Color surface = Color.FromArgb(10, 15, 21),
-        text = Color.FromArgb(202, 233, 249),
-        muted = Color.FromArgb(131, 170, 193);
+    private readonly Color surface = MP_StudioTheme.Panel,
+        text = MP_StudioTheme.Text,
+        muted = MP_StudioTheme.Secondary;
     private Catalog catalog;
     private StructureDocument document = new();
     private string currentFile;
@@ -79,8 +79,16 @@ public partial class MainForm : Form
     private void BuildUi() => BuildWorkspaceUi();
     private Button MakeButton(string caption, int x, int y, int width)
     {
-        Button button = new MP_AnimatedButton { Text = caption, Location = new Point(x, y), Size = new Size(width, 29), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(51, 62, 66), ForeColor = text, UseVisualStyleBackColor = false };
-        button.FlatAppearance.BorderColor = Color.FromArgb(81, 99, 105); return button;
+        Button button = new MP_AnimatedButton
+        {
+            Text = caption, Location = new Point(x, y), Size = new Size(width, 29),
+            FlatStyle = FlatStyle.Flat, BackColor = MP_StudioTheme.PanelRaised,
+            ForeColor = text, UseVisualStyleBackColor = false
+        };
+        button.FlatAppearance.BorderColor = MP_StudioTheme.Divider;
+        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(50, 80, 97);
+        button.FlatAppearance.MouseDownBackColor = Color.FromArgb(70, 112, 134);
+        return button;
     }
     private void AddTool(ToolStrip strip, string caption, Action action)
     {

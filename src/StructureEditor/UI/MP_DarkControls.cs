@@ -21,14 +21,14 @@ internal sealed class MP_DarkComboBox : ComboBox
         using Graphics g = Graphics.FromHwnd(Handle);
         int width = MP_ArrowOverlayWidth(ClientSize.Width);
         int x = ClientSize.Width - width;
-        Color bg = Enabled ? Color.FromArgb(48, 65, 76) : Color.FromArgb(40, 50, 58);
+        Color bg = Enabled ? MP_StudioTheme.Input : MP_StudioTheme.Panel;
         using var brush = new SolidBrush(bg);
         g.FillRectangle(brush, x, 1, width, ClientSize.Height - 2);
-        using var separator = new Pen(Color.FromArgb(65, 84, 96));
+        using var separator = new Pen(MP_StudioTheme.Divider);
         g.DrawLine(separator, x, 3, x, ClientSize.Height - 4);
         int cx = x + width / 2, cy = ClientSize.Height / 2;
         using var arrow = new SolidBrush(Enabled
-            ? Color.FromArgb(184, 207, 217) : Color.FromArgb(106, 125, 135));
+            ? MP_StudioTheme.Text : MP_StudioTheme.Secondary);
         g.FillPolygon(arrow, new[]
         {
             new Point(cx - 4, cy - 2), new Point(cx + 4, cy - 2),
@@ -36,7 +36,7 @@ internal sealed class MP_DarkComboBox : ComboBox
         });
         // The stock FlatStyle still leaves a bright 1px border under some
         // Windows themes. Paint a restrained frame with the same palette.
-        using var frame = new Pen(Color.FromArgb(74, 98, 110));
+        using var frame = new Pen(MP_StudioTheme.Divider);
         g.DrawRectangle(frame, 0, 0, ClientSize.Width - 1, ClientSize.Height - 1);
     }
 }
