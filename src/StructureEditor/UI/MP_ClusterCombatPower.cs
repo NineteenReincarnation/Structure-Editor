@@ -14,7 +14,10 @@ public partial class MainForm
         MP_cpMotionView = new MP_CpMotionView(item =>
         {
             if (item != null) MP_ActivatePaletteBrush(item);
-        });
+        })
+        {
+            SwitchLibrary = delta => MP_CycleLibraryPage(delta)
+        };
         return new System.Windows.Forms.Integration.ElementHost
         {
             Dock = DockStyle.Fill, BackColor = surface,

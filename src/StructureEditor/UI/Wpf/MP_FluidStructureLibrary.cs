@@ -60,8 +60,10 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     internal MP_FluidStructureLibrary(
         Action<string, string> onSelected,
         Action<string, string> onOpened,
-        Action<string, string> onRenamed)
+        Action<string, string> onRenamed,
+        Action<int> onSwitchLibrary = null)
     {
+        switchLibrary = onSwitchLibrary;
         selectedCallback = onSelected;
         openCallback = onOpened;
         renameCallback = onRenamed;

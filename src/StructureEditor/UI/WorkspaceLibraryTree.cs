@@ -43,7 +43,8 @@ public partial class MainForm
                 var entry = MP_libraryEntries.FirstOrDefault(item =>
                     item.Id == id && SamePath(item.File, file));
                 if (entry != null) Safe(() => MP_RenameLibraryEntry(entry));
-            });
+            },
+            delta => MP_CycleLibraryPage(delta));
         MP_libraryPreviewDelay.Tick += (_, _) =>
         {
             MP_libraryPreviewDelay.Stop();

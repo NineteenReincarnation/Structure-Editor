@@ -252,13 +252,22 @@ internal sealed class MP_CpMotionView : WC.UserControl
         scrollMotion.Jump(target);
     }
 
+    internal Action<int> SwitchLibrary { get; set; }
+
     private void OnPreviewKeyDown(object sender, WI.KeyEventArgs e)
     {
-        if (e.Key is not (WI.Key.Down or WI.Key.Up or WI.Key.Enter)) return;
+        if (WI.Keyboard.Modifiers != WI.ModifierKeys.None) return;
+        if (e.Key is WI.Key.A or WI.Key.D)
+        {
+            SwitchLibrary?.Invoke(e.Key == WI.Key.A ? -1 : 1);
+            e.Handled = SwitchLibrary != null;
+            return;
+        }
+        if (e.Key is not (WI.Key.Down or WI.Key.Up or WI.Key.W or WI.Key.S or WI.Key.Enter)) return;
         if (visible.Length == 0) return;
         int next = currentIndex;
-        if (e.Key == WI.Key.Down) next = Math.Min(visible.Length - 1, Math.Max(0, next + 1));
-        else if (e.Key == WI.Key.Up) next = Math.Max(0, next <= 0 ? 0 : next - 1);
+        if (e.Key is WI.Key.Down or WI.Key.S) next = Math.Min(visible.Length - 1, Math.Max(0, next + 1));
+        else if (e.Key is WI.Key.Up or WI.Key.W) next = Math.Max(0, next <= 0 ? 0 : next - 1);
         else if (next < 0) next = 0;
         Select(next);
         e.Handled = true;
