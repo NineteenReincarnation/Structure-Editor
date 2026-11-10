@@ -61,7 +61,8 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
             Background = Surface, Foreground = Solid(224, 234, 240),
             BorderThickness = new W.Thickness(0), Padding = new W.Thickness(4, 3, 4, 4),
             ItemTemplate = itemTemplate, ItemContainerStyle = containerStyle,
-            ItemsPanel = panel, FocusVisualStyle = null
+            ItemsPanel = panel, FocusVisualStyle = null,
+            Margin = new W.Thickness(0, 0, 12, 0)
         };
         WC.ScrollViewer.SetVerticalScrollBarVisibility(list, WC.ScrollBarVisibility.Hidden);
         WC.ScrollViewer.SetHorizontalScrollBarVisibility(list, WC.ScrollBarVisibility.Disabled);
@@ -73,6 +74,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         {
             if (selecting) return;
             selectedIndex = list.SelectedIndex;
+            RefreshSelectedRows();
             UpdateSelection(true);
             if (list.SelectedItem is CatalogItem item) activate?.Invoke(item);
         };
@@ -106,11 +108,12 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         };
         selection = new WC.Border
         {
-            Height = RowHeight - 5, Margin = new W.Thickness(6, 0, 5, 0),
-            Background = Solid(128, 117, 190, 210),
-            BorderBrush = Solid(140, 125, 205, 220),
+            Height = RowHeight - 5, Margin = new W.Thickness(6, 0, 16, 0),
+            // The moving cursor may pass other rows. Paint only its outline.
+            Background = Solid(0, 0, 0, 0),
+            BorderBrush = Solid(195, 213, 240, 251),
             BorderThickness = new W.Thickness(1),
-            CornerRadius = new W.CornerRadius(5),
+            CornerRadius = new W.CornerRadius(0),
             HorizontalAlignment = W.HorizontalAlignment.Stretch,
             VerticalAlignment = W.VerticalAlignment.Top,
             IsHitTestVisible = false, Visibility = W.Visibility.Collapsed
@@ -180,6 +183,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         }
         finally { selecting = false; }
         UpdateSelection(false);
+        RefreshSelectedRows();
         if (IsVisible && MP_Motion.Enabled)
         {
             list.BeginAnimation(OpacityProperty,
@@ -201,6 +205,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         }
         finally { selecting = false; }
         UpdateSelection(true);
+        RefreshSelectedRows();
     }
 
     internal void PlayEntrance()
@@ -221,7 +226,20 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
                 (scroller.VerticalOffset + scroller.ViewportHeight) / RowHeight) + 5);
         for (int i = first; i < last; i++)
             if (list.ItemContainerGenerator.ContainerFromIndex(i) is WC.ListBoxItem container)
-                FindChild<MP_FluidAssetRow>(container)?.RefreshThumbnail();
+            {
+                var row = FindChild<MP_FluidAssetRow>(container);
+                row?.SetSelected(i == selectedIndex);
+                row?.RefreshThumbnail();
+            }
+    }
+
+    private void RefreshSelectedRows()
+    {
+        for (int i = 0; i < items.Length; i++)
+        {
+            if (list.ItemContainerGenerator.ContainerFromIndex(i) is WC.ListBoxItem container)
+                FindChild<MP_FluidAssetRow>(container)?.SetSelected(i == selectedIndex);
+        }
     }
 
     internal WB.BitmapSource Thumbnail(CatalogItem item) => textures.TryGet(item);
@@ -295,15 +313,16 @@ public sealed class MP_FluidAssetRow : WC.Border
     private readonly WM.TranslateTransform offset = new();
     private readonly WM.SolidColorBrush hoverBrush =
         MP_FluidAssetPalette.Solid(0, 70, 121, 144);
+    private bool selectedState;
 
     public MP_FluidAssetRow()
     {
         Height = 67;
         Margin = new W.Thickness(2, 1, 2, 1);
         Background = hoverBrush;
-        CornerRadius = new W.CornerRadius(5);
+        CornerRadius = new W.CornerRadius(0);
         RenderTransform = offset;
-        var layout = new WC.Grid { Margin = new W.Thickness(6, 5, 6, 3) };
+        var layout = new WC.Grid { Margin = new W.Thickness(6, 5, 6, 3), ClipToBounds = true };
         layout.ColumnDefinitions.Add(new WC.ColumnDefinition
             { Width = new W.GridLength(52) });
         layout.ColumnDefinitions.Add(new WC.ColumnDefinition
@@ -319,9 +338,9 @@ public sealed class MP_FluidAssetRow : WC.Border
         };
         WC.Grid.SetRowSpan(icon, 3);
         layout.Children.Add(icon);
-        title = Label(13.2, MP_FluidAssetPalette.Solid(226, 237, 241));
-        def = Label(11.2, MP_FluidAssetPalette.Solid(158, 182, 194));
-        detail = Label(10, MP_FluidAssetPalette.Solid(124, 163, 177));
+        title = Label(16, MP_FluidAssetPalette.Solid(226, 237, 241));
+        def = Label(14, MP_FluidAssetPalette.Solid(158, 182, 194));
+        detail = Label(13, MP_FluidAssetPalette.Solid(124, 163, 177));
         foreach (var (control, row) in new[] { (title, 0), (def, 1), (detail, 2) })
         {
             WC.Grid.SetColumn(control, 1);
@@ -333,11 +352,13 @@ public sealed class MP_FluidAssetRow : WC.Border
         Loaded += (_, _) => Fill();
         MouseEnter += (_, _) =>
         {
+            if (selectedState) return;
             AnimColor(WM.Color.FromArgb(40, 72, 131, 151), 145);
             AnimX(2, 140);
         };
         MouseLeave += (_, _) =>
         {
+            if (selectedState) return;
             AnimColor(WM.Color.FromArgb(0, 72, 131, 151), 125);
             AnimX(0, 120);
         };
@@ -350,6 +371,24 @@ public sealed class MP_FluidAssetRow : WC.Border
         VerticalAlignment = W.VerticalAlignment.Center
     };
 
+    internal void SetSelected(bool next)
+    {
+        if (selectedState == next) return;
+        selectedState = next;
+        AnimColor(next ? WM.Color.FromRgb(175, 222, 245)
+            : WM.Color.FromArgb(0, 70, 121, 144), 145);
+        title.Foreground = next
+            ? MP_FluidAssetPalette.Solid(13, 34, 44)
+            : MP_FluidAssetPalette.Solid(226, 237, 241);
+        def.Foreground = next
+            ? MP_FluidAssetPalette.Solid(35, 67, 83)
+            : MP_FluidAssetPalette.Solid(158, 182, 194);
+        detail.Foreground = next
+            ? MP_FluidAssetPalette.Solid(35, 67, 83)
+            : MP_FluidAssetPalette.Solid(124, 163, 177);
+        if (next) AnimX(0, 0);
+    }
+
     private void Fill()
     {
         icon.Source = null;
@@ -358,6 +397,10 @@ public sealed class MP_FluidAssetRow : WC.Border
         def.Text = item.DefName;
         detail.Text = item.Group + " · " + item.Pack;
         ToolTip = item.Label + "\n" + item.DefName + "\n" + item.Pack;
+        // Recycler may reuse an earlier selected row; refresh safely.
+        selectedState = false;
+        hoverBrush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
+        hoverBrush.Color = WM.Color.FromArgb(0, 70, 121, 144);
         RefreshThumbnail();
     }
 
