@@ -26,7 +26,7 @@ internal static class MP_WpfMotion
         double origin = (double)transform.GetValue(axis);
         transform.BeginAnimation(axis, null);
         transform.SetValue(axis, destination);
-        if (!MP_Motion.Enabled || Math.Abs(destination - origin) < .2) return;
+        if (!MP_Motion.Enabled || ms <= 0 || Math.Abs(destination - origin) < .2) return;
         transform.BeginAnimation(axis, new WA.DoubleAnimation(origin, destination,
             TimeSpan.FromMilliseconds(ms)) { EasingFunction = Curve(elastic) });
     }
@@ -38,7 +38,7 @@ internal static class MP_WpfMotion
         double origin = border.Width;
         border.BeginAnimation(W.FrameworkElement.WidthProperty, null);
         border.Width = destination;
-        if (!MP_Motion.Enabled || Math.Abs(origin - destination) < .2) return;
+        if (!MP_Motion.Enabled || ms <= 0 || Math.Abs(origin - destination) < .2) return;
         border.BeginAnimation(W.FrameworkElement.WidthProperty,
             new WA.DoubleAnimation(origin, destination, TimeSpan.FromMilliseconds(ms))
             { EasingFunction = Curve(false) });
@@ -51,7 +51,7 @@ internal static class MP_WpfMotion
         var origin = brush.Color;
         brush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
         brush.Color = destination;
-        if (!MP_Motion.Enabled || origin == destination) return;
+        if (!MP_Motion.Enabled || ms <= 0 || origin == destination) return;
         brush.BeginAnimation(WM.SolidColorBrush.ColorProperty,
             new WA.ColorAnimation(origin, destination, TimeSpan.FromMilliseconds(ms))
             { EasingFunction = Curve(false) });
