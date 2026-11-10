@@ -30,6 +30,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     private bool selecting;
     private int selectedIndex = -1;
     private double targetScroll;
+    private bool refreshQueued;
     private static readonly WM.SolidColorBrush Surface = MP_StudioTheme.Brush(MP_StudioTheme.Panel);
 
     internal MP_FluidAssetPalette(Action<CatalogItem> onActivate)
@@ -185,9 +186,12 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         UpdateSelection(false);
         RefreshSelectedRows();
         // ItemSource replacement already invalidates realized containers.
-        // A whole-list opacity transition doubles the repaint and flickers.
-        list.BeginAnimation(OpacityProperty, null);
-        list.Opacity = 1;
+        // Avoid canceling the opacity clock on every filter operation.
+        if (list.Opacity != 1)
+        {
+            list.BeginAnimation(OpacityProperty, null);
+            list.Opacity = 1;
+        }
         RefreshVisible();
     }
 
@@ -219,6 +223,22 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     }
 
     internal void RefreshVisible()
+    {
+        if (source?.Textures == null || !IsVisible || items.Length == 0 || refreshQueued)
+            return;
+        // Several ScrollChanged events and decoded-texture notifications may
+        // arrive in the same frame. Realize thumbnails only once at the end of
+        // the current input burst, never inside a scrollbar-drag callback.
+        refreshQueued = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            refreshQueued = false;
+            if (!IsVisible || source?.Textures == null) return;
+            RefreshVisibleCore();
+        }), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private void RefreshVisibleCore()
     {
         if (source?.Textures == null || !IsVisible || items.Length == 0) return;
         int first = scroller == null ? 0 : Math.Max(0, (int)(scroller.VerticalOffset / RowHeight) - 3);
