@@ -8,6 +8,7 @@ public partial class MainForm
     private CancellationTokenSource catalogLoad;
     private readonly System.Windows.Forms.Timer textureRefresh = new() { Interval = 80 };
     private int pendingTextureRefresh;
+    private long lastCanvasTextureRefresh;
     private bool asyncThumbnails;
     private Control libraryFilters;
     internal bool IsLoadingCatalog { get; private set; }
@@ -18,7 +19,22 @@ public partial class MainForm
         textureRefresh.Tick += (_, _) =>
         {
             if (Interlocked.Exchange(ref pendingTextureRefresh, 0) == 0) return;
-            MP_assetView?.RefreshVisible(); MP_cpMotionView?.RefreshImages(); canvas.RefreshTextures();
+            // Thumbnail refresh is cheap; recreating terrain chunks on
+            // every decoder completion can starve canvas repaints during a
+            // fast drag and leave pale placeholder tiles on screen.
+            MP_assetView?.RefreshVisible();
+            MP_cpMotionView?.RefreshImages();
+            long now = Environment.TickCount64;
+            if (lastCanvasTextureRefresh == 0 || now - lastCanvasTextureRefresh >= 220)
+            {
+                lastCanvasTextureRefresh = now;
+                canvas.RefreshTextures();
+            }
+            else
+            {
+                // Retry on the next tick even if no new decode completes.
+                Interlocked.Exchange(ref pendingTextureRefresh, 1);
+            }
         };
     }
     private void TextureArrived() => Interlocked.Exchange(ref pendingTextureRefresh, 1);
