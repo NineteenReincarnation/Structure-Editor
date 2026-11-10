@@ -517,6 +517,24 @@ public partial class MainForm
             MP_WorkspaceHeaderPixels(DeviceDpi)
         && MP_canvasToolbar.Height + 1 >= MP_WorkspaceHeaderPixels(DeviceDpi);
 
+    internal bool MP_WorkspaceHeaderBoundsClear
+    {
+        get
+        {
+            if (!MP_WorkspaceHeadersFit) return false;
+            var header = MP_rootLayout.GetControlFromPosition(0, 1);
+            var body = MP_rootLayout.GetControlFromPosition(0, 2);
+            if (header == null || body == null) return false;
+            if (header.Height > 0 && body.Height > 0 && header.Bottom > body.Top)
+                return false;
+            if (MP_canvasToolbar.Parent == canvas.Parent && canvas.Height > 0
+                && MP_canvasToolbar.Height > 0
+                && MP_canvasToolbar.Bottom > canvas.Top)
+                return false;
+            return true;
+        }
+    }
+
     private void MP_UpdateWorkspaceHeaderHeights()
     {
         if (MP_rootLayout == null || MP_canvasToolbar == null) return;

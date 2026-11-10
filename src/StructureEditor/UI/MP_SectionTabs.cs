@@ -94,6 +94,19 @@ internal sealed class MP_SectionTabs : UserControl
         navigationLayout != null && navigationLayout.RowStyles[0].Height + 1 >=
         MP_StudioTheme.HeaderHeight * Math.Max(1f, DeviceDpi / 96f);
 
+    internal bool MP_ContentStartsBelowHeader
+    {
+        get
+        {
+            // These are actual WinForms child rectangles in the same parent.
+            // Geometry is unavailable before the owner is laid out, so defer
+            // to the DPI row contract in that case.
+            if (header.Height <= 0 || content.Height <= 0) return MP_HeaderFitsDpi;
+            return header.Top >= 0 && content.Top >= header.Bottom
+                && content.Bottom <= navigationLayout.ClientSize.Height + 1;
+        }
+    }
+
     internal bool SelectPage(TabPage page)
     {
         int index = pages.FindIndex(p => ReferenceEquals(p, page));

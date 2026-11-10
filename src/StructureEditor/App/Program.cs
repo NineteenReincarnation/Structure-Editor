@@ -182,7 +182,8 @@ internal static class Program
                         || layout.GetControlFromPosition(0, 0)
                            is not System.Windows.Forms.Integration.ElementHost
                         || layout.GetControlFromPosition(0, 1) is not MP_StablePageHost
-                        || !section.MP_HasStablePages || !section.MP_HeaderFitsDpi;
+                        || !section.MP_HasStablePages || !section.MP_HeaderFitsDpi
+                        || !section.MP_ContentStartsBelowHeader;
                 }))
                     throw new InvalidOperationException("Tab headers can overlap editor page content.");
                 var pages = Descendants(form).OfType<MP_PageSurface>().ToArray();
@@ -199,6 +200,23 @@ internal static class Program
                     if (!section.MP_HasStablePages)
                         throw new InvalidOperationException("Page switch changed host/page ownership.");
                 }
+                // Exercise all docking boundaries at common desktop sizes;
+                // this catches accidental toolbar/page overlap after changes
+                // to margins, min-widths or DPI row sizing.
+                var savedSize = form.ClientSize;
+                foreach (var size in new[]
+                    { new Size(1040, 700), new Size(1280, 800), new Size(1680, 950) })
+                {
+                    form.ClientSize = size;
+                    form.PerformLayout();
+                    foreach (var section in sections) section.PerformLayout();
+                    if (!form.MP_WorkspaceHeaderBoundsClear ||
+                        sections.Any(section => !section.MP_ContentStartsBelowHeader))
+                        throw new InvalidOperationException(
+                            $"Editor controls overlap at {size.Width}x{size.Height}.");
+                }
+                form.ClientSize = savedSize;
+                form.PerformLayout();
                 var tabs = Descendants(form).OfType<MP_SectionTabs>().ToArray();
                 if (tabs.Length != 2 || tabs.Any(tab => tab.SelectedIndex < 0)
                     || !pages.Any(page => page.Title == "工程")
