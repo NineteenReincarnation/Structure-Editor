@@ -116,13 +116,18 @@ internal static class MP_Motion
 // Owner-painted and double-buffered; no animated layout or hover reflow.
 internal sealed class MP_AnimatedButton : Button
 {
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal Color IdleColor { get; set; } = Color.FromArgb(51, 62, 66);
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal Color SelectedColor { get; set; } = Color.FromArgb(51, 87, 94);
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal Color HoverColor { get; set; } = Color.FromArgb(67, 91, 102);
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal Color PressColor { get; set; } = Color.FromArgb(39, 71, 82);
     private Color paintColor = Color.FromArgb(51, 62, 66);
     private bool hovered, pressed, selected;
 
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal bool IsSelected
     {
         get => selected;
