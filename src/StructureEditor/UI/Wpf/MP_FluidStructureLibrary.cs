@@ -26,7 +26,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly WC.ScrollViewer scroll;
     private readonly MP_WpfScrollRail scrollRail;
     private readonly WC.Border slider;
-    private readonly WM.TranslateTransform sliderOffset = new();
+    private readonly MP_LiltCursor travellingCursor;
     private readonly System.Windows.Threading.DispatcherTimer filterDelay =
         new() { Interval = TimeSpan.FromMilliseconds(150) };
     private readonly Dictionary<string, WC.Border> leafRows = new(StringComparer.Ordinal);
@@ -54,6 +54,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         selectedCallback = onSelected;
         openCallback = onOpened;
         renameCallback = onRenamed;
+        MP_LiltTheme.Apply(this);
         Background = Surface;
         var layout = new WC.Grid
         {
@@ -78,7 +79,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             Background = Solid(22, 42, 51), Foreground = Text,
             BorderBrush = Solid(66, 91, 103), BorderThickness = new W.Thickness(1),
             Padding = new W.Thickness(9, 5, 7, 3), FontSize = 12.5,
-            FontFamily = new WM.FontFamily("Microsoft YaHei UI"),
+            FontFamily = MP_LiltTheme.WpfFont,
             CaretBrush = Cyan, SelectionBrush = Solid(93, 159, 179),
             VerticalContentAlignment = W.VerticalAlignment.Center
         };
@@ -105,7 +106,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         count = new WC.TextBlock
         {
             Text = "结构索引  /  00", Foreground = Cyan,
-            FontSize = 11.3, FontFamily = new WM.FontFamily("Consolas"),
+            FontSize = 11.3, FontFamily = MP_LiltTheme.WpfFont,
             FontWeight = W.FontWeights.SemiBold,
             Effect = MP_LcdVisual.Glow(.19),
             VerticalAlignment = W.VerticalAlignment.Center
@@ -122,10 +123,10 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             BorderThickness = new W.Thickness(1),
             CornerRadius = new W.CornerRadius(3),
             VerticalAlignment = W.VerticalAlignment.Top,
-            RenderTransform = sliderOffset,
             Visibility = W.Visibility.Collapsed,
             IsHitTestVisible = false
         };
+        travellingCursor = new MP_LiltCursor(slider, false);
         // The moving plate must sit BEHIND its text, not obscure it.
         WC.Panel.SetZIndex(slider, 0);
         WC.Panel.SetZIndex(rows, 1);
@@ -327,7 +328,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         {
             Text = label == "项目结构" ? "01" : label == "其他位置" ? "02" : "--",
             Foreground = Cyan, Effect = MP_LcdVisual.Glow(.16),
-            FontFamily = new WM.FontFamily("Consolas"),
+            FontFamily = MP_LiltTheme.WpfFont,
             FontSize = 10.5, FontWeight = W.FontWeights.SemiBold,
             VerticalAlignment = W.VerticalAlignment.Center
         };
@@ -379,7 +380,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         var total = new WC.TextBlock
         {
             Text = amount.ToString("00"),
-            FontFamily = new WM.FontFamily("Consolas"),
+            FontFamily = MP_LiltTheme.WpfFont,
             FontSize = 10.5, Foreground = Solid(120, 179, 198),
             VerticalAlignment = W.VerticalAlignment.Center,
             Margin = new W.Thickness(7, 0, 1, 0)
@@ -447,10 +448,16 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         row.MouseLeave += (_, _) =>
             MP_WpfMotion.Tint((WM.SolidColorBrush)row.Background,
                 WM.Color.FromArgb(0, 74, 131, 150), 120);
+        row.MouseLeftButtonDown += (_, _) => travellingCursor.Press();
+        row.MouseLeave += (_, _) => travellingCursor.Release();
         row.MouseLeftButtonUp += (_, e) =>
         {
-            Select(entry);
-            if (e.ClickCount >= 2) openCallback?.Invoke(entry.File, entry.Id);
+            travellingCursor.Release();
+            if (row.IsMouseOver)
+            {
+                Select(entry);
+                if (e.ClickCount >= 2) openCallback?.Invoke(entry.File, entry.Id);
+            }
             e.Handled = true;
         };
         var menu = new WC.ContextMenu
@@ -498,8 +505,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         bool wasVisible = slider.Visibility == W.Visibility.Visible;
         slider.Visibility = W.Visibility.Visible;
         slider.Height = row.ActualHeight;
-        MP_WpfMotion.Translate(sliderOffset, WM.TranslateTransform.YProperty,
-            to, animate && wasVisible ? 245 : 0);
+        travellingCursor.Move(to, row.ActualHeight, immediate: !animate || !wasVisible);
     }
 
     internal void SetPreview(string id, System.Drawing.Image image)

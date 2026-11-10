@@ -39,7 +39,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
     private readonly WC.StackPanel tabRow;
     private readonly WC.Border activeCapsule;
     private readonly WC.Border baseline;
-    private readonly WM.TranslateTransform capsuleOffset = new();
+    private readonly MP_LiltCursor travellingCursor;
     private readonly List<Entry> tabs = new();
     private readonly Action<int> activate;
     private int active = -1;
@@ -52,6 +52,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
     internal MP_FluidTabBar(Action<int> onActivate)
     {
         activate = onActivate;
+        MP_LiltTheme.Apply(this);
         Height = 39;
         var surface = new WC.Grid
         {
@@ -77,8 +78,9 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             Background = new WM.SolidColorBrush(ActiveBackground),
             BorderBrush = new WM.SolidColorBrush(WM.Color.FromRgb(202, 244, 249)),
             BorderThickness = new W.Thickness(.8),
-            RenderTransform = capsuleOffset, IsHitTestVisible = false
+            IsHitTestVisible = false
         };
+        travellingCursor = new MP_LiltCursor(activeCapsule, true);
         tabRow = new WC.StackPanel
         {
             HorizontalAlignment = W.HorizontalAlignment.Left,
@@ -111,7 +113,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         {
             Text = title,
             Foreground = foreground,
-            FontFamily = new WM.FontFamily("Microsoft YaHei UI"),
+            FontFamily = MP_LiltTheme.WpfFont,
             FontSize = 12.5,
             FontWeight = W.FontWeights.Medium,
             TextTrimming = W.TextTrimming.CharacterEllipsis,
@@ -141,9 +143,16 @@ internal sealed class MP_FluidTabBar : WC.UserControl
                 WM.Color.FromArgb(0, 86, 154, 177), 120);
         host.MouseLeftButtonDown += (_, e) =>
         {
-            activate?.Invoke(index);
+            travellingCursor.Press();
             e.Handled = true;
         };
+        host.MouseLeftButtonUp += (_, e) =>
+        {
+            travellingCursor.Release();
+            if (host.IsMouseOver) activate?.Invoke(index);
+            e.Handled = true;
+        };
+        host.MouseLeave += (_, _) => travellingCursor.Release();
         tabRow.Children.Add(host);
         tabs.Add(new Entry
         {
@@ -199,9 +208,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         for (int i = 0; i < active; i++) x += tabs[i].Host.Width;
         double targetWidth = Math.Max(1, tabs[active].Host.Width - 6);
         bool smooth = animate && laidOut && MP_Motion.Enabled;
-        MP_WpfMotion.Translate(capsuleOffset, WM.TranslateTransform.XProperty,
-            x, smooth ? 230 : 0, true);
-        MP_WpfMotion.Width(activeCapsule, targetWidth, smooth ? 205 : 0);
+        travellingCursor.Move(x, targetWidth, immediate: !smooth);
         laidOut = true;
     }
 }

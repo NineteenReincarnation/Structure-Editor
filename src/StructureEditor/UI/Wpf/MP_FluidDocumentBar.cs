@@ -16,7 +16,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     private readonly WC.Grid layer;
     private readonly WC.StackPanel slots;
     private readonly WC.Border capsule;
-    private readonly WM.TranslateTransform capsuleOffset = new();
+    private readonly MP_LiltCursor travellingCursor;
     private readonly List<(WC.Border Container, WC.TextBlock Title)> visuals = new();
     private MP_DocumentVisualState[] current = Array.Empty<MP_DocumentVisualState>();
     private int active = -1;
@@ -30,6 +30,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     internal MP_FluidDocumentBar(Action<int, bool> onAction)
     {
         invoke = onAction;
+        MP_LiltTheme.Apply(this);
         Background = Brush(35, 47, 57);
         HorizontalAlignment = W.HorizontalAlignment.Stretch;
         VerticalAlignment = W.VerticalAlignment.Stretch;
@@ -49,10 +50,10 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
             Background = Brush(201, 136, 209, 225),
             BorderBrush = Brush(143, 145, 220, 232),
             BorderThickness = new W.Thickness(1),
-            RenderTransform = capsuleOffset,
             Visibility = W.Visibility.Collapsed,
             IsHitTestVisible = false
         };
+        travellingCursor = new MP_LiltCursor(capsule, true);
         slots = new WC.StackPanel { Orientation = WC.Orientation.Horizontal,
             HorizontalAlignment = W.HorizontalAlignment.Center };
         WC.Panel.SetZIndex(slots, 1);
@@ -102,7 +103,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 {
                     Text = entry.Title,
                     Foreground = Brush(202, 226, 235),
-                    FontFamily = new WM.FontFamily("Microsoft YaHei UI"),
+                    FontFamily = MP_LiltTheme.WpfFont,
                     FontSize = 12.3, FontWeight = W.FontWeights.Medium,
                     TextTrimming = W.TextTrimming.CharacterEllipsis,
                     HorizontalAlignment = W.HorizontalAlignment.Center,
@@ -150,13 +151,20 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                     WM.Color.FromArgb(0, 85, 140, 156));
                 container.MouseLeftButtonDown += (_, e) =>
                 {
-                    if (e.ChangedButton == WI.MouseButton.Middle)
-                    {
-                        invoke?.Invoke(entry.Index, true);
-                        e.Handled = true;
-                        return;
-                    }
-                    invoke?.Invoke(entry.Index, false);
+                    travellingCursor.Press();
+                    e.Handled = true;
+                };
+                container.MouseLeftButtonUp += (_, e) =>
+                {
+                    travellingCursor.Release();
+                    if (container.IsMouseOver) invoke?.Invoke(entry.Index, false);
+                    e.Handled = true;
+                };
+                container.MouseLeave += (_, _) => travellingCursor.Release();
+                container.MouseDown += (_, e) =>
+                {
+                    if (e.ChangedButton != WI.MouseButton.Middle) return;
+                    invoke?.Invoke(entry.Index, true);
                     e.Handled = true;
                 };
                 slots.Children.Add(container);
@@ -191,9 +199,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
         double w = visuals[active].Container.Width - 4;
         bool wasReady = ready && capsule.Visibility == W.Visibility.Visible;
         capsule.Visibility = W.Visibility.Visible;
-        MP_WpfMotion.Translate(capsuleOffset, WM.TranslateTransform.XProperty, x,
-            animate && wasReady ? 245 : 0);
-        MP_WpfMotion.Width(capsule, w, animate && wasReady ? 225 : 0);
+        travellingCursor.Move(x, w, immediate: !animate || !wasReady);
         ready = true;
     }
 
