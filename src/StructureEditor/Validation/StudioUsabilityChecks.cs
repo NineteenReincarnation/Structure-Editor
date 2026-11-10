@@ -69,10 +69,11 @@ internal static class StudioUsabilityChecks
             BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(form)!;
         need(materialPicker.DrawMode == DrawMode.OwnerDrawFixed && materialPicker.ItemHeight >= 30,
             "Material choices should show a material texture or swatch beside the localized name");
-        need(buttons.Count(b => b.Text == "新建") == 1
-            && buttons.Count(b => b.Text == "打开…") == 1
-            && !documentBar.Items.Cast<ToolStripItem>().Any(b => b.Text.Contains("新建") || b.Text.Contains("打开")),
-            "New and Open appear once, before the edit-layer controls rather than among document tabs");
+        need(buttons.Count(b => b.ToolTipText.StartsWith("新建结构")) == 1
+            && buttons.Count(b => b.ToolTipText.StartsWith("打开结构")) == 1
+            && !documentBar.Items.Cast<ToolStripItem>().Any(
+                b => b.Text.Contains("新建") || b.Text.Contains("打开")),
+            "New and Open remain accessible once each, before edit layers, even in compact layout");
         need(buttons.Any(b => b.Text == "保存")
             && !buttons.Any(b => b.Text is "保存位置" or "导出预览" or "选择" or "放置" or "矩形" or "擦除"),
             "Top bars do not duplicate editor tools or secondary project/export actions");

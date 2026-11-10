@@ -255,10 +255,16 @@ internal static class Program
                     || documentStrip.Items.Cast<ToolStripItem>().Any(item =>
                         item.Text is "新建" or "打开…"))
                     throw new InvalidOperationException("Document tabs must be hosted separately from New/Open.");
-                if (Descendants(form).OfType<ToolStrip>()
-                    .SelectMany(strip => strip.Items.Cast<ToolStripItem>())
-                    .Count(item => item.Text == "新建") != 1)
-                    throw new InvalidOperationException("New/Open quick actions must not be duplicated.");
+                var quickActions = Descendants(form).OfType<ToolStrip>()
+                    .SelectMany(strip => strip.Items.Cast<ToolStripItem>()).ToArray();
+                // Compact labels may be 新/开. Command identity is carried by
+                // stable tooltips and must remain exactly one of each.
+                if (quickActions.Count(item => item.ToolTipText.StartsWith("新建结构")) != 1
+                    || quickActions.Count(item => item.ToolTipText.StartsWith("打开结构")) != 1)
+                    throw new InvalidOperationException(
+                        "New/Open commands missing or duplicated in compact toolbar.");
+                if (!MP_UiSound.MP_ValidCueData())
+                    throw new InvalidOperationException("Generated UI audio cue was not valid WAV.");
                 return;
             }
             if (args.Contains("--self-test")) { StudioChecks.Run(Paths, args.Contains("--turret-explosions")); return; }
