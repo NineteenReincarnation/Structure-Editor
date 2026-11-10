@@ -94,6 +94,12 @@ internal static class Program
                 // Template realization must have a public zero-argument
                 // constructor so virtualized lists work after catalog load.
                 _ = new MP_FluidAssetRow();
+                // 278px split panel at 150% DPI leaves about 185 DIPs.
+                // Every navigation tab must remain reachable at that width.
+                double[] fitted = MP_TabLayout.Fit(new[] { 74d, 74d, 86d }, 185d);
+                if (fitted.Length != 3 || fitted.Any(w => w < 55)
+                    || fitted.Sum() > 185.01d)
+                    throw new InvalidOperationException("WPF navigation tabs overflow narrow panels.");
                 var pages = Descendants(form).OfType<TabPage>().ToArray();
                 if (pages.Length != 5 || !pages.Any(page => page.Text == "集群 CP")
                     || pages.Any(page => page.Parent is not TabControl))

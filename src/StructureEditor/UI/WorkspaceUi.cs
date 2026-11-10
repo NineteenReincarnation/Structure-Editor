@@ -143,9 +143,10 @@ public partial class MainForm
         AddTool(documentActions, "新建", NewDocument);
         AddTool(documentActions, "打开…", OpenDocument);
         layerBar.Controls.Add(documentActions, 0, 0);
-        layerBar.Controls.Add(new Label { Text = "编辑图层", AutoSize = true,
+        Label MP_layerCaption = new() { Text = "编辑图层", AutoSize = true,
             Anchor = AnchorStyles.Left, Margin = new(10, 0, 10, 0),
-            ForeColor = muted }, 1, 0);
+            ForeColor = muted };
+        layerBar.Controls.Add(MP_layerCaption, 1, 0);
         MP_editLayerSelector = new MP_DarkComboBox() { Dock = DockStyle.Fill, Margin = new(0, 3, 0, 3), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = surface, ForeColor = text };
         MP_editLayerSelector.Items.AddRange(new object[] { "全部", "建筑", "单位", "地形" }); MP_editLayerSelector.SelectedIndex = 0;
         MP_editLayerSelector.SelectedIndexChanged += (_, _) =>
@@ -193,6 +194,33 @@ public partial class MainForm
         MP_layerVisibilityBar.Items.Add(MP_visibleLayers);
         layerBar.Controls.Add(MP_editLayerSelector, 2, 0);
         layerBar.Controls.Add(MP_layerVisibilityBar, 3, 0);
+        // Three layouts instead of a row of fixed-width controls. At the
+        // minimum viewport width (280px), every active command still fits.
+        void MP_LayoutViewportTools()
+        {
+            int width = layerBar.ClientSize.Width;
+            if (width <= 0) return;
+            bool narrow = width < 395;
+            bool compact = width < 480;
+            int actionsWidth = narrow ? 101 : compact ? 116 : 132;
+            int selectorWidth = narrow ? 96 : compact ? 112 : 124;
+            int visibilityWidth = narrow ? 77 : compact ? 94 : 110;
+            layerBar.SuspendLayout();
+            try
+            {
+                layerBar.ColumnStyles[0].Width = actionsWidth;
+                layerBar.ColumnStyles[1].SizeType =
+                    compact ? SizeType.Absolute : SizeType.AutoSize;
+                if (compact) layerBar.ColumnStyles[1].Width = 0;
+                MP_layerCaption.Visible = !compact;
+                layerBar.ColumnStyles[2].Width = selectorWidth;
+                layerBar.ColumnStyles[3].Width = visibilityWidth;
+                MP_visibleLayers.Text = narrow ? "图层" : "显示图层";
+            }
+            finally { layerBar.ResumeLayout(false); }
+        }
+        layerBar.SizeChanged += (_, _) => MP_LayoutViewportTools();
+        MP_LayoutViewportTools();
         viewport.Controls.Add(canvas); viewport.Controls.Add(layerBar); inspectorSplit.Panel1.Controls.Add(viewport);
 
         MP_SectionTabs tabs = new() { Dock = DockStyle.Fill, BackColor = surface, ForeColor = text };
