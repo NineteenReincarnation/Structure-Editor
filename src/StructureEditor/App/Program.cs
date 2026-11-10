@@ -80,6 +80,14 @@ internal static class Program
                     spring.Step(1d / 240);
                 if (!double.IsFinite(spring.Current) || Math.Abs(spring.Current - 100) > .2)
                     throw new InvalidOperationException("lilt spring physics did not converge.");
+                // A single palette must drive both HWND and WPF surfaces.
+                var panelColor = MP_StudioTheme.WpfColor(MP_StudioTheme.Panel);
+                if (panelColor.R != MP_StudioTheme.Panel.R
+                    || panelColor.G != MP_StudioTheme.Panel.G
+                    || panelColor.B != MP_StudioTheme.Panel.B
+                    || MP_StudioTheme.HeaderHeight < 38
+                    || MP_StudioTheme.PanelInset < 8)
+                    throw new InvalidOperationException("Unified editor theme contract failed.");
                 using var form = new MainForm();
                 form.CreateControl();
                 static IEnumerable<Control> Descendants(Control parent)

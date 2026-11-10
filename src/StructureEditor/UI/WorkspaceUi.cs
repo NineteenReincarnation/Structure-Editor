@@ -9,7 +9,7 @@ public partial class MainForm
             button.Checked = !button.Checked;
     }
     private readonly System.Windows.Forms.Timer searchDelay = new() { Interval = 160 };
-    private readonly Font smallFont = MP_LiltTheme.CreateGdiFont(8);
+    private readonly Font smallFont = MP_LiltTheme.CreateGdiFont(9);
     private ToolStripStatusLabel selectionStatus;
     private SplitContainer librarySplit, inspectorSplit;
     private ComboBox MP_editLayerSelector;
