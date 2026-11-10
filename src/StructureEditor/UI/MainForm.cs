@@ -92,7 +92,12 @@ public partial class MainForm : Form
     }
     private void AddTool(ToolStrip strip, string caption, Action action)
     {
-        ToolStripButton button = new(caption) { ForeColor = text, DisplayStyle = ToolStripItemDisplayStyle.Text };
+        ToolStripButton button = new(caption)
+        {
+            ForeColor = text, DisplayStyle = ToolStripItemDisplayStyle.Text,
+            Padding = new Padding(5, 1, 5, 1),
+            Margin = new Padding(2, 0, 2, 0)
+        };
         button.Click += (_, _) => Safe(action); strip.Items.Add(button);
     }
     private void Safe(Action action)

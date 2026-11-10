@@ -85,6 +85,10 @@ internal static class Program
                 if (panelColor.R != MP_StudioTheme.Panel.R
                     || panelColor.G != MP_StudioTheme.Panel.G
                     || panelColor.B != MP_StudioTheme.Panel.B
+                    || MP_StudioTheme.Panel.ToArgb() != Color.FromArgb(8, 10, 14).ToArgb()
+                    || MP_StudioTheme.Text.ToArgb() != Color.FromArgb(200, 230, 255).ToArgb()
+                    || MP_StudioTheme.Active != MP_StudioTheme.Text
+                    || MP_StudioTheme.ActiveText != MP_StudioTheme.Panel
                     || MP_StudioTheme.HeaderHeight < 38
                     || MP_StudioTheme.PanelInset < 8)
                     throw new InvalidOperationException("Unified editor theme contract failed.");

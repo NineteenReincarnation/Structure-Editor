@@ -55,7 +55,8 @@ public partial class MainForm
             ToolStripButton button = new(label)
             {
                 Name = name, ForeColor = text, DisplayStyle = ToolStripItemDisplayStyle.Text,
-                CheckOnClick = true, Checked = initial, ToolTipText = $"显示或隐藏{label}"
+                CheckOnClick = true, Checked = initial, ToolTipText = $"显示或隐藏{label}",
+                Padding = new Padding(4, 1, 4, 1)
             };
             button.CheckedChanged += (_, _) => onChange(button.Checked);
             actions.Items.Add(button);
@@ -536,15 +537,26 @@ public partial class MainForm
             bool checkedItem = e.Item is ToolStripButton button && button.Checked;
             Rectangle bounds = new(2, 1, Math.Max(1, e.Item.Width - 4),
                 Math.Max(1, e.Item.Height - 2));
-            if (checkedItem)
+            // lilt's controls draw a foreground stroke at rest. Focus/press
+            // inverts the glyph and the rectangle rather than tinting it teal.
+            bool isButton = e.Item is ToolStripButton or ToolStripDropDownButton;
+            if (isButton && bounds.Width > 2 && bounds.Height > 2)
             {
-                using SolidBrush checkedFill = new(MP_StudioTheme.Active);
-                e.Graphics.FillRectangle(checkedFill, bounds);
+                using Pen outline = new(MP_StudioTheme.Accent);
+                e.Graphics.DrawRectangle(outline, bounds.Left, bounds.Top,
+                    bounds.Width - 1, bounds.Height - 1);
             }
-            if (level > .001f)
+            if (checkedItem || (isButton && level > .001f))
+            {
+                int alpha = checkedItem ? 255
+                    : Math.Clamp((int)(level * 255), 0, 255);
+                using SolidBrush inverted = new(Color.FromArgb(alpha, MP_StudioTheme.Active));
+                e.Graphics.FillRectangle(inverted, bounds);
+            }
+            else if (level > .001f)
             {
                 using SolidBrush hoverFill = new(Color.FromArgb(
-                    Math.Clamp((int)(level * 72), 0, 255), MP_StudioTheme.Text));
+                    Math.Clamp((int)(level * 48), 0, 255), MP_StudioTheme.Text));
                 e.Graphics.FillRectangle(hoverFill, bounds);
             }
         }
@@ -571,7 +583,11 @@ public partial class MainForm
         }
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
         {
-            e.TextColor = e.Item is ToolStripButton button && button.Checked
+            bool checkedItem = e.Item is ToolStripButton button && button.Checked;
+            bool hoveringButton = e.Item is ToolStripButton or ToolStripDropDownButton
+                && feedback.TryGetValue(e.Item, out ItemFeedback state)
+                && state.Level >= .55f;
+            e.TextColor = checkedItem || hoveringButton
                 ? MP_StudioTheme.ActiveText : MP_StudioTheme.Text;
             base.OnRenderItemText(e);
         }
