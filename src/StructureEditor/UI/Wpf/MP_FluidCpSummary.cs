@@ -10,7 +10,8 @@ namespace StructureEditor;
 // Composited counter and reusable WPF breakdown rows; no GDI draw loop.
 internal sealed class MP_FluidCpSummary : WC.UserControl
 {
-    private readonly WC.TextBlock total, subtitle;
+    private readonly MP_PixelReadout total;
+    private readonly WC.TextBlock subtitle;
     private readonly WC.StackPanel lines;
     private readonly WM.ScaleTransform fillScale = new();
     private readonly MP_FloatProxy proxy;
@@ -59,12 +60,10 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         };
         left.Children.Add(subtitle);
         header.Children.Add(left);
-        total = new WC.TextBlock
+        total = new MP_PixelReadout
         {
             Text = "0 CP", Foreground = Brush(189, 228, 249),
-            Effect = MP_LcdVisual.Glow(.18),
-            FontFamily = MP_LiltTheme.WpfFont,
-            FontWeight = W.FontWeights.Normal, FontSize = 24,
+            PixelSize = 2,
             VerticalAlignment = W.VerticalAlignment.Center,
             HorizontalAlignment = W.HorizontalAlignment.Right,
             RenderTransformOrigin = new W.Point(.5, .5),

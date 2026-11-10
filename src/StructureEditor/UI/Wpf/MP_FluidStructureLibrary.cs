@@ -19,7 +19,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly Action<string, string> openCallback;
     private readonly Action<string, string> renameCallback;
     private readonly WC.TextBox search;
-    private readonly WC.TextBlock count, previewTitle, previewDetail;
+    private readonly WC.TextBlock previewTitle, previewDetail;
+    private readonly MP_PixelReadout count;
     private readonly WC.Image preview;
     private readonly WC.StackPanel rows = new();
     private readonly WC.Grid rowLayer;
@@ -107,14 +108,13 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         WC.Grid.SetRow(searchHost, 0);
         layout.Children.Add(searchHost);
 
-        count = new WC.TextBlock
+        count = new MP_PixelReadout
         {
-            Text = "结构索引  /  00", Foreground = Cyan,
-            FontSize = 15, FontFamily = MP_LiltTheme.WpfFont,
-            FontWeight = W.FontWeights.Normal,
-            Effect = MP_LcdVisual.Glow(.05),
-            VerticalAlignment = W.VerticalAlignment.Center
+            Text = "INDEX / 00", Foreground = Cyan, PixelSize = 2,
+            VerticalAlignment = W.VerticalAlignment.Center,
+            Margin = new W.Thickness(4, 0, 0, 0)
         };
+        count.ToolTip = "STRUCTURE INDEX";
         WC.Grid.SetRow(count, 1);
         layout.Children.Add(count);
 
@@ -296,7 +296,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 e.Id.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 e.File.Contains(query, StringComparison.OrdinalIgnoreCase))
             .ToArray();
-        count.Text = $"STRUCTURE INDEX  /  {visible.Length:00}";
+        count.Text = $"INDEX / {visible.Length:00}";
         rowWave.Reset();
         rows.Children.Clear();
         leafRows.Clear();
