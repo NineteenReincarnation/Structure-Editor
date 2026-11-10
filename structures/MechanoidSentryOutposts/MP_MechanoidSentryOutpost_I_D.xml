@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!--Requires: Anno.MechProtocol, brrainz.harmony, nineteenreincarnation.structureframework-->
 <Defs>
   <StructureFramework.StructureDef>
@@ -6,7 +6,6 @@
     <label>机械哨戒阵地·I-D</label>
     <description>使用 Structure Editor 创建的结构布局。</description>
     <schemaVersion>1</schemaVersion>
-    <category>General</category>
     <requiredPackages>
       <li>Anno.MechProtocol</li>
       <li>brrainz.harmony</li>
@@ -16,6 +15,11 @@
         <thingDef>MP_Turret_FocusedPulseCannon</thingDef>
         <position>(0,0,0)</position>
         <rotation>0</rotation>
+        <modifiers>
+          <li Class="StructureFramework.Integrations.MPDormancyModifier">
+            <dormant>false</dormant>
+          </li>
+        </modifiers>
       </li>
     </things>
   </StructureFramework.StructureDef>

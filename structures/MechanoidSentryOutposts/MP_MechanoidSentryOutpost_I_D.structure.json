@@ -3,7 +3,6 @@
   "DefName": "MP_MechanoidSentryOutpost_I_D",
   "Label": "\u673A\u68B0\u54E8\u6212\u9635\u5730\u00B7I-D",
   "Description": "\u4F7F\u7528 Structure Editor \u521B\u5EFA\u7684\u7ED3\u6784\u5E03\u5C40\u3002",
-  "Category": "General",
   "StartDormant": false,
   "ExportProfile": "Framework",
   "AutoExportOnSave": true,
