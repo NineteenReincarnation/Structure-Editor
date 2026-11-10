@@ -18,7 +18,7 @@ public partial class MainForm
         textureRefresh.Tick += (_, _) =>
         {
             if (Interlocked.Exchange(ref pendingTextureRefresh, 0) == 0) return;
-            palette.Invalidate(); MP_cpCatalogList?.Invalidate(); canvas.RefreshTextures();
+            palette.Invalidate(); MP_cpMotionView?.RefreshImages(); canvas.RefreshTextures();
         };
     }
     private void TextureArrived() => Interlocked.Exchange(ref pendingTextureRefresh, 1);

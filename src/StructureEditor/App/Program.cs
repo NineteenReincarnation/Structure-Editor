@@ -82,6 +82,9 @@ internal static class Program
                         foreach (Control descendant in Descendants(child)) yield return descendant;
                     }
                 }
+                if (Descendants(form).OfType<System.Windows.Forms.Integration.ElementHost>()
+                    .Count(host => host.Child is MP_CpMotionView) != 1)
+                    throw new InvalidOperationException("WPF cluster catalog island is not hosted.");
                 var pages = Descendants(form).OfType<TabPage>().ToArray();
                 if (pages.Length != 5 || !pages.Any(page => page.Text == "集群 CP")
                     || pages.Any(page => page.Parent is not TabControl))

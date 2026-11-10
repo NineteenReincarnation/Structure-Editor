@@ -124,6 +124,7 @@ public partial class MainForm
         MP_libraryTabs.SelectedIndexChanged += (_, _) =>
         {
             if (MP_libraryTabs.SelectedIndex == 1 && !MP_libraryLoaded) Safe(MP_ReloadLibrary);
+            if (MP_libraryTabs.SelectedIndex == 2) MP_cpMotionView?.PlayEntrance();
         };
         librarySplit.Panel1.Controls.Add(MP_libraryTabs);
 

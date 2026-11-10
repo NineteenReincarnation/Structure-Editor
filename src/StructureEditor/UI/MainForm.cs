@@ -177,7 +177,7 @@ public partial class MainForm : Form
     {
         if (MP_rebuildingPalette || palette.SelectedItem is not CatalogItem item) return;
         // Clear the separate CP-list highlight when switching to another brush.
-        if (MP_cpCatalogList?.SelectedItem != null) MP_cpCatalogList.ClearSelected();
+        MP_cpMotionView?.ClearSelection();
         MP_ActivatePaletteBrush(item);
     }
 
