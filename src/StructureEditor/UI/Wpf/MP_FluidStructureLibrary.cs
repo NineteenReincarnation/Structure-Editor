@@ -22,6 +22,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly WC.TextBlock previewTitle, previewDetail;
     private readonly MP_PixelReadout count;
     private readonly WC.Image preview;
+    private readonly WC.TextBlock MP_previewState;
     private readonly WC.StackPanel rows = new();
     private readonly WC.Grid rowLayer;
     private readonly WC.ScrollViewer scroll;
@@ -202,6 +203,20 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             RenderTransform = new WM.ScaleTransform(1, 1)
         };
         previewGrid.Children.Add(preview);
+        MP_previewState = new WC.TextBlock
+        {
+            Text = "选择文件以查看预览",
+            Foreground = Muted,
+            FontFamily = MP_LiltTheme.WpfFont,
+            FontSize = 13,
+            TextAlignment = W.TextAlignment.Center,
+            TextWrapping = W.TextWrapping.Wrap,
+            VerticalAlignment = W.VerticalAlignment.Center,
+            HorizontalAlignment = W.HorizontalAlignment.Center,
+            Margin = new W.Thickness(14, 0, 14, 0),
+            IsHitTestVisible = false
+        };
+        previewGrid.Children.Add(MP_previewState);
         previewPanel.Child = previewGrid;
         WC.Grid.SetRow(previewPanel, 3);
         layout.Children.Add(previewPanel);
@@ -703,7 +718,11 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         if (active?.Id == entry.Id && active.File == entry.File) return;
         active = entry;
         previewTitle.Text = entry.Label;
+        previewTitle.ToolTip = entry.Label;
         previewDetail.Text = entry.HasXml ? "JSON / XML" : "结构";
+        preview.Source = null;
+        MP_previewState.Text = "正在准备预览…";
+        MP_previewState.Visibility = W.Visibility.Visible;
         // Instant inversion is both clearer and more stable than animating
         // the fill/text separately while the WPF host swaps pages.
         RefreshSelectedInk(false);
@@ -718,26 +737,59 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         slider.Visibility = W.Visibility.Collapsed;
     }
 
-    internal void SetPreview(string id, System.Drawing.Image image)
+    internal void SetPreviewStatus(string id, string message)
     {
         if (active == null || id != active.Id) return;
-        if (image == null) { preview.Source = null; return; }
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            preview.Source = null;
+            MP_previewState.Text = message;
+            MP_previewState.Visibility = W.Visibility.Visible;
+        }
+    }
+
+    internal void SetPreviewBytes(string id, byte[] bytes)
+    {
+        if (active == null || id != active.Id) return;
+        if (bytes == null || bytes.Length == 0)
+        {
+            SetPreviewStatus(id, "暂无可用预览");
+            return;
+        }
         try
         {
-            using var data = new MemoryStream();
-            image.Save(data, ImageFormat.Png);
-            data.Position = 0;
+            using var data = new MemoryStream(bytes, writable: false);
             var bitmap = new WB.BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = WB.BitmapCacheOption.OnLoad;
+            bitmap.DecodePixelWidth = 420;
             bitmap.StreamSource = data;
             bitmap.EndInit();
             bitmap.Freeze();
             preview.Source = bitmap;
-            // Preview images are content, not UI chrome: replacing them
-            // should not restart opacity and scale clocks (visible flicker).
+            MP_previewState.Visibility = W.Visibility.Collapsed;
         }
-        catch (ArgumentException) { preview.Source = null; }
-        catch (System.Runtime.InteropServices.ExternalException) { preview.Source = null; }
+        catch (Exception ex) when (ex is ArgumentException or
+            InvalidOperationException or System.Runtime.InteropServices.ExternalException)
+        {
+            SetPreviewStatus(id, "预览文件无法读取");
+        }
+    }
+
+    internal void SetPreview(string id, System.Drawing.Image image)
+    {
+        if (active == null || id != active.Id) return;
+        if (image == null) { SetPreviewStatus(id, "暂无可用预览"); return; }
+        try
+        {
+            using var data = new MemoryStream();
+            image.Save(data, ImageFormat.Png);
+            SetPreviewBytes(id, data.ToArray());
+        }
+        catch (Exception ex) when (ex is ArgumentException or
+            InvalidOperationException or System.Runtime.InteropServices.ExternalException)
+        {
+            SetPreviewStatus(id, "预览文件无法读取");
+        }
     }
 }
