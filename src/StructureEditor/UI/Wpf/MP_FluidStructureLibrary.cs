@@ -34,12 +34,13 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly List<MP_StructureViewEntry> keyboardRows = new();
     private readonly Dictionary<string, WM.SolidColorBrush> leafInks = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WM.SolidColorBrush> leafFills = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, WC.Border> fileRows = new(StringComparer.Ordinal);
+    private MP_StructureViewEntry[] visibleEntries = Array.Empty<MP_StructureViewEntry>();
     private readonly HashSet<string> collapsed = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<MP_StructureViewEntry> entries = Array.Empty<MP_StructureViewEntry>();
     private MP_StructureViewEntry active;
     private MP_ScrollOffsetProxy scrollProxy;
     private readonly MP_LiltScroll scrollMotion;
-    private readonly MP_LiltWaveScroll rowWave = new();
     private double scrollTarget;
 
     private static WM.SolidColorBrush Solid(byte r, byte g, byte b)
@@ -150,15 +151,12 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         scrollProxy = new MP_ScrollOffsetProxy(scroll);
         // Bounce only content INSIDE the viewport; never move the
         // ScrollViewer itself into the search bar or preview panel.
-        scrollMotion = new MP_LiltScroll(scrollProxy, rowLayer);
-        scroll.ScrollChanged += (_, change) =>
+        // A spring still smooths the scroll offset, but moving every row
+        // independently caused repeated text/edge rasterization and flicker.
+        scrollMotion = new MP_LiltScroll(scrollProxy);
+        scroll.ScrollChanged += (_, _) =>
         {
             scrollTarget = Math.Clamp(scrollTarget, 0, Math.Max(0, scroll.ScrollableHeight));
-            int focus = active != null && leafRows.TryGetValue(active.Id, out var selectedRow)
-                ? rows.Children.IndexOf(selectedRow) : -1;
-            if (Math.Abs(change.VerticalChange) > .001)
-                rowWave.Shift(rows.Children.OfType<W.UIElement>(), focus,
-                    change.VerticalChange);
         };
         scroll.PreviewMouseWheel += (_, e) =>
         {
@@ -257,7 +255,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             e.Handled = true;
         };
         Loaded += (_, _) => UpdateSlider(false);
-        Unloaded += (_, _) => { filterDelay.Stop(); rowWave.Reset(); };
+        Unloaded += (_, _) => filterDelay.Stop();
     }
 
     internal bool MP_HasSafeLayering =>
@@ -290,7 +288,11 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
 
     internal void SetEntries(IReadOnlyList<MP_StructureViewEntry> next)
     {
-        entries = next ?? Array.Empty<MP_StructureViewEntry>();
+        next ??= Array.Empty<MP_StructureViewEntry>();
+        // Opening/switching a document often re-queries the same library.
+        // Avoid tearing down every row and starting dozens of WPF animations.
+        if (entries.SequenceEqual(next)) return;
+        entries = next.ToArray();
         if (active != null)
             active = entries.FirstOrDefault(e => e.Id == active.Id);
         Rebuild();
@@ -305,13 +307,16 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 e.Id.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                 e.File.Contains(query, StringComparison.OrdinalIgnoreCase))
             .ToArray();
+        visibleEntries = visible;
         count.Text = $"INDEX / {visible.Length:00}";
-        rowWave.Reset();
+        rows.BeginAnimation(OpacityProperty, null);
+        rows.Opacity = 1;
         rows.Children.Clear();
         leafRows.Clear();
         keyboardRows.Clear();
         leafInks.Clear();
         leafFills.Clear();
+        fileRows.Clear();
 
         foreach (var group in visible.GroupBy(e => IsProject(e.File) ? "项目结构" : "其他位置"))
         {
@@ -320,30 +325,29 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             {
                 string key = group.Key + "/" + folder.Key;
                 bool showFolder = folder.Key != ".";
+                var folderChildren = folder
+                    .Select(entry => Leaf(entry, showFolder ? 1 : 0)).ToArray();
                 if (showFolder)
-                    rows.Children.Add(Folder(key, folder.Key, folder.Count()));
-                if (!showFolder || !collapsed.Contains(key) || query.Length > 0)
-                    foreach (var entry in folder)
-                    {
-                        keyboardRows.Add(entry);
-                        rows.Children.Add(Leaf(entry, showFolder ? 1 : 0));
-                    }
+                    rows.Children.Add(Folder(key, folder.Key, folderChildren));
+                bool expanded = !showFolder || !collapsed.Contains(key) || query.Length > 0;
+                foreach (var child in folderChildren)
+                {
+                    child.Visibility = expanded
+                        ? W.Visibility.Visible : W.Visibility.Collapsed;
+                    rows.Children.Add(child);
+                }
             }
         }
         if (visible.Length == 0)
             rows.Children.Add(Heading(query.Length > 0 ? "没有匹配的结构" : "暂无结构文件", 0, false));
 
-        scrollTarget = Math.Clamp(scroll.VerticalOffset, 0, Math.Max(0, scroll.ScrollableHeight));
-        rows.Dispatcher.BeginInvoke(new Action(() =>
-        {
-            RefreshSelectedInk();
-            UpdateSlider(false);
-        }), System.Windows.Threading.DispatcherPriority.Loaded);
-        if (MP_Motion.Enabled && IsVisible)
-            rows.BeginAnimation(OpacityProperty,
-                new WA.DoubleAnimation(.65, 1d, TimeSpan.FromMilliseconds(165))
-                { EasingFunction = new WA.CubicEase
-                    { EasingMode = WA.EasingMode.EaseOut } });
+        RefreshKeyboardRows();
+        // Set colors directly on freshly created visuals; no entry fade or
+        // color clocks on every tree refresh.
+        RefreshSelectedInk(false);
+        scrollTarget = Math.Clamp(scroll.VerticalOffset, 0,
+            Math.Max(0, scroll.ScrollableHeight));
+        slider.Visibility = W.Visibility.Collapsed;
     }
 
     private static bool IsProject(string file)
@@ -407,83 +411,126 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         };
     }
 
-    private WC.Border Folder(string key, string name, int amount)
+    // Folder rows have their own raised surface, outlined folder icon,
+    // disclosure arrow and file count. Children are hidden in place instead
+    // of destroying and recreating the entire WPF tree on each click.
+    private WC.Border Folder(string key, string name, IReadOnlyList<WC.Border> children)
     {
-        bool folded = collapsed.Contains(key);
-        var hover = MP_StudioTheme.Brush(0, MP_StudioTheme.Text);
-        var grid = new WC.Grid { Margin = new W.Thickness(8, 0, 8, 0) };
-        grid.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(23) });
+        var hover = MP_StudioTheme.Brush(MP_StudioTheme.PanelRaised);
+        var grid = new WC.Grid { Margin = new W.Thickness(7, 0, 7, 0) };
+        grid.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(16) });
+        grid.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(22) });
         grid.ColumnDefinitions.Add(new WC.ColumnDefinition
             { Width = new W.GridLength(1, W.GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = W.GridLength.Auto });
-        var chevron = new WC.TextBlock
+        var arrow = new WC.TextBlock
         {
-            Text = folded ? "▸" : "▾", Foreground = Cyan,
-            FontSize = 12.5, VerticalAlignment = W.VerticalAlignment.Center,
-            HorizontalAlignment = W.HorizontalAlignment.Center
+            Text = collapsed.Contains(key) ? "▸" : "▾",
+            Foreground = Cyan, FontSize = 14,
+            FontFamily = MP_LiltTheme.WpfFont,
+            VerticalAlignment = W.VerticalAlignment.Center
         };
+        var glyph = MP_StructureGlyph(true);
+        WC.Grid.SetColumn(glyph, 1);
         var title = new WC.TextBlock
         {
-            Text = name, Foreground = Muted, FontSize = 16,
-            FontFamily = search.FontFamily,
+            Text = name, Foreground = Text, FontSize = 15,
+            FontWeight = W.FontWeights.SemiBold, FontFamily = search.FontFamily,
             VerticalAlignment = W.VerticalAlignment.Center,
-            TextTrimming = W.TextTrimming.CharacterEllipsis
+            TextTrimming = W.TextTrimming.CharacterEllipsis,
+            ToolTip = name
         };
+        WC.Grid.SetColumn(title, 2);
         var total = new WC.TextBlock
         {
-            Text = amount.ToString("00"),
-            FontFamily = MP_LiltTheme.WpfFont,
-            FontSize = 14, Foreground = Muted,
+            Text = children.Count.ToString("00"),
+            FontFamily = MP_LiltTheme.WpfFont, FontSize = 13, Foreground = Muted,
             VerticalAlignment = W.VerticalAlignment.Center,
-            Margin = new W.Thickness(7, 0, 1, 0)
+            Margin = new W.Thickness(7, 0, 0, 0)
         };
-        WC.Grid.SetColumn(title, 1); WC.Grid.SetColumn(total, 2);
-        grid.Children.Add(chevron); grid.Children.Add(title); grid.Children.Add(total);
+        WC.Grid.SetColumn(total, 3);
+        grid.Children.Add(arrow);
+        grid.Children.Add(glyph);
+        grid.Children.Add(title);
+        grid.Children.Add(total);
         var row = new WC.Border
         {
-            Height = 32, Margin = new W.Thickness(0, 1, 0, 1),
-            Background = hover, Cursor = WI.Cursors.Hand,
-            Child = grid
+            Height = 39, Margin = new W.Thickness(0, 3, 1, 3),
+            Background = hover, BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Divider),
+            BorderThickness = new W.Thickness(1, 0, 0, 1),
+            Cursor = WI.Cursors.Hand, Child = grid,
+            ToolTip = $"文件夹：{name}（{children.Count} 个结构）"
         };
-        row.MouseEnter += (_, _) => MP_WpfMotion.Tint(hover,
-            MP_StudioTheme.WpfOpacity(32, MP_StudioTheme.Text), 135);
-        row.MouseLeave += (_, _) => MP_WpfMotion.Tint(hover,
-            MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 120);
+        row.MouseEnter += (_, _) => hover.Color =
+            MP_StudioTheme.WpfColor(MP_StudioTheme.Hover);
+        row.MouseLeave += (_, _) => hover.Color =
+            MP_StudioTheme.WpfColor(MP_StudioTheme.PanelRaised);
         row.MouseLeftButtonUp += (_, e) =>
         {
-            if (!collapsed.Add(key)) collapsed.Remove(key);
-            Rebuild();
+            bool folded = collapsed.Add(key);
+            if (!folded) collapsed.Remove(key);
+            arrow.Text = folded ? "▸" : "▾";
+            foreach (var child in children)
+                child.Visibility = folded ? W.Visibility.Collapsed : W.Visibility.Visible;
+            RefreshKeyboardRows();
+            slider.Visibility = W.Visibility.Collapsed;
             e.Handled = true;
         };
         return row;
+    }
+
+    private static W.FrameworkElement MP_StructureGlyph(bool folder)
+    {
+        var outline = new System.Windows.Shapes.Path
+        {
+            Data = WM.Geometry.Parse(folder
+                ? "M 1,5 L 1,13 L 15,13 L 15,5 L 7,5 L 5,3 L 1,3 Z"
+                : "M 3,1 L 11,1 L 15,5 L 15,15 L 3,15 Z M 11,1 L 11,5 L 15,5"),
+            Stroke = MP_StudioTheme.Brush(MP_StudioTheme.Text),
+            StrokeThickness = 1, StrokeLineJoin = WM.PenLineJoin.Miter,
+            Fill = MP_StudioTheme.Brush(0, MP_StudioTheme.Text),
+            SnapsToDevicePixels = true
+        };
+        return new WC.Viewbox
+        {
+            Child = outline, Width = 15, Height = 15,
+            VerticalAlignment = W.VerticalAlignment.Center,
+            HorizontalAlignment = W.HorizontalAlignment.Center,
+            IsHitTestVisible = false
+        };
+    }
+
+    private void RefreshKeyboardRows()
+    {
+        keyboardRows.Clear();
+        foreach (var child in rows.Children.OfType<WC.Border>())
+            if (child.Tag is MP_StructureViewEntry entry &&
+                child.Visibility == W.Visibility.Visible)
+                keyboardRows.Add(entry);
     }
 
     private WC.Border Leaf(MP_StructureViewEntry entry, int level)
     {
         var row = new WC.Border
         {
-            Height = 40, Margin = new W.Thickness(2, 1, 2, 1),
+            Height = 42, Margin = new W.Thickness(0, 1, 1, 1),
             CornerRadius = new W.CornerRadius(0),
             Background = MP_StudioTheme.Brush(0, MP_StudioTheme.Text),
+            BorderBrush = MP_StudioTheme.Brush(0, MP_StudioTheme.Text),
+            BorderThickness = new W.Thickness(1),
             Cursor = WI.Cursors.Hand,
-            Focusable = true,
+            Focusable = true, Tag = entry,
             ClipToBounds = true
         };
-        var content = new WC.Grid { Margin = new W.Thickness(8 + level * 8, 0, 6, 0) };
-        content.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(13) });
+        var content = new WC.Grid { Margin = new W.Thickness(17 + level * 8, 0, 6, 0) };
+        content.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(24) });
         content.ColumnDefinitions.Add(new WC.ColumnDefinition
             { Width = new W.GridLength(1, W.GridUnitType.Star) });
-        var marker = new WC.Border
-        {
-            Width = 4, Height = 4, CornerRadius = new W.CornerRadius(1),
-            Background = MP_StudioTheme.Brush(MP_StudioTheme.Text),
-            VerticalAlignment = W.VerticalAlignment.Center,
-            HorizontalAlignment = W.HorizontalAlignment.Left,
-            IsHitTestVisible = false
-        };
+        var marker = MP_StructureGlyph(false);
         var ink = MP_StudioTheme.Brush(MP_StudioTheme.Text);
         leafInks[entry.Id] = ink;
         leafFills[entry.Id] = (WM.SolidColorBrush)row.Background;
+        fileRows[entry.Id] = row;
         var text = new WC.TextBlock
         {
             Text = entry.Label,
@@ -509,11 +556,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 MP_WpfMotion.Tint(leafFills[entry.Id],
                     MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 120);
         };
-        row.MouseLeftButtonDown += (_, _) => travellingCursor.Press();
-        row.MouseLeave += (_, _) => travellingCursor.Release();
         row.MouseLeftButtonUp += (_, e) =>
         {
-            travellingCursor.Release();
             if (row.IsMouseOver)
             {
                 row.Focus();
@@ -536,45 +580,50 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         return row;
     }
 
-    private void RefreshSelectedInk()
+    private void RefreshSelectedInk(bool animate = true)
     {
         foreach (var (id, ink) in leafInks)
         {
             bool selected = active?.Id == id;
-            MP_WpfMotion.Tint(ink, selected
-                ? MP_StudioTheme.WpfColor(MP_StudioTheme.ActiveText)
-                : MP_StudioTheme.WpfColor(MP_StudioTheme.Text), 145);
-            if (leafFills.TryGetValue(id, out var fill))
-                MP_WpfMotion.Tint(fill, selected
-                    ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
-                    : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 145);
+            WM.Color foreground = MP_StudioTheme.WpfColor(
+                selected ? MP_StudioTheme.ActiveText : MP_StudioTheme.Text);
+            WM.Color background = selected
+                ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
+                : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text);
+            if (animate && !MP_Motion.Enabled) animate = false;
+            if (ink.Color != foreground)
+            {
+                if (animate) MP_WpfMotion.Tint(ink, foreground, 115);
+                else ink.Color = foreground;
+            }
+            if (leafFills.TryGetValue(id, out var fill) && fill.Color != background)
+            {
+                if (animate) MP_WpfMotion.Tint(fill, background, 115);
+                else fill.Color = background;
+            }
+            if (fileRows.TryGetValue(id, out var border))
+                ((WM.SolidColorBrush)border.BorderBrush).Color =
+                    selected ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
+                    : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text);
         }
     }
 
     private void Select(MP_StructureViewEntry entry)
     {
+        if (active?.Id == entry.Id && active.File == entry.File) return;
         active = entry;
         previewTitle.Text = entry.Label;
         previewDetail.Text = entry.HasXml ? "JSON / XML" : "结构";
-        selectedCallback?.Invoke(entry.File, entry.Id);
         RefreshSelectedInk();
-        UpdateSlider(true);
+        slider.Visibility = W.Visibility.Collapsed;
+        selectedCallback?.Invoke(entry.File, entry.Id);
     }
 
     private void UpdateSlider(bool animate)
     {
-        if (active == null || !leafRows.TryGetValue(active.Id, out WC.Border row) ||
-            row.ActualHeight <= 0)
-        {
-            slider.Visibility = W.Visibility.Collapsed;
-            return;
-        }
-        double to = row.TranslatePoint(new W.Point(0, 0), rowLayer).Y;
-        if (!double.IsFinite(to)) return;
-        bool wasVisible = slider.Visibility == W.Visibility.Visible;
-        slider.Visibility = W.Visibility.Visible;
-        slider.Height = row.ActualHeight;
-        travellingCursor.Move(to, row.ActualHeight, immediate: !animate || !wasVisible);
+        // Focus is bounded by the selected row itself. An overlay travelling
+        // across folder headings produced misleading focus and overlaps.
+        slider.Visibility = W.Visibility.Collapsed;
     }
 
     internal void SetPreview(string id, System.Drawing.Image image)
@@ -593,18 +642,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             bitmap.EndInit();
             bitmap.Freeze();
             preview.Source = bitmap;
-            if (!MP_Motion.Enabled) return;
-            preview.BeginAnimation(OpacityProperty,
-                new WA.DoubleAnimation(.15, 1d, TimeSpan.FromMilliseconds(235))
-                { EasingFunction = new WA.CubicEase
-                    { EasingMode = WA.EasingMode.EaseOut } });
-            if (preview.RenderTransform is WM.ScaleTransform scale)
-            {
-                scale.BeginAnimation(WM.ScaleTransform.ScaleXProperty,
-                    new WA.DoubleAnimation(.97, 1, TimeSpan.FromMilliseconds(235)));
-                scale.BeginAnimation(WM.ScaleTransform.ScaleYProperty,
-                    new WA.DoubleAnimation(.97, 1, TimeSpan.FromMilliseconds(235)));
-            }
+            // Preview images are content, not UI chrome: replacing them
+            // should not restart opacity and scale clocks (visible flicker).
         }
         catch (ArgumentException) { preview.Source = null; }
         catch (System.Runtime.InteropServices.ExternalException) { preview.Source = null; }
