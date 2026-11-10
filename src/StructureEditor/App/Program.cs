@@ -141,13 +141,24 @@ internal static class Program
                     return layout.RowCount != 2
                         || layout.GetControlFromPosition(0, 0)
                            is not System.Windows.Forms.Integration.ElementHost
-                        || layout.GetControlFromPosition(0, 1) is not TabControl;
+                        || layout.GetControlFromPosition(0, 1) is not MP_StablePageHost
+                        || !section.MP_HasStablePages;
                 }))
                     throw new InvalidOperationException("Tab headers can overlap editor page content.");
                 var pages = Descendants(form).OfType<TabPage>().ToArray();
                 if (pages.Length != 5 || !pages.Any(page => page.Text == "集群 CP")
-                    || pages.Any(page => page.Parent is not TabControl))
-                    throw new InvalidOperationException("Workspace tab pages were not attached to TabControls.");
+                    || pages.Any(page => page.Parent is not MP_StablePageHost))
+                    throw new InvalidOperationException("Workspace pages must stay on stable host panels.");
+                // Switch twice to exercise the flicker-free page host while
+                // preserving all page instances, without recreating HWNDs.
+                foreach (var section in sections)
+                {
+                    int previous = section.SelectedIndex;
+                    section.SelectedIndex = 1;
+                    section.SelectedIndex = previous;
+                    if (!section.MP_HasStablePages)
+                        throw new InvalidOperationException("Page switch changed host/page ownership.");
+                }
                 var tabs = Descendants(form).OfType<MP_SectionTabs>().ToArray();
                 if (tabs.Length != 2 || tabs.Any(tab => tab.SelectedIndex < 0)
                     || !pages.Any(page => page.Text == "工程")
