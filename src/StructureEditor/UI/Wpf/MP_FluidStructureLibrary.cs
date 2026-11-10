@@ -32,6 +32,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly Dictionary<string, WC.Border> leafRows = new(StringComparer.Ordinal);
     private readonly List<MP_StructureViewEntry> keyboardRows = new();
     private readonly Dictionary<string, WM.SolidColorBrush> leafInks = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, WM.SolidColorBrush> leafFills = new(StringComparer.Ordinal);
     private readonly HashSet<string> collapsed = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<MP_StructureViewEntry> entries = Array.Empty<MP_StructureViewEntry>();
     private MP_StructureViewEntry active;
@@ -117,26 +118,29 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         WC.Grid.SetRow(count, 1);
         layout.Children.Add(count);
 
-        rowLayer = new WC.Grid { Background = Surface };
+        rowLayer = new WC.Grid { Background = Surface, ClipToBounds = true };
         slider = new WC.Border
         {
             Height = 35, Margin = new W.Thickness(2, 0, 2, 0),
-            BorderBrush = Solid(232, 216, 252, 255),
-            Background = Solid(229, 157, 240, 247),
+            // Travelling focus is only a stroke; opaque selection stays
+            // inside the actual row so it cannot cover folder headings.
+            BorderBrush = Solid(220, 210, 247, 255),
+            Background = Solid(0, 0, 0, 0),
             BorderThickness = new W.Thickness(1),
-            CornerRadius = new W.CornerRadius(3),
+            CornerRadius = new W.CornerRadius(0),
             VerticalAlignment = W.VerticalAlignment.Top,
             Visibility = W.Visibility.Collapsed,
             IsHitTestVisible = false
         };
         travellingCursor = new MP_LiltCursor(slider, false);
         // The moving plate must sit BEHIND its text, not obscure it.
-        WC.Panel.SetZIndex(slider, 0);
-        WC.Panel.SetZIndex(rows, 1);
+        WC.Panel.SetZIndex(rows, 0);
+        WC.Panel.SetZIndex(slider, 1);
         rowLayer.Children.Add(rows); rowLayer.Children.Add(slider);
         scroll = new WC.ScrollViewer
         {
             Content = rowLayer, Background = Surface,
+            Margin = new W.Thickness(0, 0, 12, 0),
             VerticalScrollBarVisibility = WC.ScrollBarVisibility.Hidden,
             HorizontalScrollBarVisibility = WC.ScrollBarVisibility.Disabled,
             CanContentScroll = false,
@@ -298,6 +302,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         leafRows.Clear();
         keyboardRows.Clear();
         leafInks.Clear();
+        leafFills.Clear();
 
         foreach (var group in visible.GroupBy(e => IsProject(e.File) ? "项目结构" : "其他位置"))
         {
@@ -449,10 +454,11 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         var row = new WC.Border
         {
             Height = 40, Margin = new W.Thickness(2, 1, 2, 1),
-            CornerRadius = new W.CornerRadius(3),
+            CornerRadius = new W.CornerRadius(0),
             Background = Solid(0, 73, 125, 149),
             Cursor = WI.Cursors.Hand,
-            Focusable = true
+            Focusable = true,
+            ClipToBounds = true
         };
         var content = new WC.Grid { Margin = new W.Thickness(8 + level * 8, 0, 6, 0) };
         content.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(13) });
@@ -468,6 +474,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         };
         var ink = Solid(201, 239, 246);
         leafInks[entry.Id] = ink;
+        leafFills[entry.Id] = (WM.SolidColorBrush)row.Background;
         var text = new WC.TextBlock
         {
             Text = entry.Label,
@@ -482,11 +489,17 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         row.Child = content;
         row.ToolTip = entry.Label + "\n" + entry.Id + "\n" + Path.GetFileName(entry.File);
         row.MouseEnter += (_, _) =>
-            MP_WpfMotion.Tint((WM.SolidColorBrush)row.Background,
-                WM.Color.FromArgb(37, 74, 131, 150), 120);
+        {
+            if (active?.Id != entry.Id)
+                MP_WpfMotion.Tint(leafFills[entry.Id],
+                    WM.Color.FromArgb(37, 92, 147, 170), 120);
+        };
         row.MouseLeave += (_, _) =>
-            MP_WpfMotion.Tint((WM.SolidColorBrush)row.Background,
-                WM.Color.FromArgb(0, 74, 131, 150), 120);
+        {
+            if (active?.Id != entry.Id)
+                MP_WpfMotion.Tint(leafFills[entry.Id],
+                    WM.Color.FromArgb(0, 73, 125, 149), 120);
+        };
         row.MouseLeftButtonDown += (_, _) => travellingCursor.Press();
         row.MouseLeave += (_, _) => travellingCursor.Release();
         row.MouseLeftButtonUp += (_, e) =>
@@ -517,9 +530,16 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private void RefreshSelectedInk()
     {
         foreach (var (id, ink) in leafInks)
-            MP_WpfMotion.Tint(ink, active?.Id == id
-                ? WM.Color.FromRgb(20, 56, 66)
-                : WM.Color.FromRgb(201, 239, 246), 155);
+        {
+            bool selected = active?.Id == id;
+            MP_WpfMotion.Tint(ink, selected
+                ? WM.Color.FromRgb(9, 22, 32)
+                : WM.Color.FromRgb(201, 239, 246), 145);
+            if (leafFills.TryGetValue(id, out var fill))
+                MP_WpfMotion.Tint(fill, selected
+                    ? WM.Color.FromRgb(175, 222, 245)
+                    : WM.Color.FromArgb(0, 73, 125, 149), 145);
+        }
     }
 
     private void Select(MP_StructureViewEntry entry)

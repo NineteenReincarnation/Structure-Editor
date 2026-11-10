@@ -71,10 +71,12 @@ internal sealed class MP_LiltValue
     }
 
     // lilt Value.Shift: keep the target unchanged, let the row spring back.
-    internal void Shift(double distance)
+    internal void Shift(double distance, double maxOffset = double.PositiveInfinity)
     {
         if (!MP_Motion.Enabled || Math.Abs(distance) < .001) return;
-        Current += distance;
+        // Keep row movement below 3px so independently animated rows never
+        // cover each other or another folder heading on a desktop screen.
+        Current = Math.Clamp(Current + distance, -maxOffset, maxOffset);
         Active = true;
         MP_LiltClock.Activate(this);
         Changed?.Invoke();
@@ -350,7 +352,7 @@ internal sealed class MP_LiltWaveScroll
             state.Value.Spring = new MP_LiltSpring(
                 MP_LiltSpring.Default.Response * (1 + .2 * distance),
                 MP_LiltSpring.Default.Damping);
-            state.Value.Shift(delta);
+            state.Value.Shift(Math.Clamp(delta * .075, -1.2, 1.2), 3);
             index++;
         }
     }
