@@ -126,6 +126,7 @@ internal sealed class MP_AnimatedButton : Button
     internal Color PressColor { get; set; } = Color.FromArgb(39, 71, 82);
     private Color paintColor = Color.FromArgb(51, 62, 66);
     private bool hovered, pressed, selected;
+    private float pressInset;
 
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal bool IsSelected
@@ -169,22 +170,43 @@ internal sealed class MP_AnimatedButton : Button
             t => { paintColor = MP_Motion.Blend(from, to, t); Invalidate(); }, duration);
     }
 
+    private void AnimatePress(float target, int duration)
+    {
+        float start = pressInset;
+        MP_Motion.Tween(this, "button-press", start, target,
+            value => { pressInset = value; Invalidate(); }, duration);
+    }
+
+    protected override void OnClick(EventArgs e)
+    {
+        MP_UiSound.Play(MP_UiSound.Cue.Confirm);
+        base.OnClick(e);
+    }
+
     protected override void OnMouseEnter(EventArgs e)
     {
         base.OnMouseEnter(e); hovered = true; AnimateFill(145);
     }
     protected override void OnMouseLeave(EventArgs e)
     {
-        base.OnMouseLeave(e); hovered = false; pressed = false; AnimateFill(120);
+        base.OnMouseLeave(e); hovered = false; pressed = false;
+        AnimatePress(0, 170); AnimateFill(120);
     }
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
-        if (e.Button == MouseButtons.Left) { pressed = true; AnimateFill(83); }
+        if (e.Button == MouseButtons.Left)
+        {
+            pressed = true;
+            AnimatePress(1, 75);
+            AnimateFill(83);
+        }
     }
     protected override void OnMouseUp(MouseEventArgs e)
     {
-        base.OnMouseUp(e); pressed = false; AnimateFill(120);
+        base.OnMouseUp(e); pressed = false;
+        AnimatePress(0, 220);
+        AnimateFill(120);
     }
     protected override void OnEnabledChanged(EventArgs e)
     {
@@ -196,10 +218,15 @@ internal sealed class MP_AnimatedButton : Button
         if (bounds.Width < 1 || bounds.Height < 1) return;
         using (var fill = new SolidBrush(paintColor))
             e.Graphics.FillRectangle(fill, bounds);
+        int inset = (int)Math.Round(Math.Clamp(pressInset, 0, 1) * 2);
         if (FlatAppearance.BorderSize > 0)
         {
+            // Inner press line moves, never changes the native hit rectangle
+            // or surrounding layout. Mirrors lilt's compressed focus cursor.
             using Pen border = new(FlatAppearance.BorderColor, FlatAppearance.BorderSize);
-            e.Graphics.DrawRectangle(border, 0, 0, bounds.Width - 1, bounds.Height - 1);
+            e.Graphics.DrawRectangle(border, inset, inset,
+                Math.Max(0, bounds.Width - inset * 2 - 1),
+                Math.Max(0, bounds.Height - inset * 2 - 1));
         }
         TextFormatFlags flags = TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine |
             TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix;
@@ -211,7 +238,9 @@ internal sealed class MP_AnimatedButton : Button
                 => TextFormatFlags.Right,
             _ => TextFormatFlags.HorizontalCenter
         };
-        TextRenderer.DrawText(e.Graphics, Text, Font, bounds,
+        Rectangle textBounds = bounds;
+        textBounds.Offset(0, inset > 0 ? 1 : 0);
+        TextRenderer.DrawText(e.Graphics, Text, Font, textBounds,
             Enabled ? ForeColor : Color.FromArgb(112, 133, 144), flags);
         if (Focused && ShowFocusCues && bounds.Width > 6 && bounds.Height > 6)
             ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(bounds, -3, -3));
