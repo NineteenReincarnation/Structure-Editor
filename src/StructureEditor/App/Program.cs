@@ -67,6 +67,11 @@ internal static class Program
             }
             if (args.Contains("--ui-smoke-test"))
             {
+                if (Math.Abs(MP_Motion.EaseOut(0f)) > 0.00001f ||
+                    Math.Abs(MP_Motion.EaseOut(1f) - 1f) > 0.00001f ||
+                    Math.Abs(MP_Motion.EaseOut(.5f) - .875f) > 0.00001f ||
+                    MP_Motion.Blend(Color.Black, Color.White, 1f) != Color.FromArgb(255, 255, 255))
+                    throw new InvalidOperationException("Motion easing/color contract failed.");
                 using var form = new MainForm();
                 form.CreateControl();
                 static IEnumerable<Control> Descendants(Control parent)

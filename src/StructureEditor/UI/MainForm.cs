@@ -18,7 +18,7 @@ public partial class MainForm : Form
     private readonly Label selectedName = new(), selectedInfo = new(), libraryInfo = new();
     private readonly MP_ExportIndicator MP_exportStatusDot = new();
     private Label MP_rotationLabel, MP_materialLabel, MP_dormancyLabel;
-    private readonly ListBox palette = new();
+    private readonly ListBox palette = new MP_MotionListBox();
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Stack<StructureDocument> undo = new(), redo = new();
     private readonly Color surface = Color.FromArgb(33, 43, 52), text = Color.FromArgb(224, 234, 240), muted = Color.FromArgb(156, 175, 188);
@@ -76,7 +76,7 @@ public partial class MainForm : Form
     private void BuildUi() => BuildWorkspaceUi();
     private Button MakeButton(string caption, int x, int y, int width)
     {
-        Button button = new() { Text = caption, Location = new Point(x, y), Size = new Size(width, 29), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(51, 62, 66), ForeColor = text, UseVisualStyleBackColor = false };
+        Button button = new MP_AnimatedButton { Text = caption, Location = new Point(x, y), Size = new Size(width, 29), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(51, 62, 66), ForeColor = text, UseVisualStyleBackColor = false };
         button.FlatAppearance.BorderColor = Color.FromArgb(81, 99, 105); return button;
     }
     private void AddTool(ToolStrip strip, string caption, Action action)
@@ -127,6 +127,7 @@ public partial class MainForm : Form
             return;
         }
         CatalogItem previous = palette.SelectedItem as CatalogItem;
+        (palette as MP_MotionListBox)?.ResetMotion();
         palette.BeginUpdate();
         try
         {
@@ -148,7 +149,12 @@ public partial class MainForm : Form
         int Px(float value) => (int)Math.Round(value * DeviceDpi / 96f);
         CatalogItem item = (CatalogItem)palette.Items[e.Index];
         bool selected = (e.State & DrawItemState.Selected) != 0;
-        using SolidBrush bg = new(selected ? Color.FromArgb(53, 79, 82) : surface); e.Graphics.FillRectangle(bg, e.Bounds);
+        MP_MotionListBox motionList = palette as MP_MotionListBox;
+        Color background = MP_Motion.Blend(surface, Color.FromArgb(44, 62, 72),
+            motionList?.Hover(e.Index) ?? 0);
+        background = MP_Motion.Blend(background, Color.FromArgb(53, 79, 82),
+            motionList?.Selected(e.Index) ?? (selected ? 1f : 0f));
+        using SolidBrush bg = new(background); e.Graphics.FillRectangle(bg, e.Bounds);
         string texturePath = item.Icon ?? catalog.TextureFor(item);
         Bitmap image = asyncThumbnails ? catalog.Textures.Request(texturePath) : catalog.Textures.Get(texturePath);
         if (image != null)

@@ -6,6 +6,7 @@ namespace StructureEditor;
 internal sealed class MP_ExportIndicator : Control
 {
     private int state = 3;
+    private Color indicatorColor = Color.FromArgb(126, 151, 166);
 
     internal MP_ExportIndicator()
     {
@@ -18,23 +19,27 @@ internal sealed class MP_ExportIndicator : Control
     {
         int next = errors > 0 ? 2 : warnings > 0 ? 1 : 0;
         if (next == state) return;
+        Color from = indicatorColor;
         state = next;
-        Invalidate();
+        Color target = StateColor(next);
+        MP_Motion.Tween(this, "status", 0f, 1f,
+            t => { indicatorColor = MP_Motion.Blend(from, target, t); Invalidate(); }, 190);
     }
+
+    private static Color StateColor(int value) => value switch
+    {
+        0 => Color.FromArgb(129, 206, 166),
+        1 => Color.FromArgb(218, 185, 120),
+        2 => Color.FromArgb(239, 151, 139),
+        _ => Color.FromArgb(126, 151, 166)
+    };
 
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
         Graphics g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        Color color = state switch
-        {
-            0 => Color.FromArgb(129, 206, 166),
-            1 => Color.FromArgb(218, 185, 120),
-            2 => Color.FromArgb(239, 151, 139),
-            _ => Color.FromArgb(126, 151, 166)
-        };
-        using SolidBrush fill = new(color);
+        using SolidBrush fill = new(indicatorColor);
         int diameter = Math.Min(13, Math.Min(Width - 3, Height - 3));
         Rectangle rect = new((Width - diameter) / 2,
             (Height - diameter) / 2, diameter, diameter);

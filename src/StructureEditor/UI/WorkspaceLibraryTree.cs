@@ -9,7 +9,7 @@ public partial class MainForm
     private sealed record MP_LibraryEntry(string File, string Id, string Label, bool HasXml);
 
     private MP_SectionTabs MP_libraryTabs;
-    private TreeView MP_libraryTree;
+    private MP_DarkTreeView MP_libraryTree;
     private TextBox MP_librarySearch;
     private PictureBox MP_libraryPreview;
     private Label MP_libraryDetails;
@@ -83,8 +83,11 @@ public partial class MainForm
             bool leaf = e.Node.Tag is MP_LibraryEntry;
             Rectangle rowRect = new(0, e.Bounds.Top,
                 MP_libraryTree.ClientSize.Width, e.Bounds.Height);
-            using SolidBrush rowBrush = new(selected ? Color.FromArgb(51, 87, 94)
-                : MP_libraryTree.BackColor);
+            Color rowColor = MP_Motion.Blend(MP_libraryTree.BackColor,
+                Color.FromArgb(45, 65, 77), MP_libraryTree.Hover(e.Node));
+            rowColor = MP_Motion.Blend(rowColor, Color.FromArgb(51, 87, 94),
+                MP_libraryTree.Selected(e.Node));
+            using SolidBrush rowBrush = new(rowColor);
             e.Graphics.FillRectangle(rowBrush, rowRect);
             if (selected)
             {
@@ -160,7 +163,7 @@ public partial class MainForm
             Dock = DockStyle.Fill, Padding = new Padding(2, 8, 2, 4),
             BackColor = surface
         };
-        MP_libraryPreview = new PictureBox
+        MP_libraryPreview = new MP_FadePictureBox
         {
             Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.FromArgb(29, 35, 39)
@@ -307,6 +310,7 @@ public partial class MainForm
         string previous = (MP_libraryTree.SelectedNode?.Tag as MP_LibraryEntry)?.Id;
         MP_libraryPreviewDelay.Stop();
         MP_pendingLibraryPreview = null;
+        MP_libraryTree.ResetMotion();
         MP_libraryTree.BeginUpdate();
         try
         {
@@ -426,7 +430,10 @@ public partial class MainForm
                 previewFile = cacheFile;
             }
             using (Image image = Image.FromFile(previewFile))
+            {
                 MP_libraryPreview.Image = new Bitmap(image); // release the source PNG
+                (MP_libraryPreview as MP_FadePictureBox)?.Reveal();
+            }
             string kind = entry.File.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? "JSON 工程" : "XML";
             MP_libraryDetails.Text = entry.Label;
             MP_libraryDetails.Tag = entry.Id;

@@ -10,6 +10,7 @@ public partial class MainForm
 {
     private TextBox MP_cpSearch;
     private ListBox MP_cpCatalogList, MP_cpBreakdown;
+    private float MP_cpDisplayedTotal;
     private Label MP_cpCatalogCount, MP_cpTotal;
     private ToolTip MP_cpTooltip;
     private int MP_cpTooltipIndex = -1;
@@ -64,7 +65,7 @@ public partial class MainForm
             Dock = DockStyle.Fill, ForeColor = muted,
             Text = "尚未加载", TextAlign = ContentAlignment.MiddleLeft
         };
-        MP_cpCatalogList = new ListBox
+        MP_cpCatalogList = new MP_MotionListBox
         {
             DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 52,
             BorderStyle = BorderStyle.None, IntegralHeight = false,
@@ -141,6 +142,7 @@ public partial class MainForm
         CatalogItem selected = MP_cpCatalogList.SelectedItem as CatalogItem;
         MP_cpRefreshing = true;
         MP_cpTooltipIndex = -1;
+        (MP_cpCatalogList as MP_MotionListBox)?.ResetMotion();
         MP_cpCatalogList.BeginUpdate();
         try
         {
@@ -166,7 +168,12 @@ public partial class MainForm
         Rectangle bounds = e.Bounds;
         bool selected = (e.State & DrawItemState.Selected) != 0;
         int Scale(float pixels) => (int)Math.Round(pixels * DeviceDpi / 96f);
-        using (SolidBrush bg = new(selected ? Color.FromArgb(52, 83, 92) : surface))
+        MP_MotionListBox motion = MP_cpCatalogList as MP_MotionListBox;
+        Color background = MP_Motion.Blend(surface, Color.FromArgb(43, 63, 75),
+            motion?.Hover(e.Index) ?? 0f);
+        background = MP_Motion.Blend(background, Color.FromArgb(52, 83, 92),
+            motion?.Selected(e.Index) ?? (selected ? 1f : 0f));
+        using (SolidBrush bg = new(background))
             e.Graphics.FillRectangle(bg, bounds);
         if (selected)
         {
@@ -264,7 +271,7 @@ public partial class MainForm
         header.Controls.Add(MP_cpTotal);
         header.Controls.Add(title);
 
-        MP_cpBreakdown = new ListBox
+        MP_cpBreakdown = new MP_MotionListBox
         {
             DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = 27,
             IntegralHeight = false, BorderStyle = BorderStyle.None,
@@ -282,13 +289,20 @@ public partial class MainForm
         if (MP_cpBreakdown == null || MP_cpTotal == null) return;
         MP_ClusterCombatPower.Row[] rows = MP_ClusterCombatPower.Calculate(catalog, document);
         float total = MP_ClusterCombatPower.Total(rows);
-        MP_cpTotal.Text = MP_FormatCp(total) + " CP";
+        float from = MP_cpDisplayedTotal;
+        MP_Motion.Tween(MP_cpTotal, "cp-total", from, total,
+            value =>
+            {
+                MP_cpDisplayedTotal = value;
+                MP_cpTotal.Text = MP_FormatCp(value) + " CP";
+            }, 170);
         bool same = MP_cpBreakdown.Items.Count == rows.Length;
         for (int i = 0; same && i < rows.Length; i++)
             same = MP_cpBreakdown.Items[i] is MP_ClusterCombatPower.Row old &&
                 ReferenceEquals(old.Item, rows[i].Item) && old.Count == rows[i].Count &&
                 Math.Abs(old.Total - rows[i].Total) < 0.001f;
         if (same) return;
+        (MP_cpBreakdown as MP_MotionListBox)?.ResetMotion();
         MP_cpBreakdown.BeginUpdate();
         try
         {
@@ -303,7 +317,10 @@ public partial class MainForm
     {
         if (e.Index < 0) return;
         Rectangle bounds = e.Bounds;
-        using (SolidBrush bg = new(Color.FromArgb(28, 40, 49)))
+        Color background = MP_Motion.Blend(Color.FromArgb(28, 40, 49),
+            Color.FromArgb(45, 65, 76),
+            (MP_cpBreakdown as MP_MotionListBox)?.Hover(e.Index) ?? 0f);
+        using (SolidBrush bg = new(background))
             e.Graphics.FillRectangle(bg, bounds);
         if (MP_cpBreakdown.Items[e.Index] is not MP_ClusterCombatPower.Row row)
         {
