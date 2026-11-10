@@ -80,6 +80,33 @@ internal static class Program
                     spring.Step(1d / 240);
                 if (!double.IsFinite(spring.Current) || Math.Abs(spring.Current - 100) > .2)
                     throw new InvalidOperationException("lilt spring physics did not converge.");
+                // Check 96/120/144/192 DPI conversions for hybrid headers.
+                foreach (int dpi in new[] { 96, 120, 144, 192 })
+                {
+                    int height = MP_SectionTabs.MP_RequiredHeaderPixels(dpi);
+                    if (height < MP_StudioTheme.HeaderHeight * dpi / 96d ||
+                        height > MP_StudioTheme.HeaderHeight * dpi / 96d + 4)
+                        throw new InvalidOperationException("WPF section header DPI sizing failed.");
+                }
+                // Verify a direct WPF thumbnail retains real color and alpha.
+                using (var sample = new Bitmap(4, 4,
+                    System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+                {
+                    using (Graphics sampleGraphics = Graphics.FromImage(sample))
+                        sampleGraphics.Clear(Color.FromArgb(255, 40, 80, 120));
+                    var thumbnail = MP_WpfThumbnailFactory.Create(sample,
+                        new Rectangle(0, 0, 4, 4));
+                    if (thumbnail == null || !thumbnail.IsFrozen ||
+                        thumbnail.PixelWidth != 4 || thumbnail.PixelHeight != 4)
+                        throw new InvalidOperationException("WPF fast thumbnail failed.");
+                    byte[] pixel = new byte[4 * 4 * 4];
+                    thumbnail.CopyPixels(pixel, 4 * 4, 0);
+                    if (pixel[0] < 90 || pixel[0] > 150 ||
+                        pixel[1] < 50 || pixel[1] > 110 ||
+                        pixel[2] < 10 || pixel[2] > 70 ||
+                        pixel[3] != 255)
+                        throw new InvalidOperationException("WPF thumbnail channels/alpha changed.");
+                }
                 // A single palette must drive both HWND and WPF surfaces.
                 var panelColor = MP_StudioTheme.WpfColor(MP_StudioTheme.Panel);
                 if (panelColor.R != MP_StudioTheme.Panel.R
@@ -142,7 +169,7 @@ internal static class Program
                         || layout.GetControlFromPosition(0, 0)
                            is not System.Windows.Forms.Integration.ElementHost
                         || layout.GetControlFromPosition(0, 1) is not MP_StablePageHost
-                        || !section.MP_HasStablePages;
+                        || !section.MP_HasStablePages || !section.MP_HeaderFitsDpi;
                 }))
                     throw new InvalidOperationException("Tab headers can overlap editor page content.");
                 var pages = Descendants(form).OfType<MP_PageSurface>().ToArray();

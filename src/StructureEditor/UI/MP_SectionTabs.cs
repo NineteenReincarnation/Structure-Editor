@@ -67,13 +67,16 @@ internal sealed class MP_SectionTabs : UserControl
     private void UpdateHeaderDpiHeight()
     {
         if (navigationLayout == null) return;
-        float factor = Math.Max(1f, DeviceDpi / 96f);
-        float pixels = (float)Math.Ceiling(MP_StudioTheme.HeaderHeight * factor) + 3;
+        float pixels = MP_RequiredHeaderPixels(DeviceDpi);
         RowStyle style = navigationLayout.RowStyles[0];
         if (Math.Abs(style.Height - pixels) < 0.5f) return;
         style.Height = pixels;
         navigationLayout.PerformLayout();
     }
+
+    internal static int MP_RequiredHeaderPixels(int dpi)
+        => (int)Math.Ceiling(MP_StudioTheme.HeaderHeight *
+            Math.Max(1d, dpi / 96d)) + 3;
 
     protected override void OnHandleCreated(EventArgs e)
     {
