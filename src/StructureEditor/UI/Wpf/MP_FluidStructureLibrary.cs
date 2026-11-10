@@ -45,6 +45,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private MP_StructureViewEntry active;
     private MP_ScrollOffsetProxy scrollProxy;
     private readonly MP_LiltScroll scrollMotion;
+    private readonly Action<int> switchLibrary;
     private double scrollTarget;
 
     private static WM.SolidColorBrush Solid(byte r, byte g, byte b)
@@ -245,7 +246,14 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         Content = layout;
         PreviewKeyDown += (_, e) =>
         {
-            if (e.OriginalSource is WC.TextBox) return;
+            if (e.OriginalSource is WC.TextBox ||
+                WI.Keyboard.Modifiers != WI.ModifierKeys.None) return;
+            if (e.Key is WI.Key.A or WI.Key.D)
+            {
+                switchLibrary?.Invoke(e.Key == WI.Key.A ? -1 : 1);
+                e.Handled = switchLibrary != null;
+                return;
+            }
             // RimWorld-style W/S navigation is active while a structure row
             // has focus. Search text boxes retain normal typing.
             if (e.Key is WI.Key.Down or WI.Key.Up or WI.Key.W or WI.Key.S)
@@ -264,6 +272,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 row.BringIntoView();
                 row.Focus();
                 if (row.Tag is MP_StructureViewEntry next) Select(next);
+                MP_UiSound.Play(MP_UiSound.Cue.Navigate);
                 e.Handled = true;
                 return;
             }
@@ -293,6 +302,15 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         && rowLayer.ClipToBounds && scroll.Margin.Right >= 12;
 
     internal void FocusSearch() => search.Focus();
+
+    internal void FocusNavigation()
+    {
+        WC.Border target = keyboardNodes.FirstOrDefault(
+            node => node.Tag is MP_StructureViewEntry entry && active?.Id == entry.Id)
+            ?? keyboardNodes.FirstOrDefault();
+        if (target != null) target.Focus();
+        else Focus();
+    }
 
     internal void ClearSearch()
     {

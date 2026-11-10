@@ -107,7 +107,7 @@ public partial class MainForm
                 palette.SelectedItem = item;
             else
                 MP_ActivatePaletteBrush(item);
-        });
+        }, delta => MP_CycleLibraryPage(delta));
         var MP_assetHost = new System.Windows.Forms.Integration.ElementHost
         {
             Dock = DockStyle.Fill, BackColor = surface, Child = MP_assetView,
@@ -536,6 +536,33 @@ public partial class MainForm
         if (Math.Abs(MP_rootLayout.RowStyles[1].Height - pixels) >= 1f)
             MP_rootLayout.RowStyles[1].Height = pixels;
         if (MP_canvasToolbar.Height != pixels) MP_canvasToolbar.Height = pixels;
+    }
+
+    private void MP_CycleLibraryPage(int delta)
+    {
+        if (MP_libraryTabs == null || delta == 0) return;
+        int next = Math.Clamp(MP_libraryTabs.SelectedIndex + Math.Sign(delta), 0, 2);
+        if (next == MP_libraryTabs.SelectedIndex) return;
+        MP_libraryTabs.SelectedIndex = next;
+        MP_UiSound.Play(MP_UiSound.Cue.Navigate);
+        // Preserve keyboard mode after switching; never send focus to
+        // the search field or back to the placement canvas accidentally.
+        switch (next)
+        {
+            case 0:
+                MP_assetView?.Dispatcher.BeginInvoke(
+                    new Action(() => MP_assetView?.FocusNavigation()),
+                    System.Windows.Threading.DispatcherPriority.Loaded);
+                break;
+            case 1:
+                MP_structureView?.Dispatcher.BeginInvoke(
+                    new Action(() => MP_structureView?.FocusNavigation()),
+                    System.Windows.Threading.DispatcherPriority.Loaded);
+                break;
+            case 2:
+                MP_cpMotionView?.Focus();
+                break;
+        }
     }
 
     private void RefreshToolDisplay()

@@ -19,6 +19,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     private readonly WC.Border selection;
     private readonly MP_LiltCursor travellingCursor;
     private readonly Action<CatalogItem> activate;
+    private readonly Action<int> switchLibrary;
     private readonly MP_WpfTextureCache textures = new();
     private WC.ScrollViewer scroller;
     private MP_ScrollOffsetProxy scrollProxy;
@@ -33,9 +34,11 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     private bool refreshQueued;
     private static readonly WM.SolidColorBrush Surface = MP_StudioTheme.Brush(MP_StudioTheme.Panel);
 
-    internal MP_FluidAssetPalette(Action<CatalogItem> onActivate)
+    internal MP_FluidAssetPalette(Action<CatalogItem> onActivate,
+        Action<int> onSwitchLibrary = null)
     {
         activate = onActivate;
+        switchLibrary = onSwitchLibrary;
         MP_LiltTheme.Apply(this);
         Background = Surface;
         layout = new WC.Grid { Background = Surface, ClipToBounds = true };
@@ -101,9 +104,30 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         };
         list.PreviewKeyDown += (_, e) =>
         {
-            if (e.Key == WI.Key.Enter && list.SelectedItem is CatalogItem item)
+            if (WI.Keyboard.Modifiers != WI.ModifierKeys.None) return;
+            if (e.Key is WI.Key.A or WI.Key.D)
+            {
+                switchLibrary?.Invoke(e.Key == WI.Key.A ? -1 : 1);
+                e.Handled = switchLibrary != null;
+                return;
+            }
+            if (e.Key is WI.Key.W or WI.Key.S or WI.Key.Up or WI.Key.Down)
+            {
+                if (items.Length == 0) return;
+                int step = e.Key is WI.Key.W or WI.Key.Up ? -1 : 1;
+                int next = selectedIndex < 0 ? 0
+                    : Math.Clamp(selectedIndex + step, 0, items.Length - 1);
+                list.SelectedIndex = next;
+                list.ScrollIntoView(items[next]);
+                list.Focus();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key is WI.Key.Enter or WI.Key.Space &&
+                list.SelectedItem is CatalogItem item)
             {
                 activate?.Invoke(item);
+                MP_UiSound.Play(MP_UiSound.Cue.Confirm);
                 e.Handled = true;
             }
         };
@@ -209,6 +233,8 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         UpdateSelection(true);
         RefreshSelectedRows();
     }
+
+    internal void FocusNavigation() => list.Focus();
 
     internal bool MP_HasSafeLayering =>
         selection.Background is WM.SolidColorBrush brush && brush.Color.A == 0
