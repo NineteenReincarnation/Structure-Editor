@@ -254,6 +254,16 @@ internal sealed class MP_CpMotionView : WC.UserControl
 
     internal Action<int> SwitchLibrary { get; set; }
 
+    internal void FocusNavigation()
+    {
+        if (currentIndex >= 0 && currentIndex < rows.Children.Count &&
+            rows.Children[currentIndex] is WC.Border selectedRow)
+            selectedRow.Focus();
+        else if (rows.Children.Count > 0 && rows.Children[0] is WC.Border first)
+            first.Focus();
+        else Focus();
+    }
+
     private void OnPreviewKeyDown(object sender, WI.KeyEventArgs e)
     {
         if (WI.Keyboard.Modifiers != WI.ModifierKeys.None ||
@@ -499,6 +509,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
     {
         if (index < 0 || index >= visible.Length) return;
         bool hadSelection = currentIndex >= 0;
+        if (currentIndex != index)
+            MP_UiSound.Play(MP_UiSound.Cue.Navigate);
         currentIndex = index;
         selected = visible[index];
         UpdateRowContrast(index);

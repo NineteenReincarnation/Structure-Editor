@@ -577,7 +577,9 @@ public partial class MainForm
                     System.Windows.Threading.DispatcherPriority.Loaded);
                 break;
             case 2:
-                MP_cpMotionView?.Focus();
+                MP_cpMotionView?.Dispatcher.BeginInvoke(
+                    new Action(() => MP_cpMotionView?.FocusNavigation()),
+                    System.Windows.Threading.DispatcherPriority.Loaded);
                 break;
         }
     }
