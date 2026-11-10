@@ -117,6 +117,17 @@ internal static class Program
                         pixel[3] != 255)
                         throw new InvalidOperationException("WPF thumbnail channels/alpha changed.");
                 }
+                // Preserve enough space for property editors when the CP
+                // footer is displayed on a short or high-DPI window.
+                foreach (var (height, dpi) in new[]
+                    { (480, 96), (700, 144), (900, 192) })
+                {
+                    int footer = MP_InspectorLayout.CpFooterHeight(height, dpi);
+                    if (footer < 120 || footer > height * .34
+                        || footer >= height / 2)
+                        throw new InvalidOperationException(
+                            "CP footer takes priority over the object inspector.");
+                }
                 // A single palette must drive both HWND and WPF surfaces.
                 var panelColor = MP_StudioTheme.WpfColor(MP_StudioTheme.Panel);
                 if (panelColor.R != MP_StudioTheme.Panel.R

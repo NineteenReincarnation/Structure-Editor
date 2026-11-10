@@ -384,11 +384,21 @@ public partial class MainForm
         inspectorColumn.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         inspectorColumn.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         inspectorColumn.RowStyles.Add(new RowStyle(SizeType.Absolute, 196));
+        void FitCpFooter()
+        {
+            if (inspectorColumn.ClientSize.Height <= 0) return;
+            int needed = MP_InspectorLayout.CpFooterHeight(
+                inspectorColumn.ClientSize.Height, DeviceDpi);
+            if (needed > 0 && Math.Abs(inspectorColumn.RowStyles[1].Height - needed) >= 1)
+                inspectorColumn.RowStyles[1].Height = needed;
+        }
+        inspectorColumn.SizeChanged += (_, _) => FitCpFooter();
         inspectorColumn.Controls.Add(tabs, 0, 0);
         var cpFooter = MP_CreateClusterCpFooter();
         cpFooter.Margin = new Padding(0, 1, 0, 0);
         inspectorColumn.Controls.Add(cpFooter, 0, 1);
         inspectorSplit.Panel2.Controls.Add(inspectorColumn);
+        FitCpFooter();
         foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, dormancyBox })
         {
             c.BackColor = MP_StudioTheme.Input;

@@ -8,6 +8,16 @@ internal static class MP_InspectorLayout
 {
     internal const int RowGap = 7;
 
+    // CP is a secondary inspector region: its height scales with DPI, but
+    // never grows so far that the selected object's properties are hidden.
+    internal static int CpFooterHeight(int availableHeight, int dpi)
+    {
+        if (availableHeight <= 0) return 0;
+        int preferred = (int)Math.Round(196d * Math.Max(96, dpi) / 96d);
+        int limit = Math.Max(120, (int)Math.Floor(availableHeight * .32d));
+        return Math.Min(preferred, limit);
+    }
+
     internal static TableLayoutPanel CreatePage(
         MP_SectionTabs sections, string title, Color background, Color foreground)
     {
@@ -40,7 +50,14 @@ internal static class MP_InspectorLayout
     {
         control.Dock = DockStyle.Top;
         control.Margin = new Padding(0, 0, 0, RowGap);
-        if (height > 0) control.Height = height;
+        if (height > 0)
+        {
+            // Respect the native input font's measured line height at high
+            // display scaling. Retain the original explicit row size when
+            // it already accommodates the control.
+            int fontMinimum = control.Font.Height + (control is ComboBox ? 10 : 6);
+            control.Height = Math.Max(height, fontMinimum);
+        }
         int row = panel.RowCount++;
         panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         panel.Controls.Add(control, 0, row);
