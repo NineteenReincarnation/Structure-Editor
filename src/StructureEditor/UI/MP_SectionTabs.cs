@@ -1,39 +1,28 @@
+using System.Windows.Forms.Integration;
 namespace StructureEditor;
 
-// Dark button tabs backed by a real WinForms TabControl. The native host must
-// remain the parent of TabPage, but its unwanted light tab strip and border are
-// suppressed so the page flows to the edges of the dark surface.
+// WPF owns navigation visuals; native TabControl still owns WinForms TabPages,
+// preserving document commands, right-side inspector and structure library logic.
 internal sealed class MP_SectionTabs : UserControl
 {
-    private readonly FlowLayoutPanel header;
     private readonly MP_BorderlessTabHost content;
-    private readonly List<(TabPage Page, Button Button)> pages = new();
+    private readonly ElementHost header;
+    private readonly MP_FluidTabBar bar;
+    private readonly List<TabPage> pages = new();
     private int selection = -1;
-    private float underlineX, underlineWidth;
-    private bool underlineReady;
 
     internal event EventHandler SelectedIndexChanged;
+
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal int SelectedIndex
     {
         get => selection;
         set
         {
-            if (value < 0 || value >= pages.Count) return;
-            if (selection == value) return;
+            if (value < 0 || value >= pages.Count || selection == value) return;
             selection = value;
-            // WinForms requires TabPage to be parented by a TabControl.
-            // Let the native host own visibility and keyboard selection;
-            // the separate dark buttons provide the visible tab header.
             if (content.SelectedIndex != value) content.SelectedIndex = value;
-            for (int i = 0; i < pages.Count; i++)
-            {
-                var button = (MP_AnimatedButton)pages[i].Button;
-                button.IsSelected = i == value;
-                button.ForeColor = i == value
-                    ? Color.FromArgb(243, 247, 249) : Color.FromArgb(170, 193, 205);
-            }
-            MoveUnderline();
+            bar.Select(value);
             SelectedIndexChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -57,55 +46,20 @@ internal sealed class MP_SectionTabs : UserControl
             if (content.SelectedIndex >= 0 && content.SelectedIndex != selection)
                 SelectedIndex = content.SelectedIndex;
         };
-        header = new MP_SmoothFlow
+        bar = new MP_FluidTabBar(value => SelectedIndex = value);
+        header = new ElementHost
         {
-            Dock = DockStyle.Top, Height = 31, WrapContents = false,
-            Margin = Padding.Empty, Padding = Padding.Empty,
-            BackColor = Color.FromArgb(37, 50, 59)
-        };
-        header.Paint += (_, e) =>
-        {
-            if (!underlineReady || underlineWidth < 1f) return;
-            using SolidBrush brush = new(Color.FromArgb(135, 203, 219));
-            e.Graphics.FillRectangle(brush, (int)Math.Round(underlineX),
-                Math.Max(0, header.Height - 3), (int)Math.Round(underlineWidth), 3);
-        };
-        header.Layout += (_, _) =>
-        {
-            if (selection < 0 || selection >= pages.Count) return;
-            // Keep the indicator aligned when DPI or tab widths change.
-            if (!MP_Motion.Enabled || !underlineReady)
-            {
-                underlineX = pages[selection].Button.Left;
-                underlineWidth = pages[selection].Button.Width;
-                underlineReady = true;
-                header.Invalidate();
-            }
+            Child = bar, Dock = DockStyle.Top, Height = 39,
+            BackColor = Color.FromArgb(37, 50, 59), TabStop = false
         };
         Controls.Add(content);
         Controls.Add(header);
-    }
-
-    private void MoveUnderline()
-    {
-        if (selection < 0 || selection >= pages.Count) return;
-        var button = pages[selection].Button;
-        float nextX = button.Left, nextWidth = button.Width;
-        if (!underlineReady || !header.IsHandleCreated)
-        {
-            underlineX = nextX; underlineWidth = nextWidth; underlineReady = true;
-            header.Invalidate();
-            return;
-        }
-        MP_Motion.Tween(header, "underline-x", underlineX, nextX,
-            x => { underlineX = x; header.Invalidate(); }, 190);
-        MP_Motion.Tween(header, "underline-width", underlineWidth, nextWidth,
-            width => { underlineWidth = width; header.Invalidate(); }, 190);
+        header.BringToFront();
     }
 
     internal bool SelectPage(TabPage page)
     {
-        int index = pages.FindIndex(entry => ReferenceEquals(entry.Page, page));
+        int index = pages.FindIndex(p => ReferenceEquals(p, page));
         if (index < 0) return false;
         SelectedIndex = index;
         return true;
@@ -113,32 +67,12 @@ internal sealed class MP_SectionTabs : UserControl
 
     internal void AddPage(TabPage page)
     {
-        int index = pages.Count;
         page.Margin = Padding.Empty;
         page.BackColor = BackColor;
-        var button = new MP_AnimatedButton
-        {
-            IdleColor = Color.FromArgb(37, 50, 59),
-            SelectedColor = Color.FromArgb(51, 87, 94),
-            HoverColor = Color.FromArgb(62, 89, 100),
-            Text = page.Text,
-            Width = Math.Max(50, TextRenderer.MeasureText(page.Text, Font).Width + 16),
-            Height = 27, Margin = Padding.Empty, Padding = Padding.Empty,
-            FlatStyle = FlatStyle.Flat, UseVisualStyleBackColor = false,
-            TextAlign = ContentAlignment.MiddleCenter,
-            ForeColor = Color.FromArgb(170, 193, 205),
-            BackColor = Color.FromArgb(37, 50, 59),
-            TabStop = false
-        };
-        button.FlatAppearance.BorderSize = 0;
-        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(61, 84, 96);
-        button.FlatAppearance.MouseDownBackColor = Color.FromArgb(67, 96, 110);
-        button.Click += (_, _) => SelectedIndex = index;
-        pages.Add((page, button));
+        pages.Add(page);
         content.TabPages.Add(page);
-        header.Controls.Add(button);
-        if (selection == -1) SelectedIndex = 0;
-        else MoveUnderline();
+        bar.AddTab(page.Text);
+        if (selection < 0) SelectedIndex = 0;
     }
 }
 
