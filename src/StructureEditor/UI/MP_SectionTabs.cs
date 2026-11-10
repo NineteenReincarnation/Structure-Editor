@@ -105,7 +105,7 @@ internal sealed class MP_PageSurface : Panel
     internal string Title { get; }
     // Visibility returns false for every child before MainForm.Show().
     // Track page selection explicitly so startup checks do not misread it.
-    internal bool MP_IsActive { get; set; }
+    internal bool MP_IsActive;
     internal MP_PageSurface(string title) => Title = title;
 }
 
