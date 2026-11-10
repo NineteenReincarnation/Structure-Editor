@@ -103,7 +103,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         selection = new WC.Border
         {
             Height = RowHeight - 5, Margin = new W.Thickness(6, 0, 5, 0),
-            Background = Solid(55, 112, 180, 200),
+            Background = Solid(128, 117, 190, 210),
             BorderBrush = Solid(140, 125, 205, 220),
             BorderThickness = new W.Thickness(1),
             CornerRadius = new W.CornerRadius(5),
@@ -408,12 +408,15 @@ internal sealed class MP_WpfTextureCache
     private Catalog source;
     private readonly Dictionary<string, WB.BitmapSource> cache =
         new(StringComparer.Ordinal);
+    private readonly Queue<string> cacheOrder = new();
+    private const int MaxCachedThumbnails = 256;
 
     internal void SetCatalog(Catalog catalog)
     {
         if (ReferenceEquals(source, catalog)) return;
         source = catalog;
         cache.Clear();
+        cacheOrder.Clear();
     }
 
     internal WB.BitmapSource TryGet(CatalogItem item)
@@ -442,9 +445,13 @@ internal sealed class MP_WpfTextureCache
             var image = new WB.BitmapImage();
             image.BeginInit();
             image.CacheOption = WB.BitmapCacheOption.OnLoad;
+            image.DecodePixelWidth = 96;
             image.StreamSource = stream;
             image.EndInit();
             image.Freeze();
+            while (cacheOrder.Count >= MaxCachedThumbnails)
+                cache.Remove(cacheOrder.Dequeue());
+            cacheOrder.Enqueue(key);
             cache[key] = image;
             return image;
         }

@@ -46,7 +46,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
             VerticalAlignment = W.VerticalAlignment.Center,
             HorizontalAlignment = W.HorizontalAlignment.Left,
             CornerRadius = new W.CornerRadius(4),
-            Background = Brush(76, 85, 168, 185),
+            Background = Brush(201, 136, 209, 225),
             BorderBrush = Brush(143, 145, 220, 232),
             BorderThickness = new W.Thickness(1),
             RenderTransform = capsuleOffset,
@@ -171,8 +171,10 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
         {
             active = nextActive;
             for (int i = 0; i < visuals.Count; i++)
-                visuals[i].Title.Foreground = i == active
-                    ? Brush(224, 244, 249) : Brush(164, 194, 206);
+                MP_WpfMotion.Tint((WM.SolidColorBrush)visuals[i].Title.Foreground,
+                    i == active
+                        ? WM.Color.FromRgb(24, 54, 64)
+                        : WM.Color.FromRgb(164, 194, 206), 160);
             Move(!structureChanged);
         }
     }

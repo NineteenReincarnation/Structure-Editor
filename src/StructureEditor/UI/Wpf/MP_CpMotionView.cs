@@ -35,6 +35,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
         Interval = TimeSpan.FromMilliseconds(135)
     };
     private readonly List<(CatalogItem Item, WC.Image Image)> images = new();
+    private readonly List<(WM.SolidColorBrush Name, WM.SolidColorBrush Def,
+        WM.SolidColorBrush Cp)> rowText = new();
     private readonly Dictionary<string, WB.BitmapSource> imageCache = new(StringComparer.Ordinal);
     private Catalog source;
     private CatalogItem[] visible = Array.Empty<CatalogItem>();
@@ -111,7 +113,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         rows = new WC.StackPanel { Orientation = WC.Orientation.Vertical };
         selectionVisual = new WC.Border
         {
-            Background = Brush(Color(49, 110, 183, 199)),
+            Background = Brush(Color(207, 135, 211, 227)),
             BorderBrush = Brush(Color(141, 120, 195, 212)),
             BorderThickness = new W.Thickness(1), CornerRadius = new W.CornerRadius(5),
             Margin = new W.Thickness(2, 3, 2, 0), Height = RowHeight - 6,
@@ -267,6 +269,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
     {
         selected = null;
         currentIndex = -1;
+        UpdateRowContrast(-1);
         selectionVisual.Visibility = W.Visibility.Collapsed;
     }
 
@@ -310,6 +313,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         if (same) return;
         visible = next;
         images.Clear();
+        rowText.Clear();
         rows.Children.Clear();
         double max = Math.Max(1, next.Length == 0
             ? 0 : next.Max(item => item.ClusterCombatPower.GetValueOrDefault()));
@@ -319,6 +323,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
             ? "尚未加载" : $"集群设施 {next.Length} 种 · 单击选择放置";
         int selectedAt = Array.FindIndex(next, item => ReferenceEquals(item, selected));
         currentIndex = selectedAt;
+        UpdateRowContrast(selectedAt);
         if (selectedAt < 0) selectionVisual.Visibility = W.Visibility.Collapsed;
         else
         {
@@ -370,9 +375,13 @@ internal sealed class MP_CpMotionView : WC.UserControl
         images.Add((item, icon));
         WC.Grid.SetColumn(icon, 0); WC.Grid.SetRowSpan(icon, 2); body.Children.Add(icon);
 
+        var nameColor = new WM.SolidColorBrush(Color(224, 234, 240));
+        var defColor = new WM.SolidColorBrush(Color(157, 176, 188));
+        var cpColor = new WM.SolidColorBrush(Color(173, 228, 240));
+        rowText.Add((nameColor, defColor, cpColor));
         var name = new WC.TextBlock
         {
-            Text = item.ClusterWikiName ?? item.Label, Foreground = MainText,
+            Text = item.ClusterWikiName ?? item.Label, Foreground = nameColor,
             TextTrimming = W.TextTrimming.CharacterEllipsis,
             FontFamily = search.FontFamily, FontSize = 13,
             VerticalAlignment = W.VerticalAlignment.Center
@@ -384,7 +393,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         detail.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = W.GridLength.Auto });
         var def = new WC.TextBlock
         {
-            Text = item.DefName, Foreground = Secondary,
+            Text = item.DefName, Foreground = defColor,
             FontFamily = search.FontFamily, FontSize = 11,
             VerticalAlignment = W.VerticalAlignment.Center,
             TextTrimming = W.TextTrimming.CharacterEllipsis
@@ -393,7 +402,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             Text = item.ClusterCombatPower.HasValue
                 ? item.ClusterCombatPower.Value.ToString("0.##", CultureInfo.InvariantCulture) + " CP" : "—",
-            Foreground = Accent, Margin = new W.Thickness(7, 0, 0, 0),
+            Foreground = cpColor, Margin = new W.Thickness(7, 0, 0, 0),
             FontFamily = search.FontFamily, FontSize = 11.2,
             VerticalAlignment = W.VerticalAlignment.Center
         };
@@ -443,12 +452,30 @@ internal sealed class MP_CpMotionView : WC.UserControl
         return row;
     }
 
+    private void UpdateRowContrast(int selectedIndex)
+    {
+        // The reference LCD uses a solid cyan capsule with darker glyphs.
+        // Animate only the two text hues of the actual selected row; all
+        // other rows stay readable in the editor's dark palette.
+        for (int i = 0; i < rowText.Count; i++)
+        {
+            bool active = i == selectedIndex;
+            MP_WpfMotion.Tint(rowText[i].Name,
+                active ? Color(23, 54, 64) : Color(224, 234, 240), 160);
+            MP_WpfMotion.Tint(rowText[i].Def,
+                active ? Color(38, 74, 85) : Color(157, 176, 188), 160);
+            MP_WpfMotion.Tint(rowText[i].Cp,
+                active ? Color(23, 71, 87) : Color(173, 228, 240), 160);
+        }
+    }
+
     private void Select(int index)
     {
         if (index < 0 || index >= visible.Length) return;
         bool hadSelection = currentIndex >= 0;
         currentIndex = index;
         selected = visible[index];
+        UpdateRowContrast(index);
         selectionVisual.Visibility = W.Visibility.Visible;
         double target = index * RowHeight;
         double from = selectionTransform.Y;
@@ -505,6 +532,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
             var image = new WB.BitmapImage();
             image.BeginInit();
             image.CacheOption = WB.BitmapCacheOption.OnLoad;
+            image.DecodePixelWidth = 96;
             image.StreamSource = data;
             image.EndInit();
             image.Freeze();
