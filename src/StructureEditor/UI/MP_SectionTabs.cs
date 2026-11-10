@@ -107,13 +107,31 @@ internal sealed class MP_SectionTabs : UserControl
         }
     }
 
+    // TabPage references remain valid for legacy callers, while the visible
+    // page is now a stable MP_PageSurface. Support both identities so older
+    // workspace commands and new navigation share one selection path.
     internal bool SelectPage(TabPage page)
     {
         int index = pages.FindIndex(p => ReferenceEquals(p, page));
-        if (index < 0) return false;
+        return SelectIndex(index);
+    }
+
+    internal bool SelectPage(MP_PageSurface surface)
+    {
+        int index = surfaces.FindIndex(p => ReferenceEquals(p, surface));
+        return SelectIndex(index);
+    }
+
+    private bool SelectIndex(int index)
+    {
+        if (index < 0 || index >= pages.Count) return false;
         SelectedIndex = index;
         return true;
     }
+
+    internal string MP_SelectedPageTitle =>
+        selection >= 0 && selection < surfaces.Count
+            ? surfaces[selection].Title : string.Empty;
 
     internal void AddPage(TabPage page)
     {

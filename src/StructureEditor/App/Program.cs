@@ -199,6 +199,15 @@ internal static class Program
                     section.SelectedIndex = previous;
                     if (!section.MP_HasStablePages)
                         throw new InvalidOperationException("Page switch changed host/page ownership.");
+                    var activeSurface = Descendants(section)
+                        .OfType<MP_PageSurface>()
+                        .SingleOrDefault(page => page.MP_IsActive);
+                    if (activeSurface == null
+                        || !section.SelectPage(activeSurface)
+                        || section.MP_SelectedPageTitle != activeSurface.Title
+                        || !section.MP_HasStablePages)
+                        throw new InvalidOperationException(
+                            "Stable page selection no longer matches workspace commands.");
                 }
                 // Exercise all docking boundaries at common desktop sizes;
                 // this catches accidental toolbar/page overlap after changes

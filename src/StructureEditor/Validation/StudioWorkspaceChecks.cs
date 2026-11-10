@@ -106,11 +106,15 @@ internal static class StudioWorkspaceChecks
                 need(rejected && File.Exists(occupied), "A new unsaved document cannot claim an occupied XML number as its own source");
             }
             form.Size = new(1450, 900);
-            var inspector = ((GroupBox)Field("namingPanel")).Parent;
-            while (inspector is not TabPage) inspector = inspector.Parent;
-            var tabs = inspector.Parent?.Parent as MP_SectionTabs;
-            need(tabs != null && tabs.SelectPage((TabPage)inspector),
-                "Workspace metadata section remains selectable with the unified dark tab control");
+            // The page body is now a permanent Panel; it no longer lives
+            // directly beneath TabPage. Test the actual runtime hierarchy.
+            Control inspector = (GroupBox)Field("namingPanel");
+            while (inspector != null && inspector is not MP_PageSurface)
+                inspector = inspector.Parent;
+            var section = inspector?.Parent?.Parent as MP_SectionTabs;
+            need(section != null && section.SelectPage((MP_PageSurface)inspector)
+                && section.MP_SelectedPageTitle == "工程",
+                "Workspace metadata remains selectable after stable-page refactor");
             StudioInteractionChecks.RenderWorkspace(form, Path.Combine(folder, "workspace-documents.png"));
             form.Size = new(1060, 720); StudioInteractionChecks.RenderWorkspace(form, Path.Combine(folder, "workspace-documents-compact.png"));
         }
