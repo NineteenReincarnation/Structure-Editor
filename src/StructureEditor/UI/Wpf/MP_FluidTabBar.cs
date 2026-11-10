@@ -128,7 +128,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         var host = new WC.Border
         {
             Width = desired, Height = 35,
-            Background = new WM.SolidColorBrush(WM.Color.FromArgb(0, 111, 183, 205)),
+            Background = MP_StudioTheme.Brush(0, MP_StudioTheme.Text),
             Cursor = WI.Cursors.Hand,
             ToolTip = title,
             Child = caption
@@ -137,13 +137,13 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         {
             if (index != active)
                 MP_WpfMotion.Tint((WM.SolidColorBrush)host.Background,
-                    WM.Color.FromArgb(52, 86, 154, 177), 120);
+                    MP_StudioTheme.WpfOpacity(42, MP_StudioTheme.Text), 120);
         };
         host.MouseLeave += (_, _) =>
         {
             if (index != active)
                 MP_WpfMotion.Tint((WM.SolidColorBrush)host.Background,
-                    WM.Color.FromArgb(0, 86, 154, 177), 120);
+                    MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 120);
         };
         host.MouseLeftButtonDown += (_, e) =>
         {
@@ -178,7 +178,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             // Only the active item's own background is inverted.
             MP_WpfMotion.Tint((WM.SolidColorBrush)tabs[i].Host.Background,
                 i == index ? ActiveBackground
-                    : WM.Color.FromArgb(0, 111, 183, 205), 145);
+                    : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 145);
         }
         Position(true);
     }

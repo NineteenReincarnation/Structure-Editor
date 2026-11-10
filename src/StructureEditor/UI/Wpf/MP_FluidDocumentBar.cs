@@ -115,21 +115,21 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 var close = new WC.Border
                 {
                     Width = 22, Height = 23, CornerRadius = new W.CornerRadius(0),
-                    Background = Brush(0, 96, 159, 173),
+                    Background = MP_StudioTheme.Brush(0, MP_StudioTheme.Text),
                     Cursor = WI.Cursors.Hand,
                     ToolTip = "关闭结构"
                 };
                 close.Child = new WC.TextBlock
                 {
                     Text = "×", FontSize = 16,
-                    Foreground = Brush(170, 205, 215),
+                    Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Text),
                     HorizontalAlignment = W.HorizontalAlignment.Center,
                     VerticalAlignment = W.VerticalAlignment.Center
                 };
                 close.MouseEnter += (_, _) => AnimateColor((WM.SolidColorBrush)close.Background,
-                    WM.Color.FromArgb(113, 124, 79, 82));
+                    MP_StudioTheme.WpfOpacity(54, MP_StudioTheme.Text));
                 close.MouseLeave += (_, _) => AnimateColor((WM.SolidColorBrush)close.Background,
-                    WM.Color.FromArgb(0, 96, 159, 173));
+                    MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text));
                 close.MouseLeftButtonDown += (_, e) =>
                 {
                     invoke?.Invoke(entry.Index, true);
@@ -141,7 +141,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 var container = new WC.Border
                 {
                     Width = Math.Clamp(estimatedWidth, 102, 240), Height = 31,
-                    Background = Brush(0, 85, 140, 156),
+                    Background = MP_StudioTheme.Brush(0, MP_StudioTheme.Text),
                     Cursor = WI.Cursors.Hand,
                     Child = content
                 };
@@ -149,13 +149,13 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                 {
                     if (entry.Index != active)
                         AnimateColor((WM.SolidColorBrush)container.Background,
-                            WM.Color.FromArgb(42, 123, 187, 205));
+                            MP_StudioTheme.WpfOpacity(42, MP_StudioTheme.Text));
                 };
                 container.MouseLeave += (_, _) =>
                 {
                     if (entry.Index != active)
                         AnimateColor((WM.SolidColorBrush)container.Background,
-                            WM.Color.FromArgb(0, 85, 140, 156));
+                            MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text));
                 };
                 container.MouseLeftButtonDown += (_, e) =>
                 {
@@ -194,7 +194,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                         : MP_StudioTheme.WpfColor(MP_StudioTheme.Secondary), 160);
                 MP_WpfMotion.Tint((WM.SolidColorBrush)visuals[i].Container.Background,
                     i == active ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
-                        : WM.Color.FromArgb(0, 85, 140, 156), 155);
+                        : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 155);
             }
             Move(!structureChanged);
         }
