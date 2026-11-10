@@ -24,6 +24,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly WC.StackPanel rows = new();
     private readonly WC.Grid rowLayer;
     private readonly WC.ScrollViewer scroll;
+    private readonly MP_WpfScrollRail scrollRail;
     private readonly WC.Border slider;
     private readonly WM.TranslateTransform sliderOffset = new();
     private readonly System.Windows.Threading.DispatcherTimer filterDelay =
@@ -146,8 +147,14 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             MP_WpfMotion.Scroll(scrollProxy, scrollTarget, 230);
             e.Handled = true;
         };
-        WC.Grid.SetRow(scroll, 2);
-        layout.Children.Add(scroll);
+        var scrollHost = new WC.Grid { ClipToBounds = true };
+        scrollHost.Children.Add(scroll);
+        scrollRail = new MP_WpfScrollRail(scroll, scrollProxy,
+            offset => scrollTarget = offset);
+        WC.Panel.SetZIndex(scrollRail, 2);
+        scrollHost.Children.Add(scrollRail);
+        WC.Grid.SetRow(scrollHost, 2);
+        layout.Children.Add(scrollHost);
 
         var previewPanel = new WC.Border
         {

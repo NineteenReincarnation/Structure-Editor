@@ -22,6 +22,8 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     private readonly MP_WpfTextureCache textures = new();
     private WC.ScrollViewer scroller;
     private MP_ScrollOffsetProxy scrollProxy;
+    private MP_WpfScrollRail scrollRail;
+    private bool scrollEventsHooked;
     private Catalog source;
     private CatalogItem[] items = Array.Empty<CatalogItem>();
     private bool selecting;
@@ -121,17 +123,22 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         Loaded += (_, _) =>
         {
             scroller = FindChild<WC.ScrollViewer>(list);
-            if (scroller != null)
+            if (scroller != null && !scrollEventsHooked)
             {
+                scrollEventsHooked = true;
                 scrollProxy = new MP_ScrollOffsetProxy(scroller);
+                scrollRail = new MP_WpfScrollRail(scroller, scrollProxy,
+                    offset => targetScroll = offset);
+                WC.Panel.SetZIndex(scrollRail, 2);
+                layout.Children.Add(scrollRail);
                 scroller.ScrollChanged += (_, _) =>
                 {
-                    // The selector is a composited overlay, not painted by
-                    // each row; scrolling must move it with the content.
+                    // Passive movement never jumps back to the selected item.
                     UpdateSelection(false);
                     RefreshVisible();
                 };
             }
+            scrollRail?.Refresh();
             RefreshVisible();
             UpdateSelection(false);
         };
