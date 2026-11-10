@@ -68,7 +68,10 @@ internal sealed class MP_WpfScrollRail : WC.Grid
         double travelHeight = Math.Max(0, ActualHeight);
         bool canScroll = viewer.ScrollableHeight > 1 && viewport > 0
             && total > viewport && travelHeight > 1;
-        Visibility = canScroll ? W.Visibility.Visible : W.Visibility.Collapsed;
+        // Keep measuring while the content is initially empty: collapsing
+        // the rail can otherwise leave ActualHeight at zero permanently.
+        Opacity = canScroll ? 1d : 0d;
+        IsHitTestVisible = canScroll;
         if (!canScroll) return;
         double thumbHeight = Math.Clamp(viewport / total * travelHeight,
             Math.Min(22, travelHeight), travelHeight);
