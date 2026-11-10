@@ -1,0 +1,435 @@
+using System.Drawing.Imaging;
+using System.Globalization;
+using W = System.Windows;
+using WC = System.Windows.Controls;
+using WM = System.Windows.Media;
+using WA = System.Windows.Media.Animation;
+using WI = System.Windows.Input;
+using WB = System.Windows.Media.Imaging;
+
+namespace StructureEditor;
+
+// WPF native virtualized asset library. Search/filter remain shared with the
+// established catalog query; the visible surface never owns editor state.
+internal sealed class MP_FluidAssetPalette : WC.UserControl
+{
+    private const double RowHeight = 70;
+    private readonly WC.ListBox list;
+    private readonly WC.Grid layout;
+    private readonly WC.Border selection;
+    private readonly WM.TranslateTransform selectionOffset = new();
+    private readonly Action<CatalogItem> activate;
+    private readonly MP_WpfTextureCache textures = new();
+    private WC.ScrollViewer scroller;
+    private MP_ScrollOffsetProxy scrollProxy;
+    private Catalog source;
+    private CatalogItem[] items = Array.Empty<CatalogItem>();
+    private bool selecting;
+    private int selectedIndex = -1;
+    private double targetScroll;
+    private static readonly WM.SolidColorBrush Surface = Solid(34, 44, 53);
+
+    internal MP_FluidAssetPalette(Action<CatalogItem> onActivate)
+    {
+        activate = onActivate;
+        Background = Surface;
+        layout = new WC.Grid { Background = Surface, ClipToBounds = true };
+        var rowFactory = new W.FrameworkElementFactory(typeof(MP_FluidAssetRow));
+        var itemTemplate = new W.DataTemplate(typeof(CatalogItem)) { VisualTree = rowFactory };
+        var containerTemplate = new WC.ControlTemplate(typeof(WC.ListBoxItem));
+        var presenter = new W.FrameworkElementFactory(typeof(WC.ContentPresenter));
+        presenter.SetValue(WC.ContentPresenter.HorizontalAlignmentProperty, W.HorizontalAlignment.Stretch);
+        presenter.SetValue(WC.ContentPresenter.VerticalAlignmentProperty, W.VerticalAlignment.Center);
+        presenter.SetValue(WC.ContentPresenter.ContentProperty,
+            new W.TemplateBindingExtension(WC.ContentControl.ContentProperty));
+        presenter.SetValue(WC.ContentPresenter.ContentTemplateProperty,
+            new W.TemplateBindingExtension(WC.ContentControl.ContentTemplateProperty));
+        containerTemplate.VisualTree = presenter;
+        var containerStyle = new W.Style(typeof(WC.ListBoxItem));
+        containerStyle.Setters.Add(new W.Setter(WC.Control.TemplateProperty, containerTemplate));
+        containerStyle.Setters.Add(new W.Setter(WC.Control.PaddingProperty, new W.Thickness(0)));
+        containerStyle.Setters.Add(new W.Setter(WC.Control.BorderThicknessProperty, new W.Thickness(0)));
+        containerStyle.Setters.Add(new W.Setter(WC.Control.HorizontalContentAlignmentProperty, W.HorizontalAlignment.Stretch));
+        var panel = new WC.ItemsPanelTemplate(
+            new W.FrameworkElementFactory(typeof(WC.VirtualizingStackPanel)));
+        list = new WC.ListBox
+        {
+            Background = Surface, Foreground = Solid(224, 234, 240),
+            BorderThickness = new W.Thickness(0), Padding = new W.Thickness(4, 3, 4, 4),
+            ItemTemplate = itemTemplate, ItemContainerStyle = containerStyle,
+            ItemsPanel = panel, FocusVisualStyle = null
+        };
+        WC.ScrollViewer.SetVerticalScrollBarVisibility(list, WC.ScrollBarVisibility.Hidden);
+        WC.ScrollViewer.SetHorizontalScrollBarVisibility(list, WC.ScrollBarVisibility.Disabled);
+        WC.ScrollViewer.SetCanContentScroll(list, true);
+        WC.VirtualizingPanel.SetIsVirtualizing(list, true);
+        WC.VirtualizingPanel.SetVirtualizationMode(list, WC.VirtualizationMode.Recycling);
+        WC.VirtualizingPanel.SetScrollUnit(list, WC.ScrollUnit.Pixel);
+        list.SelectionChanged += (_, _) =>
+        {
+            if (selecting) return;
+            selectedIndex = list.SelectedIndex;
+            UpdateSelection(true);
+            if (list.SelectedItem is CatalogItem item) activate?.Invoke(item);
+        };
+        list.PreviewMouseWheel += (_, e) =>
+        {
+            if (!MP_Motion.Enabled || scroller == null) return;
+            targetScroll = Math.Clamp(targetScroll - e.Delta / 120d * 120d,
+                0d, Math.Max(0d, scroller.ScrollableHeight));
+            ScrollTo(targetScroll);
+            e.Handled = true;
+        };
+        list.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == WI.Key.Enter && list.SelectedItem is CatalogItem item)
+            {
+                activate?.Invoke(item);
+                e.Handled = true;
+            }
+        };
+        selection = new WC.Border
+        {
+            Height = RowHeight - 5, Margin = new W.Thickness(6, 0, 5, 0),
+            Background = Solid(55, 112, 180, 200),
+            BorderBrush = Solid(140, 125, 205, 220),
+            BorderThickness = new W.Thickness(1),
+            CornerRadius = new W.CornerRadius(5),
+            RenderTransform = selectionOffset,
+            HorizontalAlignment = W.HorizontalAlignment.Stretch,
+            VerticalAlignment = W.VerticalAlignment.Top,
+            IsHitTestVisible = false, Visibility = W.Visibility.Collapsed
+        };
+        WC.Panel.SetZIndex(list, 0);
+        WC.Panel.SetZIndex(selection, 1);
+        layout.Children.Add(list);
+        layout.Children.Add(selection);
+        Content = layout;
+
+        Loaded += (_, _) =>
+        {
+            scroller = FindChild<WC.ScrollViewer>(list);
+            if (scroller != null)
+            {
+                scrollProxy = new MP_ScrollOffsetProxy(scroller);
+                scroller.ScrollChanged += (_, _) =>
+                {
+                    // The selector is a composited overlay, not painted by
+                    // each row; scrolling must move it with the content.
+                    UpdateSelection(false);
+                    RefreshVisible();
+                };
+            }
+            RefreshVisible();
+            UpdateSelection(false);
+        };
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible) { PlayEntrance(); RefreshVisible(); }
+        };
+    }
+
+    internal void SetItems(Catalog catalog, CatalogItem[] next)
+    {
+        next ??= Array.Empty<CatalogItem>();
+        if (!ReferenceEquals(source, catalog))
+        {
+            source = catalog;
+            textures.SetCatalog(catalog);
+        }
+        bool identical = next.Length == items.Length;
+        for (int i = 0; identical && i < next.Length; i++)
+            identical = ReferenceEquals(next[i], items[i]);
+        if (identical) return;
+        CatalogItem previous = list.SelectedItem as CatalogItem;
+        items = next;
+        selecting = true;
+        try
+        {
+            list.ItemsSource = next;
+            int index = previous == null ? -1 :
+                Array.FindIndex(next, i => ReferenceEquals(i, previous));
+            list.SelectedIndex = index;
+            selectedIndex = index;
+        }
+        finally { selecting = false; }
+        UpdateSelection(false);
+        if (IsVisible && MP_Motion.Enabled)
+        {
+            list.BeginAnimation(OpacityProperty,
+                new WA.DoubleAnimation(.72, 1d, TimeSpan.FromMilliseconds(165))
+                { EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut } });
+        }
+        RefreshVisible();
+    }
+
+    internal void MarkSelected(CatalogItem item)
+    {
+        if (item == null || !items.Contains(item)) return;
+        if (ReferenceEquals(list.SelectedItem, item)) return;
+        selecting = true;
+        try
+        {
+            list.SelectedItem = item;
+            selectedIndex = list.SelectedIndex;
+        }
+        finally { selecting = false; }
+        UpdateSelection(true);
+    }
+
+    internal void PlayEntrance()
+    {
+        if (!IsVisible) return;
+        if (!MP_Motion.Enabled) { Opacity = 1; return; }
+        BeginAnimation(OpacityProperty,
+            new WA.DoubleAnimation(.55, 1d, TimeSpan.FromMilliseconds(185))
+            { EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut } });
+    }
+
+    internal void RefreshVisible()
+    {
+        if (source?.Textures == null || !IsVisible || items.Length == 0) return;
+        int first = scroller == null ? 0 : Math.Max(0, (int)(scroller.VerticalOffset / RowHeight) - 3);
+        int last = scroller == null ? Math.Min(items.Length, 25)
+            : Math.Min(items.Length, (int)Math.Ceiling(
+                (scroller.VerticalOffset + scroller.ViewportHeight) / RowHeight) + 5);
+        for (int i = first; i < last; i++)
+            if (list.ItemContainerGenerator.ContainerFromIndex(i) is WC.ListBoxItem container)
+                FindChild<MP_FluidAssetRow>(container)?.RefreshThumbnail();
+    }
+
+    internal WB.BitmapSource Thumbnail(CatalogItem item) => textures.TryGet(item);
+
+    private void UpdateSelection(bool animate)
+    {
+        if (selectedIndex < 0 || selectedIndex >= items.Length)
+        {
+            selection.Visibility = W.Visibility.Collapsed;
+            return;
+        }
+        if (list.ItemContainerGenerator.ContainerFromIndex(selectedIndex) is not WC.ListBoxItem container)
+        {
+            if (list.IsLoaded)
+            {
+                list.ScrollIntoView(items[selectedIndex]);
+                list.Dispatcher.BeginInvoke(new Action(() => UpdateSelection(animate)),
+                    System.Windows.Threading.DispatcherPriority.Loaded);
+            }
+            return;
+        }
+        W.Point pos = container.TranslatePoint(new W.Point(0, 0), layout);
+        double nextY = pos.Y + 2;
+        if (!double.IsFinite(nextY)) return;
+        bool wasVisible = selection.Visibility == W.Visibility.Visible;
+        selection.Visibility = W.Visibility.Visible;
+        if (!wasVisible || !animate || !MP_Motion.Enabled)
+        {
+            selectionOffset.BeginAnimation(WM.TranslateTransform.YProperty, null);
+            selectionOffset.Y = nextY;
+            return;
+        }
+        double from = selectionOffset.Y;
+        selectionOffset.BeginAnimation(WM.TranslateTransform.YProperty, null);
+        selectionOffset.Y = nextY;
+        selectionOffset.BeginAnimation(WM.TranslateTransform.YProperty,
+            new WA.DoubleAnimation(from, nextY, TimeSpan.FromMilliseconds(240))
+            { EasingFunction = new WA.BackEase
+                { Amplitude = .13, EasingMode = WA.EasingMode.EaseOut } });
+    }
+
+    private void ScrollTo(double destination)
+    {
+        if (scroller == null) return;
+        if (!MP_Motion.Enabled || scrollProxy == null)
+        {
+            scroller.ScrollToVerticalOffset(destination);
+            return;
+        }
+        double from = scroller.VerticalOffset;
+        scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
+        scrollProxy.Offset = destination;
+        scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty,
+            new WA.DoubleAnimation(from, destination, TimeSpan.FromMilliseconds(245))
+            { EasingFunction = new WA.CubicEase
+                { EasingMode = WA.EasingMode.EaseOut } });
+    }
+
+    private static T FindChild<T>(W.DependencyObject parent) where T : W.DependencyObject
+    {
+        if (parent == null) return null;
+        for (int i = 0; i < WM.VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            W.DependencyObject child = WM.VisualTreeHelper.GetChild(parent, i);
+            if (child is T result) return result;
+            T next = FindChild<T>(child);
+            if (next != null) return next;
+        }
+        return null;
+    }
+
+    internal static WM.SolidColorBrush Solid(byte r, byte g, byte b) =>
+        new(WM.Color.FromRgb(r, g, b));
+    internal static WM.SolidColorBrush Solid(byte a, byte r, byte g, byte b) =>
+        new(WM.Color.FromArgb(a, r, g, b));
+}
+
+// Content reused by the virtualizing panel; no per-row timers or GDI drawing.
+internal sealed class MP_FluidAssetRow : WC.Border
+{
+    private readonly WC.Image icon;
+    private readonly WC.TextBlock title, def, detail;
+    private readonly WM.TranslateTransform offset = new();
+    private readonly WM.SolidColorBrush hoverBrush =
+        MP_FluidAssetPalette.Solid(0, 70, 121, 144);
+
+    internal MP_FluidAssetRow()
+    {
+        Height = 67;
+        Margin = new W.Thickness(2, 1, 2, 1);
+        Background = hoverBrush;
+        CornerRadius = new W.CornerRadius(5);
+        RenderTransform = offset;
+        var layout = new WC.Grid { Margin = new W.Thickness(6, 5, 6, 3) };
+        layout.ColumnDefinitions.Add(new WC.ColumnDefinition
+            { Width = new W.GridLength(52) });
+        layout.ColumnDefinitions.Add(new WC.ColumnDefinition
+            { Width = new W.GridLength(1, W.GridUnitType.Star) });
+        layout.RowDefinitions.Add(new WC.RowDefinition { Height = new W.GridLength(25) });
+        layout.RowDefinitions.Add(new WC.RowDefinition { Height = new W.GridLength(19) });
+        layout.RowDefinitions.Add(new WC.RowDefinition { Height = new W.GridLength(15) });
+        icon = new WC.Image
+        {
+            Width = 45, Height = 45, Stretch = WM.Stretch.Uniform,
+            HorizontalAlignment = W.HorizontalAlignment.Center,
+            VerticalAlignment = W.VerticalAlignment.Center
+        };
+        WC.Grid.SetRowSpan(icon, 3);
+        layout.Children.Add(icon);
+        title = Label(13.2, MP_FluidAssetPalette.Solid(226, 237, 241));
+        def = Label(11.2, MP_FluidAssetPalette.Solid(158, 182, 194));
+        detail = Label(10, MP_FluidAssetPalette.Solid(124, 163, 177));
+        foreach (var (control, row) in new[] { (title, 0), (def, 1), (detail, 2) })
+        {
+            WC.Grid.SetColumn(control, 1);
+            WC.Grid.SetRow(control, row);
+            layout.Children.Add(control);
+        }
+        Child = layout;
+        DataContextChanged += (_, _) => Fill();
+        Loaded += (_, _) => Fill();
+        MouseEnter += (_, _) =>
+        {
+            AnimColor(WM.Color.FromArgb(40, 72, 131, 151), 145);
+            AnimX(2, 140);
+        };
+        MouseLeave += (_, _) =>
+        {
+            AnimColor(WM.Color.FromArgb(0, 72, 131, 151), 125);
+            AnimX(0, 120);
+        };
+    }
+
+    private static WC.TextBlock Label(double size, WM.Brush color) => new()
+    {
+        FontFamily = new WM.FontFamily("Microsoft YaHei UI"), FontSize = size,
+        Foreground = color, TextTrimming = W.TextTrimming.CharacterEllipsis,
+        VerticalAlignment = W.VerticalAlignment.Center
+    };
+
+    private void Fill()
+    {
+        icon.Source = null;
+        if (DataContext is not CatalogItem item) return;
+        title.Text = item.Label;
+        def.Text = item.DefName;
+        detail.Text = item.Group + " · " + item.Pack;
+        ToolTip = item.Label + "\n" + item.DefName + "\n" + item.Pack;
+        RefreshThumbnail();
+    }
+
+    internal void RefreshThumbnail()
+    {
+        if (icon.Source != null || DataContext is not CatalogItem item || !IsVisible) return;
+        W.DependencyObject parent = this;
+        while (parent != null && parent is not MP_FluidAssetPalette)
+            parent = WM.VisualTreeHelper.GetParent(parent);
+        if (parent is MP_FluidAssetPalette view)
+            icon.Source = view.Thumbnail(item);
+    }
+
+    private void AnimColor(WM.Color target, int ms)
+    {
+        WM.Color from = hoverBrush.Color;
+        hoverBrush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
+        hoverBrush.Color = target;
+        if (MP_Motion.Enabled)
+            hoverBrush.BeginAnimation(WM.SolidColorBrush.ColorProperty,
+                new WA.ColorAnimation(from, target, TimeSpan.FromMilliseconds(ms))
+                { EasingFunction = new WA.CubicEase
+                    { EasingMode = WA.EasingMode.EaseOut } });
+    }
+
+    private void AnimX(double target, int ms)
+    {
+        double from = offset.X;
+        offset.BeginAnimation(WM.TranslateTransform.XProperty, null);
+        offset.X = target;
+        if (MP_Motion.Enabled)
+            offset.BeginAnimation(WM.TranslateTransform.XProperty,
+                new WA.DoubleAnimation(from, target, TimeSpan.FromMilliseconds(ms))
+                { EasingFunction = new WA.CubicEase
+                    { EasingMode = WA.EasingMode.EaseOut } });
+    }
+}
+
+// Shared WPF image adapter stays separate from Catalog and supports lazy decoding.
+// Decoded images are frozen for use in the WPF visual tree.
+internal sealed class MP_WpfTextureCache
+{
+    private Catalog source;
+    private readonly Dictionary<string, WB.BitmapSource> cache =
+        new(StringComparer.Ordinal);
+
+    internal void SetCatalog(Catalog catalog)
+    {
+        if (ReferenceEquals(source, catalog)) return;
+        source = catalog;
+        cache.Clear();
+    }
+
+    internal WB.BitmapSource TryGet(CatalogItem item)
+    {
+        if (source?.Textures == null || item == null) return null;
+        string path = item.Icon ?? source.TextureFor(item);
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        string key = path + (item.Linked && item.Icon == null ? "|linked" : "");
+        if (cache.TryGetValue(key, out var cached)) return cached;
+        System.Drawing.Bitmap bitmap = source.Textures.Request(path);
+        if (bitmap == null) return null;
+        try
+        {
+            System.Drawing.Rectangle src = item.Linked && item.Icon == null &&
+                LinkedGraphics.IsAtlas(bitmap, path)
+                ? LinkedGraphics.Source(bitmap.Width, bitmap.Height, 0)
+                : new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
+            using var stream = new MemoryStream();
+            if (src.Width != bitmap.Width || src.Height != bitmap.Height)
+            {
+                using System.Drawing.Bitmap crop = bitmap.Clone(src, PixelFormat.Format32bppArgb);
+                crop.Save(stream, ImageFormat.Png);
+            }
+            else bitmap.Save(stream, ImageFormat.Png);
+            stream.Position = 0;
+            var image = new WB.BitmapImage();
+            image.BeginInit();
+            image.CacheOption = WB.BitmapCacheOption.OnLoad;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+            cache[key] = image;
+            return image;
+        }
+        catch (ArgumentException) { return null; }
+        catch (System.Runtime.InteropServices.ExternalException) { return null; }
+    }
+}

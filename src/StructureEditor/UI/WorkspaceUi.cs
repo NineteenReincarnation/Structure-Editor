@@ -88,25 +88,22 @@ public partial class MainForm
         palette.Dock = DockStyle.Fill; palette.DrawMode = DrawMode.OwnerDrawFixed; palette.ItemHeight = 78; palette.IntegralHeight = false; palette.BorderStyle = BorderStyle.None;
         palette.BackColor = surface; palette.ForeColor = text; palette.DrawItem += DrawPalette; palette.SelectedIndexChanged += (_, _) => SelectBrush();
         libraryInfo.Dock = DockStyle.Bottom; libraryInfo.Height = 43; libraryInfo.ForeColor = muted;
-        // Cover the bright native ListBox scrollbar with a dark draggable track.
-        // Scrolling and selection still use the original ListBox.
+        // Native palette is retained as the query/selection compatibility adapter.
+        // WPF renders the actual asset library with virtualization and motion.
         Panel MP_paletteHost = new() { Dock = DockStyle.Fill, BackColor = surface };
-        MP_DarkPaletteScrollbar MP_paletteScroll = new(palette);
-        palette.Dock = DockStyle.None;
-        palette.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
-        MP_paletteHost.Resize += (_, _) =>
+        MP_assetView = new MP_FluidAssetPalette(item =>
         {
-            // Native scrollbar lives outside the clipped panel;
-            // only the custom dark track remains visible.
-            palette.Bounds = new Rectangle(0, 0,
-                MP_paletteHost.ClientSize.Width + SystemInformation.VerticalScrollBarWidth,
-                MP_paletteHost.ClientSize.Height);
-            MP_paletteScroll.BringToFront();
-            MP_paletteScroll.Invalidate();
+            if (palette.Items.Contains(item))
+                palette.SelectedItem = item;
+            else
+                MP_ActivatePaletteBrush(item);
+        });
+        var MP_assetHost = new System.Windows.Forms.Integration.ElementHost
+        {
+            Dock = DockStyle.Fill, BackColor = surface, Child = MP_assetView,
+            TabStop = true
         };
-        MP_paletteHost.Controls.Add(palette);
-        MP_paletteHost.Controls.Add(MP_paletteScroll);
-        MP_paletteScroll.BringToFront();
+        MP_paletteHost.Controls.Add(MP_assetHost);
         library.Controls.Add(MP_paletteHost); library.Controls.Add(filters); library.Controls.Add(libraryInfo);
         MP_libraryTabs = new MP_SectionTabs
         {
@@ -124,6 +121,7 @@ public partial class MainForm
         MP_libraryTabs.SelectedIndexChanged += (_, _) =>
         {
             if (MP_libraryTabs.SelectedIndex == 1 && !MP_libraryLoaded) Safe(MP_ReloadLibrary);
+            if (MP_libraryTabs.SelectedIndex == 0) MP_assetView?.PlayEntrance();
             if (MP_libraryTabs.SelectedIndex == 2) MP_cpMotionView?.PlayEntrance();
         };
         librarySplit.Panel1.Controls.Add(MP_libraryTabs);

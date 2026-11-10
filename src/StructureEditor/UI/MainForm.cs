@@ -19,6 +19,7 @@ public partial class MainForm : Form
     private readonly MP_ExportIndicator MP_exportStatusDot = new();
     private Label MP_rotationLabel, MP_materialLabel, MP_dormancyLabel;
     private readonly ListBox palette = new MP_MotionListBox();
+    private MP_FluidAssetPalette MP_assetView;
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Stack<StructureDocument> undo = new(), redo = new();
     private readonly Color surface = Color.FromArgb(33, 43, 52), text = Color.FromArgb(224, 234, 240), muted = Color.FromArgb(156, 175, 188);
@@ -124,6 +125,7 @@ public partial class MainForm : Form
         if (identical)
         {
             libraryInfo.Text = $"{results.Length} 个素材";
+            MP_assetView?.SetItems(catalog, results);
             return;
         }
         CatalogItem previous = palette.SelectedItem as CatalogItem;
@@ -142,6 +144,7 @@ public partial class MainForm : Form
             palette.EndUpdate();
         }
         libraryInfo.Text = $"{results.Length} 个素材";
+        MP_assetView?.SetItems(catalog, results);
     }
     private void DrawPalette(object sender, DrawItemEventArgs e)
     {
@@ -186,6 +189,7 @@ public partial class MainForm : Form
     {
         if (item == null) return;
         RememberAsset(item);
+        MP_assetView?.MarkSelected(item);
         bool keepRectangle = canvas.Tool == CanvasTool.Rectangle && item.Kind == "Terrain";
         canvas.Brush = item;
         canvas.BrushRotation = item.Kind == "Pawn" ? 2 : 0;
