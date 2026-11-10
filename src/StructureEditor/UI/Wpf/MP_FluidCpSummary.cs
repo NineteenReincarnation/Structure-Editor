@@ -61,6 +61,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         total = new WC.TextBlock
         {
             Text = "0 CP", Foreground = Brush(172, 225, 238),
+            Effect = MP_LcdVisual.Glow(.18),
             FontFamily = new WM.FontFamily("Microsoft YaHei UI"),
             FontWeight = W.FontWeights.SemiBold, FontSize = 21,
             VerticalAlignment = W.VerticalAlignment.Center,

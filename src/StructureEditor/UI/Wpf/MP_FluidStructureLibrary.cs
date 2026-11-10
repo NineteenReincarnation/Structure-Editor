@@ -107,6 +107,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             Text = "结构索引  /  00", Foreground = Cyan,
             FontSize = 11.3, FontFamily = new WM.FontFamily("Consolas"),
             FontWeight = W.FontWeights.SemiBold,
+            Effect = MP_LcdVisual.Glow(.19),
             VerticalAlignment = W.VerticalAlignment.Center
         };
         WC.Grid.SetRow(count, 1);
@@ -325,7 +326,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         var index = new WC.TextBlock
         {
             Text = label == "项目结构" ? "01" : label == "其他位置" ? "02" : "--",
-            Foreground = Cyan, FontFamily = new WM.FontFamily("Consolas"),
+            Foreground = Cyan, Effect = MP_LcdVisual.Glow(.16),
+            FontFamily = new WM.FontFamily("Consolas"),
             FontSize = 10.5, FontWeight = W.FontWeights.SemiBold,
             VerticalAlignment = W.VerticalAlignment.Center
         };

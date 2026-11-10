@@ -32,6 +32,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         internal WM.SolidColorBrush Foreground;
         internal string FullTitle;
         internal double Desired;
+        internal WM.Effects.DropShadowEffect Glow;
     }
 
     private readonly WC.Grid panel;
@@ -105,6 +106,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
     {
         int index = tabs.Count;
         var foreground = new WM.SolidColorBrush(Muted);
+        var glow = MP_LcdVisual.Glow();
         var caption = new WC.TextBlock
         {
             Text = title,
@@ -116,6 +118,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             HorizontalAlignment = W.HorizontalAlignment.Center,
             VerticalAlignment = W.VerticalAlignment.Center,
             TextAlignment = W.TextAlignment.Center,
+            Effect = glow,
             Margin = new W.Thickness(6, 0, 6, 0)
         };
         double desired = Math.Max(71, title.Sum(c => c > 127 ? 12.5 : 7.5) + 29);
@@ -145,7 +148,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         tabs.Add(new Entry
         {
             Host = host, Caption = caption, Foreground = foreground,
-            Desired = desired, FullTitle = title
+            Desired = desired, FullTitle = title, Glow = glow
         });
         FitToViewport();
     }
@@ -158,6 +161,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         {
             MP_WpfMotion.Tint(tabs[i].Foreground,
                 i == index ? ActiveText : Muted, 145);
+            MP_LcdVisual.GlowSelected(tabs[i].Glow, i == index);
             if (i == index)
                 MP_WpfMotion.Tint((WM.SolidColorBrush)tabs[i].Host.Background,
                     WM.Color.FromArgb(0, 111, 183, 205), 110);
