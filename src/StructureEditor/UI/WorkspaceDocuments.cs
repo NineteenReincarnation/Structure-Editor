@@ -20,6 +20,7 @@ public partial class MainForm
     private WorkspaceDocument activeDocument;
     private ToolStrip documentBar;
     private Panel MP_documentHost;
+    private MP_FluidDocumentBar MP_documentMotionBar;
     private bool switchingDocument;
 
     // The tab strip is centered in the available symmetric middle column.
@@ -40,6 +41,27 @@ public partial class MainForm
             Margin = Padding.Empty, Padding = Padding.Empty
         };
         MP_documentHost.Controls.Add(documentBar);
+        // ToolStrip remains the compatibility command model; WPF renders
+        // document navigation and owns the clickable visual surface.
+        documentBar.Visible = false;
+        MP_documentMotionBar = new MP_FluidDocumentBar((index, close) =>
+        {
+            if (index < 0 || index >= documents.Count) return;
+            WorkspaceDocument session = documents[index];
+            if (close)
+                Safe(() =>
+                {
+                    if (session != activeDocument) SwitchWorkspaceDocument(session);
+                    CloseWorkspaceDocument();
+                });
+            else Safe(() => SwitchWorkspaceDocument(session));
+        });
+        MP_documentHost.Controls.Add(new System.Windows.Forms.Integration.ElementHost
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(35, 47, 57),
+            Child = MP_documentMotionBar, TabStop = false
+        });
         MP_documentHost.SizeChanged += (_, _) => MP_CenterDocumentBar();
         return MP_documentHost;
     }
@@ -171,6 +193,11 @@ public partial class MainForm
             session.Tab.ToolTipText = "";
         }
         MP_CenterDocumentBar();
+        MP_documentMotionBar?.SetTabs(documents.Select((session, index) =>
+            new MP_DocumentVisualState(index,
+                (session == activeDocument ? document.Label : session.Document.Label) +
+                ((session == activeDocument ? dirty : session.Dirty) ? " *" : ""),
+                session == activeDocument)).ToArray());
     }
     internal void SwitchWorkspaceDocument(WorkspaceDocument session)
     {
@@ -222,7 +249,7 @@ public partial class MainForm
         var closing = activeDocument; int index = documents.IndexOf(closing);
         if (documents.Count > 1) SwitchWorkspaceDocument(documents[index == 0 ? 1 : index - 1]);
         documents.Remove(closing); documentBar.Items.Remove(closing.Tab); closing.Tab.Dispose();
-        MP_CenterDocumentBar();
+        MP_CenterDocumentBar(); RefreshDocumentTabs();
         if (documents.Count == 0)
         {
             activeDocument = null; document = new(); currentFile = null; dirty = false; saveLocationChanged = false;
