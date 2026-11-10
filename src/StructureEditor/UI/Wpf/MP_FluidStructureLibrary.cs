@@ -213,6 +213,28 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
 
     internal void FocusSearch() => search.Focus();
 
+    internal void ClearSearch()
+    {
+        filterDelay.Stop();
+        search.Clear();
+        Rebuild();
+    }
+
+    internal void SelectById(string id)
+    {
+        MP_StructureViewEntry found = entries.FirstOrDefault(e =>
+            e.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+        if (found == null) return;
+        if (!leafRows.ContainsKey(found.Id))
+        {
+            collapsed.Clear();
+            Rebuild();
+        }
+        Select(found);
+        if (leafRows.TryGetValue(found.Id, out WC.Border row))
+            row.BringIntoView();
+    }
+
     internal void SetEntries(IReadOnlyList<MP_StructureViewEntry> next)
     {
         entries = next ?? Array.Empty<MP_StructureViewEntry>();

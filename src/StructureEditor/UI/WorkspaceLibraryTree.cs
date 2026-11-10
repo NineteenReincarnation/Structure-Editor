@@ -4,260 +4,26 @@ using System.Text;
 
 namespace StructureEditor;
 
+// The structure library is WPF-first. Legacy TreeView controls and their
+// duplicated selection / layout / native preview logic are no longer created.
 public partial class MainForm
 {
     private sealed record MP_LibraryEntry(string File, string Id, string Label, bool HasXml);
-
     private MP_SectionTabs MP_libraryTabs;
     private MP_FluidStructureLibrary MP_structureView;
-    private MP_DarkTreeView MP_libraryTree;
-    private TextBox MP_librarySearch;
-    private PictureBox MP_libraryPreview;
-    private Label MP_libraryDetails;
-    private Label MP_libraryCount;
     private List<MP_LibraryEntry> MP_libraryEntries = new();
     private bool MP_libraryLoaded;
-    private bool MP_libraryTreeInitialized;
-    private readonly System.Windows.Forms.Timer MP_libraryFilterDelay = new() { Interval = 170 };
-    private readonly System.Windows.Forms.Timer MP_libraryPreviewDelay = new() { Interval = 130 };
+    private readonly System.Windows.Forms.Timer MP_libraryPreviewDelay =
+        new() { Interval = 130 };
     private MP_LibraryEntry MP_pendingLibraryPreview;
-    private Font MP_libraryFolderFont;
-    private ToolTip MP_libraryToolTip;
-    private string MP_libraryTipText = "";
 
-    // This panel is docked into the existing LEFT library column. No extra
-    // dialog and no extra per-Def tree level: double-click a leaf to open it.
     private Control MP_CreateStructureLibraryPanel()
     {
-        var layout = new MP_SmoothLayout
-        {
-            Dock = DockStyle.Fill, BackColor = surface, ForeColor = text,
-            ColumnCount = 1, RowCount = 5, Padding = new Padding(4)
-        };
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
-        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 155));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
-
-        var row = new Panel { Dock = DockStyle.Fill, BackColor = surface };
-        MP_librarySearch = new TextBox
-        {
-            Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle,
-            PlaceholderText = "搜索结构 / DefName", BackColor = Color.FromArgb(49, 58, 64),
-            ForeColor = text, Margin = Padding.Empty
-        };
-        var refresh = new Button
-        {
-            Dock = DockStyle.Right, Width = 54, Text = "刷新",
-            BackColor = Color.FromArgb(49, 65, 76), ForeColor = text,
-            FlatStyle = FlatStyle.Flat, UseVisualStyleBackColor = false
-        };
-        refresh.FlatAppearance.BorderSize = 0;
-        refresh.FlatAppearance.MouseOverBackColor = Color.FromArgb(61, 84, 96);
-        row.Controls.Add(MP_librarySearch);
-        row.Controls.Add(refresh);
-        layout.Controls.Add(row, 0, 0);
-
-        MP_libraryCount = new Label
-        {
-            Dock = DockStyle.Fill, ForeColor = muted, TextAlign = ContentAlignment.MiddleLeft,
-            Text = "结构库"
-        };
-        layout.Controls.Add(MP_libraryCount, 0, 1);
-
-        MP_libraryTree = new MP_DarkTreeView
-        {
-            Dock = DockStyle.Fill, BackColor = Color.FromArgb(33, 44, 53),
-            ForeColor = text, BorderStyle = BorderStyle.None,
-            HideSelection = false, FullRowSelect = true, ShowNodeToolTips = false,
-            ShowLines = false, ShowRootLines = false, ShowPlusMinus = true,
-            DrawMode = TreeViewDrawMode.OwnerDrawAll, HotTracking = false,
-            Indent = 13, ItemHeight = 29
-        };
-        MP_libraryFolderFont = new Font(MP_libraryTree.Font, FontStyle.Bold);
-        MP_libraryTree.DrawNode += (_, e) =>
-        {
-            if (e.Node == null || e.Bounds.Height <= 0) return;
-            bool selected = e.Node == MP_libraryTree.SelectedNode;
-            bool leaf = e.Node.Tag is MP_LibraryEntry;
-            Rectangle rowRect = new(0, e.Bounds.Top,
-                MP_libraryTree.ClientSize.Width, e.Bounds.Height);
-            Color rowColor = MP_Motion.Blend(MP_libraryTree.BackColor,
-                Color.FromArgb(45, 65, 77), MP_libraryTree.Hover(e.Node));
-            rowColor = MP_Motion.Blend(rowColor, Color.FromArgb(51, 87, 94),
-                MP_libraryTree.Selected(e.Node));
-            using SolidBrush rowBrush = new(rowColor);
-            e.Graphics.FillRectangle(rowBrush, rowRect);
-            if (selected)
-            {
-                using SolidBrush stripe = new(Color.FromArgb(145, 197, 209));
-                e.Graphics.FillRectangle(stripe, 0, rowRect.Top, 3, rowRect.Height);
-            }
-            int labelX = Math.Max(18, e.Node.Bounds.Left + 3);
-            if (e.Node.Nodes.Count > 0)
-            {
-                int x = Math.Max(9, e.Node.Bounds.Left - 12);
-                int y = rowRect.Top + rowRect.Height / 2;
-                using SolidBrush arrowBrush = new(Color.FromArgb(155, 190, 202));
-                Point[] arrow = e.Node.IsExpanded
-                    ? new[] { new Point(x - 4, y - 2), new Point(x + 4, y - 2),
-                        new Point(x, y + 3) }
-                    : new[] { new Point(x - 2, y - 4), new Point(x + 3, y),
-                        new Point(x - 2, y + 4) };
-                e.Graphics.FillPolygon(arrowBrush, arrow);
-            }
-            Color fg = selected ? Color.FromArgb(243, 249, 249)
-                : leaf ? Color.FromArgb(223, 234, 239)
-                : Color.FromArgb(156, 191, 204);
-            Font font = leaf ? MP_libraryTree.Font : MP_libraryFolderFont;
-            TextRenderer.DrawText(e.Graphics, e.Node.Text, font,
-                new Rectangle(labelX, rowRect.Top,
-                    Math.Max(8, rowRect.Width - labelX - 7), rowRect.Height),
-                fg, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
-                    | TextFormatFlags.SingleLine | TextFormatFlags.NoPrefix);
-        };
-        layout.Controls.Add(MP_libraryTree, 0, 2);
-        MP_libraryToolTip = new ToolTip
-        {
-            OwnerDraw = true, InitialDelay = 550, ReshowDelay = 180,
-            AutoPopDelay = 6000, ShowAlways = false
-        };
-        MP_libraryToolTip.Popup += (_, e) =>
-        {
-            if (MP_libraryTipText.Length == 0) { e.Cancel = true; return; }
-            int width = Math.Min(570, TextRenderer.MeasureText(
-                MP_libraryTipText, MP_libraryTree.Font).Width + 18);
-            e.ToolTipSize = new Size(Math.Max(100, width), 30);
-        };
-        MP_libraryToolTip.Draw += (_, e) =>
-        {
-            using SolidBrush fill = new(Color.FromArgb(39, 52, 62));
-            using Pen border = new(Color.FromArgb(72, 100, 113));
-            e.Graphics.FillRectangle(fill, e.Bounds);
-            e.Graphics.DrawRectangle(border, 0, 0, e.Bounds.Width - 1, e.Bounds.Height - 1);
-            TextRenderer.DrawText(e.Graphics, MP_libraryTipText, MP_libraryTree.Font,
-                new Rectangle(8, 0, e.Bounds.Width - 14, e.Bounds.Height),
-                text, TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine
-                    | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-        };
-        MP_libraryTree.MouseMove += (_, e) =>
-        {
-            TreeNode node = MP_libraryTree.GetNodeAt(e.Location);
-            string next = node != null && node.Tag is MP_LibraryEntry
-                && TextRenderer.MeasureText(node.Text, MP_libraryTree.Font).Width
-                    > MP_libraryTree.ClientSize.Width - node.Bounds.Left - 10
-                ? node.ToolTipText : "";
-            if (next == MP_libraryTipText) return;
-            MP_libraryTipText = next;
-            MP_libraryToolTip.SetToolTip(MP_libraryTree, next);
-        };
-        MP_libraryTree.MouseLeave += (_, _) =>
-        {
-            MP_libraryTipText = "";
-            MP_libraryToolTip.SetToolTip(MP_libraryTree, "");
-        };
-
-        var previewPanel = new Panel
-        {
-            Dock = DockStyle.Fill, Padding = new Padding(2, 8, 2, 4),
-            BackColor = surface
-        };
-        MP_libraryPreview = new MP_FadePictureBox
-        {
-            Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom,
-            BackColor = Color.FromArgb(29, 35, 39)
-        };
-        previewPanel.Controls.Add(MP_libraryPreview);
-        layout.Controls.Add(previewPanel, 0, 3);
-
-        MP_libraryDetails = new Label
-        {
-            Dock = DockStyle.Fill, ForeColor = muted, AutoEllipsis = true,
-            Text = ""
-        };
-        layout.Controls.Add(MP_libraryDetails, 0, 4);
-
-        MP_libraryFilterDelay.Tick += (_, _) =>
-        {
-            MP_libraryFilterDelay.Stop();
-            if (MP_libraryLoaded && !IsDisposed && !Disposing) MP_RebuildLibraryTree();
-        };
-        MP_libraryPreviewDelay.Tick += (_, _) =>
-        {
-            MP_libraryPreviewDelay.Stop();
-            if (!IsDisposed && !Disposing) MP_ShowLibraryPreview(MP_pendingLibraryPreview);
-        };
-        MP_librarySearch.TextChanged += (_, _) =>
-        {
-            if (!MP_libraryLoaded) return;
-            MP_libraryFilterDelay.Stop();
-            MP_libraryFilterDelay.Start();
-        };
-        refresh.Click += (_, _) => Safe(MP_ReloadLibrary);
-        var MP_renameContext = new ContextMenuStrip
-        {
-            BackColor = Color.FromArgb(39, 52, 62),
-            ForeColor = text, ShowImageMargin = false, Renderer = new StudioRenderer()
-        };
-        var MP_renameMenuItem = MP_renameContext.Items.Add("重命名…");
-        MP_renameMenuItem.ForeColor = text;
-        MP_renameContext.Opening += (_, e) =>
-        {
-            if (MP_libraryTree.SelectedNode?.Tag is not MP_LibraryEntry) e.Cancel = true;
-        };
-        MP_renameMenuItem.Click += (_, _) =>
-        {
-            if (MP_libraryTree.SelectedNode?.Tag is MP_LibraryEntry selected)
-                Safe(() => MP_RenameLibraryEntry(selected));
-        };
-        MP_libraryTree.ContextMenuStrip = MP_renameContext;
-        MP_libraryTree.NodeMouseClick += (_, e) =>
-        {
-            if (e.Button == MouseButtons.Right) MP_libraryTree.SelectedNode = e.Node;
-        };
-        MP_libraryTree.AfterSelect += (_, e) =>
-        {
-            MP_pendingLibraryPreview = e.Node?.Tag as MP_LibraryEntry;
-            MP_libraryPreviewDelay.Stop();
-            MP_libraryPreviewDelay.Start();
-        };
-        MP_libraryTree.NodeMouseDoubleClick += (_, e) =>
-        {
-            if (e.Node?.Tag is MP_LibraryEntry entry) Safe(() => OpenWorkspaceFile(entry.File, entry.Id));
-        };
-        MP_libraryTree.KeyDown += (_, e) =>
-        {
-            if (MP_libraryTree.SelectedNode?.Tag is not MP_LibraryEntry entry) return;
-            if (e.KeyCode == Keys.F2)
-            {
-                e.Handled = true; e.SuppressKeyPress = true;
-                Safe(() => MP_RenameLibraryEntry(entry));
-            }
-            else if (e.KeyCode == Keys.Enter)
-            {
-                e.Handled = true; e.SuppressKeyPress = true;
-                Safe(() => OpenWorkspaceFile(entry.File, entry.Id));
-            }
-        };
-        // Also runs for forms disposed directly by validation without Show().
-        Disposed += (_, _) =>
-        {
-            MP_libraryFilterDelay.Stop(); MP_libraryFilterDelay.Dispose();
-            MP_libraryPreviewDelay.Stop(); MP_libraryPreviewDelay.Dispose();
-            MP_libraryFolderFont?.Dispose();
-            MP_libraryToolTip?.Dispose();
-            MP_libraryPreview.Image?.Dispose(); MP_libraryPreview.Image = null;
-        };
-        // Retain the legacy TreeView as an invisible compatibility model for
-        // rename/preview logic, while WPF owns the visible structure library.
         MP_structureView = new MP_FluidStructureLibrary(
             (file, id) =>
             {
-                var entry = MP_libraryEntries.FirstOrDefault(item =>
+                MP_pendingLibraryPreview = MP_libraryEntries.FirstOrDefault(item =>
                     item.Id == id && SamePath(item.File, file));
-                MP_pendingLibraryPreview = entry;
                 MP_libraryPreviewDelay.Stop();
                 MP_libraryPreviewDelay.Start();
             },
@@ -268,10 +34,20 @@ public partial class MainForm
                     item.Id == id && SamePath(item.File, file));
                 if (entry != null) Safe(() => MP_RenameLibraryEntry(entry));
             });
+        MP_libraryPreviewDelay.Tick += (_, _) =>
+        {
+            MP_libraryPreviewDelay.Stop();
+            if (!IsDisposed && !Disposing) MP_ShowLibraryPreview(MP_pendingLibraryPreview);
+        };
+        Disposed += (_, _) =>
+        {
+            MP_libraryPreviewDelay.Stop();
+            MP_libraryPreviewDelay.Dispose();
+        };
         return new System.Windows.Forms.Integration.ElementHost
         {
-            Dock = DockStyle.Fill, BackColor = surface,
-            Child = MP_structureView, TabStop = true
+            Child = MP_structureView, Dock = DockStyle.Fill,
+            BackColor = surface, TabStop = true
         };
     }
 
@@ -284,144 +60,39 @@ public partial class MainForm
 
     private static bool MP_IsProjectStructure(string file)
     {
-        string dir = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Program.StructureLibraryFolder));
-        string path = Path.GetFullPath(file);
-        return path.StartsWith(dir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        string directory = Path.TrimEndingDirectorySeparator(
+            Path.GetFullPath(Program.StructureLibraryFolder));
+        return Path.GetFullPath(file).StartsWith(directory + Path.DirectorySeparatorChar,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private void MP_ReloadLibrary()
     {
-        // A manual refresh supersedes any pending keystroke rebuild.
-        MP_libraryFilterDelay.Stop();
-        var all = LibraryDefinitions();
-        // A JSON project is the editable source of truth when its XML export
-        // is present. Keep one leaf per DefName instead of two clickable files.
-        MP_libraryEntries = all
-            .GroupBy(e => e.Id, StringComparer.OrdinalIgnoreCase)
+        MP_libraryPreviewDelay.Stop();
+        // One editable structure per DefName. Prefer JSON over exported XML.
+        MP_libraryEntries = LibraryDefinitions()
+            .GroupBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
-                var chosen = group.OrderBy(e => MP_IsProjectStructure(e.File) ? 0 : 1)
-                    .ThenBy(e => e.File.EndsWith(".structure.json", StringComparison.OrdinalIgnoreCase) ? 0
-                        : e.File.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? 1 : 2)
-                    .ThenBy(e => e.File, StringComparer.OrdinalIgnoreCase).First();
+                var chosen = group.OrderBy(item => MP_IsProjectStructure(item.File) ? 0 : 1)
+                    .ThenBy(item =>
+                        item.File.EndsWith(".structure.json", StringComparison.OrdinalIgnoreCase) ? 0 :
+                        item.File.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? 1 : 2)
+                    .ThenBy(item => item.File, StringComparer.OrdinalIgnoreCase).First();
                 return new MP_LibraryEntry(chosen.File, chosen.Id, chosen.Label,
-                    group.Any(e => e.File.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)));
+                    group.Any(item => item.File.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)));
             })
-            .OrderBy(e => MP_IsProjectStructure(e.File) ? 0 : 1)
-            .ThenBy(e => e.Label, StringComparer.CurrentCultureIgnoreCase).ToList();
+            .OrderBy(item => MP_IsProjectStructure(item.File) ? 0 : 1)
+            .ThenBy(item => item.Label, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
         MP_libraryLoaded = true;
-        MP_RebuildLibraryTree();
-        MP_structureView?.SetEntries(MP_libraryEntries
-            .Select(e => new MP_StructureViewEntry(e.File, e.Id, e.Label, e.HasXml))
-            .ToArray());
-    }
-
-    private void MP_RebuildLibraryTree()
-    {
-        string query = MP_librarySearch.Text.Trim();
-        var visible = MP_libraryEntries.Where(e => query.Length == 0
-            || e.Label.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || e.Id.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || e.File.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
-        var expandedPaths = new HashSet<string>(StringComparer.Ordinal);
-        void Capture(TreeNodeCollection nodes)
-        {
-            foreach (TreeNode node in nodes)
-            {
-                if (node.IsExpanded) expandedPaths.Add(node.FullPath);
-                Capture(node.Nodes);
-            }
-        }
-        Capture(MP_libraryTree.Nodes);
-        string previous = (MP_libraryTree.SelectedNode?.Tag as MP_LibraryEntry)?.Id;
-        MP_libraryPreviewDelay.Stop();
-        MP_pendingLibraryPreview = null;
-        MP_libraryTree.ResetMotion();
-        MP_libraryTree.BeginUpdate();
-        try
-        {
-            MP_libraryTree.Nodes.Clear();
-            var projectRoot = new TreeNode("项目结构") { Name = "project" };
-            var otherRoot = new TreeNode("其他位置") { Name = "other" };
-            // Folder lookup is O(1) rather than repeatedly scanning siblings
-            // when a collection contains hundreds of structures.
-            var folders = new Dictionary<(TreeNode Parent, string Name), TreeNode>();
-            foreach (MP_LibraryEntry entry in visible)
-            {
-                bool project = MP_IsProjectStructure(entry.File);
-                TreeNode parent = project ? projectRoot : otherRoot;
-                string directory = Path.GetDirectoryName(Path.GetFullPath(entry.File))!;
-                string relative = project ? Path.GetRelativePath(Program.StructureLibraryFolder, directory)
-                    : Path.GetFileName(directory);
-                foreach (string segment in relative.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                    .Where(s => !string.IsNullOrWhiteSpace(s) && s != "."))
-                {
-                    var key = (parent, segment);
-                    if (!folders.TryGetValue(key, out TreeNode existing))
-                    {
-                        existing = new TreeNode(segment) { Name = "dir:" + segment };
-                        parent.Nodes.Add(existing);
-                        folders.Add(key, existing);
-                    }
-                    parent = existing;
-                }
-                parent.Nodes.Add(new TreeNode(entry.Label)
-                {
-                    Name = "item:" + entry.Id, Tag = entry,
-                    ToolTipText = entry.Id + " · " + Path.GetFileName(entry.File)
-                });
-            }
-            if (projectRoot.Nodes.Count > 0) MP_libraryTree.Nodes.Add(projectRoot);
-            if (otherRoot.Nodes.Count > 0) MP_libraryTree.Nodes.Add(otherRoot);
-            if (MP_libraryTree.Nodes.Count == 0)
-                MP_libraryTree.Nodes.Add(new TreeNode(query.Length > 0 ? "没有匹配的结构" : "暂无结构文件"));
-            if (!MP_libraryTreeInitialized || query.Length > 0)
-                MP_libraryTree.ExpandAll();
-            else
-            {
-                void Restore(TreeNodeCollection nodes)
-                {
-                    foreach (TreeNode n in nodes)
-                    {
-                        if (expandedPaths.Contains(n.FullPath)) n.Expand();
-                        Restore(n.Nodes);
-                    }
-                }
-                Restore(MP_libraryTree.Nodes);
-            }
-            MP_libraryTreeInitialized = true;
-            MP_libraryCount.Text = $"{visible.Count} 个结构";
-        }
-        finally { MP_libraryTree.EndUpdate(); }
-        if (previous != null)
-        {
-            TreeNode Find(TreeNodeCollection nodes)
-            {
-                foreach (TreeNode node in nodes)
-                {
-                    if (node.Tag is MP_LibraryEntry entry && entry.Id == previous)
-                        return node;
-                    TreeNode inner = Find(node.Nodes);
-                    if (inner != null) return inner;
-                }
-                return null;
-            }
-            TreeNode restored = Find(MP_libraryTree.Nodes);
-            if (restored != null) { MP_libraryTree.SelectedNode = restored; return; }
-        }
-        MP_ShowLibraryPreview(null);
+        MP_structureView?.SetEntries(MP_libraryEntries.Select(item =>
+            new MP_StructureViewEntry(item.File, item.Id, item.Label, item.HasXml)).ToArray());
     }
 
     private void MP_ShowLibraryPreview(MP_LibraryEntry entry)
     {
-        Image old = MP_libraryPreview.Image;
-        MP_libraryPreview.Image = null;
-        old?.Dispose();
-        if (entry == null)
-        {
-            MP_libraryDetails.Text = "";
-            return;
-        }
+        if (entry == null || MP_structureView == null) return;
         try
         {
             string file = Path.GetFullPath(entry.File);
@@ -437,39 +108,37 @@ public partial class MainForm
             }.FirstOrDefault(File.Exists);
             if (previewFile == null)
             {
-                string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(file + "|" + entry.Id)))[..24];
-                string cacheDirectory = Path.Combine(Program.DataDirectory, "PreviewCache");
-                Directory.CreateDirectory(cacheDirectory);
-                string cacheFile = Path.Combine(cacheDirectory, key + ".png");
-                if (!File.Exists(cacheFile) || File.GetLastWriteTimeUtc(cacheFile) < File.GetLastWriteTimeUtc(file))
+                string hash = Convert.ToHexString(
+                    SHA256.HashData(Encoding.UTF8.GetBytes(file + "|" + entry.Id)))[..24];
+                string cacheFolder = Path.Combine(Program.DataDirectory, "PreviewCache");
+                Directory.CreateDirectory(cacheFolder);
+                string cacheFile = Path.Combine(cacheFolder, hash + ".png");
+                if (!File.Exists(cacheFile) ||
+                    File.GetLastWriteTimeUtc(cacheFile) < File.GetLastWriteTimeUtc(file))
                 {
-                    if (catalog == null) throw new InvalidOperationException("请先加载 RimWorld 游戏素材。");
-                    StructureDocument doc = StructureDocument.Load(file, catalog, entry.Id);
+                    if (catalog == null)
+                        throw new InvalidOperationException("请先加载 RimWorld 游戏素材。");
+                    StructureDocument target = StructureDocument.Load(file, catalog, entry.Id);
                     using var renderer = new StructureCanvas
                     {
-                        Catalog = catalog, Document = doc, AsyncTextures = false,
+                        Catalog = catalog, Document = target, AsyncTextures = false,
                         ShowGrid = false, ShowProximityRanges = false
                     };
-                    using Bitmap snapshot = renderer.ExportPreview(420);
-                    snapshot.Save(cacheFile, ImageFormat.Png);
+                    using Bitmap preview = renderer.ExportPreview(420);
+                    preview.Save(cacheFile, ImageFormat.Png);
                 }
                 previewFile = cacheFile;
             }
-            using (Image image = Image.FromFile(previewFile))
-            {
-                MP_libraryPreview.Image = new Bitmap(image); // release the source PNG
-                (MP_libraryPreview as MP_FadePictureBox)?.Reveal();
-            }
-            string kind = entry.File.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? "JSON 工程" : "XML";
-            MP_libraryDetails.Text = entry.Label;
-            MP_libraryDetails.Tag = entry.Id;
+            using Image image = Image.FromFile(previewFile);
+            MP_structureView.SetPreview(entry.Id, image);
         }
         catch (Exception)
         {
-            MP_libraryDetails.Text = entry.Label;
+            // Keep navigation responsive even when a source thumbnail is missing.
+            MP_structureView.SetPreview(entry.Id, null);
         }
-        MP_structureView?.SetPreview(entry.Id, MP_libraryPreview.Image);
     }
+
     private void MP_RenameLibraryEntry(MP_LibraryEntry entry)
     {
         namingSwitchDelay.Stop();
@@ -612,30 +281,13 @@ public partial class MainForm
         RefreshDocumentTabs();
         PersistWorkspace();
 
-        MP_librarySearch.Clear();
+        MP_structureView?.ClearSearch();
         MP_ReloadLibrary();
         MP_SelectRenamedEntry(nextId);
         status.Text = $"已重命名 {entry.Id} → {nextId} · 同步 XML {plan.XmlPaths.Count} 份（原文件已备份）";
     }
 
-    private void MP_SelectRenamedEntry(string id)
-    {
-        TreeNode find(TreeNodeCollection nodes)
-        {
-            foreach (TreeNode node in nodes)
-            {
-                if (node.Tag is MP_LibraryEntry entry && entry.Id == id) return node;
-                TreeNode nested = find(node.Nodes);
-                if (nested != null) return nested;
-            }
-            return null;
-        }
-        TreeNode selected = find(MP_libraryTree.Nodes);
-        if (selected != null)
-        {
-            selected.EnsureVisible();
-            MP_libraryTree.SelectedNode = selected;
-        }
-    }
 
+    private void MP_SelectRenamedEntry(string id)
+        => MP_structureView?.SelectById(id);
 }
