@@ -44,9 +44,9 @@ internal sealed class MP_FluidTabBar : WC.UserControl
     private int active = -1;
     private bool laidOut;
     private double lastAvailable;
-    private static readonly WM.Color Muted = WM.Color.FromRgb(163, 195, 207);
-    private static readonly WM.Color ActiveText = WM.Color.FromRgb(22, 52, 64);
-    private static readonly WM.Color ActiveBackground = WM.Color.FromRgb(143, 214, 229);
+    private static readonly WM.Color Muted = WM.Color.FromRgb(142, 205, 220);
+    private static readonly WM.Color ActiveText = WM.Color.FromRgb(15, 47, 57);
+    private static readonly WM.Color ActiveBackground = WM.Color.FromRgb(162, 239, 247);
 
     internal MP_FluidTabBar(Action<int> onActivate)
     {
@@ -54,7 +54,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         Height = 39;
         var surface = new WC.Grid
         {
-            Background = new WM.SolidColorBrush(WM.Color.FromRgb(31, 46, 57)),
+            Background = new WM.SolidColorBrush(WM.Color.FromRgb(20, 34, 44)),
             ClipToBounds = true
         };
         surface.RowDefinitions.Add(new WC.RowDefinition
@@ -91,7 +91,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         surface.Children.Add(panel);
         baseline = new WC.Border
         {
-            Background = new WM.SolidColorBrush(WM.Color.FromRgb(67, 110, 124)),
+            Background = new WM.SolidColorBrush(WM.Color.FromRgb(55, 116, 132)),
             Height = 1
         };
         WC.Grid.SetRow(baseline, 1);

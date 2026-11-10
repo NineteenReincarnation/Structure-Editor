@@ -49,12 +49,24 @@ internal sealed class MP_SectionTabs : UserControl
         bar = new MP_FluidTabBar(value => SelectedIndex = value);
         header = new ElementHost
         {
-            Child = bar, Dock = DockStyle.Top, Height = 39,
-            BackColor = Color.FromArgb(37, 50, 59), TabStop = false
+            Child = bar, Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(28, 44, 54), TabStop = false
         };
-        Controls.Add(content);
-        Controls.Add(header);
-        header.BringToFront();
+        // Dock.Fill and BringToFront allowed the tab header to overlay the
+        // first input row (visible in the reported screenshot). Two explicit
+        // grid rows guarantee that the page starts BELOW the header at every DPI.
+        TableLayoutPanel MP_navigationLayout = new()
+        {
+            Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2,
+            Margin = Padding.Empty, Padding = Padding.Empty,
+            BackColor = BackColor, CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+        };
+        MP_navigationLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        MP_navigationLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 39));
+        MP_navigationLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        MP_navigationLayout.Controls.Add(header, 0, 0);
+        MP_navigationLayout.Controls.Add(content, 0, 1);
+        Controls.Add(MP_navigationLayout);
     }
 
     internal bool SelectPage(TabPage page)

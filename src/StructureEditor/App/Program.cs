@@ -100,6 +100,17 @@ internal static class Program
                 if (fitted.Length != 3 || fitted.Any(w => w < 55)
                     || fitted.Sum() > 185.01d)
                     throw new InvalidOperationException("WPF navigation tabs overflow narrow panels.");
+                var sections = Descendants(form).OfType<MP_SectionTabs>().ToArray();
+                if (sections.Length != 2 || sections.Any(section =>
+                {
+                    if (section.Controls.Count != 1 ||
+                        section.Controls[0] is not TableLayoutPanel layout) return true;
+                    return layout.RowCount != 2
+                        || layout.GetControlFromPosition(0, 0)
+                           is not System.Windows.Forms.Integration.ElementHost
+                        || layout.GetControlFromPosition(0, 1) is not TabControl;
+                }))
+                    throw new InvalidOperationException("Tab headers can overlap editor page content.");
                 var pages = Descendants(form).OfType<TabPage>().ToArray();
                 if (pages.Length != 5 || !pages.Any(page => page.Text == "集群 CP")
                     || pages.Any(page => page.Parent is not TabControl))

@@ -41,10 +41,10 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         => new(WM.Color.FromRgb(r, g, b));
     private static WM.SolidColorBrush Solid(byte a, byte r, byte g, byte b)
         => new(WM.Color.FromArgb(a, r, g, b));
-    private static readonly WM.SolidColorBrush Surface = Solid(33, 43, 52);
-    private static readonly WM.SolidColorBrush Text = Solid(224, 234, 240);
-    private static readonly WM.SolidColorBrush Muted = Solid(150, 178, 191);
-    private static readonly WM.SolidColorBrush Cyan = Solid(165, 214, 230);
+    private static readonly WM.SolidColorBrush Surface = Solid(22, 35, 44);
+    private static readonly WM.SolidColorBrush Text = Solid(201, 239, 246);
+    private static readonly WM.SolidColorBrush Muted = Solid(139, 190, 203);
+    private static readonly WM.SolidColorBrush Cyan = Solid(162, 236, 246);
 
     internal MP_FluidStructureLibrary(
         Action<string, string> onSelected,
@@ -75,7 +75,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         var searchHost = new WC.Grid { Margin = new W.Thickness(0, 0, 0, 5) };
         search = new WC.TextBox
         {
-            Background = Solid(44, 59, 69), Foreground = Text,
+            Background = Solid(22, 42, 51), Foreground = Text,
             BorderBrush = Solid(66, 91, 103), BorderThickness = new W.Thickness(1),
             Padding = new W.Thickness(9, 5, 7, 3), FontSize = 12.5,
             FontFamily = new WM.FontFamily("Microsoft YaHei UI"),
@@ -116,8 +116,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         slider = new WC.Border
         {
             Height = 35, Margin = new W.Thickness(2, 0, 2, 0),
-            BorderBrush = Solid(190, 201, 241, 247),
-            Background = Solid(212, 140, 213, 231),
+            BorderBrush = Solid(232, 216, 252, 255),
+            Background = Solid(229, 157, 240, 247),
             BorderThickness = new W.Thickness(1),
             CornerRadius = new W.CornerRadius(3),
             VerticalAlignment = W.VerticalAlignment.Top,
@@ -344,8 +344,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         return new WC.Border
         {
             Height = 34, Margin = new W.Thickness(0, 6, 1, 3),
-            Background = Solid(29, 43, 54),
-            BorderBrush = Solid(60, 94, 109),
+            Background = Solid(25, 45, 56),
+            BorderBrush = Solid(69, 136, 153),
             BorderThickness = new W.Thickness(2, 0, 0, 1),
             CornerRadius = new W.CornerRadius(1),
             Child = body
@@ -424,7 +424,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             HorizontalAlignment = W.HorizontalAlignment.Left,
             IsHitTestVisible = false
         };
-        var ink = Solid(212, 230, 237);
+        var ink = Solid(201, 239, 246);
         leafInks[entry.Id] = ink;
         var text = new WC.TextBlock
         {
@@ -469,8 +469,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     {
         foreach (var (id, ink) in leafInks)
             MP_WpfMotion.Tint(ink, active?.Id == id
-                ? WM.Color.FromRgb(23, 54, 65)
-                : WM.Color.FromRgb(212, 230, 237), 155);
+                ? WM.Color.FromRgb(20, 56, 66)
+                : WM.Color.FromRgb(201, 239, 246), 155);
     }
 
     private void Select(MP_StructureViewEntry entry)
