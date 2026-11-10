@@ -146,7 +146,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
             PanningMode = WC.PanningMode.VerticalOnly
         };
         scrollProxy = new MP_ScrollOffsetProxy(scroller);
-        scrollMotion = new MP_LiltScroll(scrollProxy);
+        scrollMotion = new MP_LiltScroll(scrollProxy, scroller);
         scroller.ScrollChanged += (_, e) =>
         {
             if (e.ExtentHeightChange != 0 || e.ViewportHeightChange != 0)
@@ -161,7 +161,9 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             if (!MP_Motion.Enabled) return;
             double step = e.Delta / 120d * RowHeight * 2.3;
-            scrollTarget = Math.Clamp(scrollTarget - step, 0, Math.Max(0, scroller.ScrollableHeight));
+            double attempted = scrollTarget - step;
+            scrollTarget = Math.Clamp(attempted, 0, Math.Max(0, scroller.ScrollableHeight));
+            scrollMotion.Nudge(attempted - scrollTarget, scroller.ViewportHeight);
             ScrollTo(scrollTarget);
             e.Handled = true;
         };

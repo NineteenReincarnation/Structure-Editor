@@ -142,7 +142,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             PanningMode = WC.PanningMode.VerticalOnly
         };
         scrollProxy = new MP_ScrollOffsetProxy(scroll);
-        scrollMotion = new MP_LiltScroll(scrollProxy);
+        scrollMotion = new MP_LiltScroll(scrollProxy, scroll);
         scroll.ScrollChanged += (_, change) =>
         {
             scrollTarget = Math.Clamp(scrollTarget, 0, Math.Max(0, scroll.ScrollableHeight));
@@ -155,8 +155,9 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         scroll.PreviewMouseWheel += (_, e) =>
         {
             if (!MP_Motion.Enabled) return;
-            scrollTarget = Math.Clamp(scrollTarget - e.Delta / 120d * 110d,
-                0, Math.Max(0, scroll.ScrollableHeight));
+            double attempted = scrollTarget - e.Delta / 120d * 110d;
+            scrollTarget = Math.Clamp(attempted, 0, Math.Max(0, scroll.ScrollableHeight));
+            scrollMotion.Nudge(attempted - scrollTarget, scroll.ViewportHeight);
             scrollMotion.To(scrollTarget);
             e.Handled = true;
         };

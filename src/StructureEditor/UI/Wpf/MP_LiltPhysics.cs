@@ -22,6 +22,15 @@ internal readonly record struct MP_LiltSpring(double Response, double Damping, b
     internal static readonly MP_LiltSpring CursorRelease = new(.57, .4);
 
     internal double Rate => 2 * Math.PI / Math.Max(.001, Response);
+
+    // lilt anim.RubberBand, using UIScrollView's 0.55 resistance.
+    internal static double RubberBand(double raw, double dimension)
+    {
+        if (dimension <= 0 || raw == 0) return 0;
+        double magnitude = Math.Abs(raw);
+        double resisted = (1 - 1 / (magnitude * .55 / dimension + 1)) * dimension;
+        return Math.CopySign(resisted, raw);
+    }
 }
 
 // Target and velocity never reset on retarget. Resting values are removed
@@ -78,6 +87,8 @@ internal sealed class MP_LiltValue
         Active = true;
         MP_LiltClock.Activate(this);
     }
+
+    internal void Bump(double pixels) => Kick(pixels * Spring.Rate * Math.E);
 
     internal void Step(double dt)
     {
@@ -174,7 +185,6 @@ internal sealed class MP_LiltCursor
     private readonly WM.TranslateTransform offset;
     private readonly MP_LiltValue leading, trailing, squeeze;
     private bool initialized;
-    private double crossLength;
 
     internal MP_LiltCursor(WC.Border visual, bool horizontal)
     {
@@ -256,12 +266,30 @@ internal sealed class MP_LiltScroll
 {
     private readonly MP_ScrollOffsetProxy proxy;
     private readonly MP_LiltValue position;
+    private readonly MP_LiltValue edge;
+    private readonly WM.TranslateTransform elasticTransform;
 
-    internal MP_LiltScroll(MP_ScrollOffsetProxy proxy)
+    internal MP_LiltScroll(MP_ScrollOffsetProxy proxy, W.UIElement elasticSurface = null)
     {
         this.proxy = proxy;
         position = new MP_LiltValue(proxy.Offset, MP_LiltSpring.Snappy);
         position.Changed = () => this.proxy.Offset = position.Current;
+        if (elasticSurface != null)
+        {
+            elasticTransform = elasticSurface.RenderTransform as WM.TranslateTransform
+                ?? new WM.TranslateTransform();
+            elasticSurface.RenderTransform = elasticTransform;
+            edge = new MP_LiltValue(0, MP_LiltSpring.Bouncy);
+            edge.Changed = () => elasticTransform.Y = edge.Current;
+        }
+    }
+
+    internal void Nudge(double rawOverrun, double viewportHeight)
+    {
+        if (edge == null || !MP_Motion.Enabled || Math.Abs(rawOverrun) < .001)
+            return;
+        double resisted = MP_LiltSpring.RubberBand(rawOverrun, viewportHeight);
+        edge.Bump(Math.Clamp(resisted * .085, -6, 6));
     }
 
     internal void To(double offset)
@@ -279,6 +307,7 @@ internal sealed class MP_LiltScroll
     {
         proxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
         position.Jump(offset);
+        edge?.Jump(0);
     }
 }
 
