@@ -293,7 +293,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
 }
 
 // Content reused by the virtualizing panel; no per-row timers or GDI drawing.
-internal sealed class MP_FluidAssetRow : WC.Border
+public sealed class MP_FluidAssetRow : WC.Border
 {
     private readonly WC.Image icon;
     private readonly WC.TextBlock title, def, detail;
@@ -301,7 +301,7 @@ internal sealed class MP_FluidAssetRow : WC.Border
     private readonly WM.SolidColorBrush hoverBrush =
         MP_FluidAssetPalette.Solid(0, 70, 121, 144);
 
-    internal MP_FluidAssetRow()
+    public MP_FluidAssetRow()
     {
         Height = 67;
         Margin = new W.Thickness(2, 1, 2, 1);

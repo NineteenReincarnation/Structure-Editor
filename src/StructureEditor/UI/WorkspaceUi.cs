@@ -93,7 +93,7 @@ public partial class MainForm
         Panel MP_paletteHost = new() { Dock = DockStyle.Fill, BackColor = surface };
         MP_assetView = new MP_FluidAssetPalette(item =>
         {
-            if (palette.Items.Contains(item))
+            if (palette.Items.Contains(item) && !ReferenceEquals(palette.SelectedItem, item))
                 palette.SelectedItem = item;
             else
                 MP_ActivatePaletteBrush(item);

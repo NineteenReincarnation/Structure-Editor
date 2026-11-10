@@ -15,7 +15,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
     private readonly WM.ScaleTransform fillScale = new();
     private readonly MP_FloatProxy proxy;
     private float displayed;
-    private MP_ClusterCombatPower.Row[] last = Array.Empty<MP_ClusterCombatPower.Row>();
+    private MP_ClusterCombatPower.Row[] last;
 
     private static WM.SolidColorBrush Brush(byte r, byte g, byte b)
         => new(WM.Color.FromRgb(r, g, b));
@@ -131,7 +131,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
                 }
             }
         }
-        bool same = rows.Length == last.Length;
+        bool same = last != null && rows.Length == last.Length;
         for (int i = 0; same && i < rows.Length; i++)
             same = ReferenceEquals(rows[i].Item, last[i].Item)
                 && rows[i].Count == last[i].Count;
