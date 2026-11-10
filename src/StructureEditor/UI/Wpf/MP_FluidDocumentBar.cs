@@ -152,13 +152,24 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
                         ? MP_StudioTheme.ActiveText : MP_StudioTheme.Text));
                 close.MouseLeave += (_, _) => AnimateColor((WM.SolidColorBrush)close.Background,
                     MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text));
+                // Press feedback is immediate, but close commits only
+                // on a release over the X; dragging away cancels.
                 close.MouseLeftButtonDown += (_, e) =>
                 {
-                    MP_UiSound.Play(MP_UiSound.Cue.Close);
-                    MP_UiSound.Play(MP_UiSound.Cue.Close);
-                    invoke?.Invoke(entry.Index, true);
+                    travellingCursor.Press();
                     e.Handled = true;
                 };
+                close.MouseLeftButtonUp += (_, e) =>
+                {
+                    travellingCursor.Release();
+                    if (close.IsMouseOver)
+                    {
+                        MP_UiSound.Play(MP_UiSound.Cue.Close);
+                        invoke?.Invoke(entry.Index, true);
+                    }
+                    e.Handled = true;
+                };
+                close.MouseLeave += (_, _) => travellingCursor.Release();
                 WC.Grid.SetColumn(close, 1);
                 content.Children.Add(close);
                 double estimatedWidth = entry.Title.Sum(c => c > 127 ? 16 : 8.5) + 67;
