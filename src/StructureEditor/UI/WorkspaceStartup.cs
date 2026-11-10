@@ -127,7 +127,7 @@ public partial class MainForm
     {
         palette.ItemHeight = Math.Max(48, (int)Math.Round(78 * DeviceDpi / 96f));
         if (MP_cpCatalogList != null)
-            MP_cpCatalogList.ItemHeight = Math.Max(55, (int)Math.Round(70 * DeviceDpi / 96f));
+            MP_cpCatalogList.ItemHeight = Math.Max(48, (int)Math.Round(52 * DeviceDpi / 96f));
     }
     private void StopBackgroundLoading()
     {

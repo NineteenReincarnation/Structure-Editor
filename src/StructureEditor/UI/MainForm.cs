@@ -170,10 +170,23 @@ public partial class MainForm : Form
     private void SelectBrush()
     {
         if (MP_rebuildingPalette || palette.SelectedItem is not CatalogItem item) return;
+        // Clear the separate CP-list highlight when switching to another brush.
+        if (MP_cpCatalogList?.SelectedItem != null) MP_cpCatalogList.ClearSelected();
+        MP_ActivatePaletteBrush(item);
+    }
+
+    // One selection path for the ordinary palette and the mech-cluster CP list.
+    private void MP_ActivatePaletteBrush(CatalogItem item)
+    {
+        if (item == null) return;
         RememberAsset(item);
         bool keepRectangle = canvas.Tool == CanvasTool.Rectangle && item.Kind == "Terrain";
-        canvas.Brush = item; canvas.BrushRotation = item.Kind == "Pawn" ? 2 : 0; canvas.Tool = keepRectangle ? CanvasTool.Rectangle : CanvasTool.Place; canvas.ClearSelection();
-        ShowItem(item, null); canvas.Invalidate();
+        canvas.Brush = item;
+        canvas.BrushRotation = item.Kind == "Pawn" ? 2 : 0;
+        canvas.Tool = keepRectangle ? CanvasTool.Rectangle : CanvasTool.Place;
+        canvas.ClearSelection();
+        ShowItem(item, null);
+        canvas.Invalidate();
     }
     private void ShowSelection()
     {
