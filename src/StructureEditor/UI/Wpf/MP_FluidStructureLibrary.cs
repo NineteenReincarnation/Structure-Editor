@@ -35,6 +35,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private IReadOnlyList<MP_StructureViewEntry> entries = Array.Empty<MP_StructureViewEntry>();
     private MP_StructureViewEntry active;
     private MP_ScrollOffsetProxy scrollProxy;
+    private readonly MP_LiltScroll scrollMotion;
     private double scrollTarget;
 
     private static WM.SolidColorBrush Solid(byte r, byte g, byte b)
@@ -140,6 +141,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             PanningMode = WC.PanningMode.VerticalOnly
         };
         scrollProxy = new MP_ScrollOffsetProxy(scroll);
+        scrollMotion = new MP_LiltScroll(scrollProxy);
         scroll.ScrollChanged += (_, _) =>
         {
             scrollTarget = Math.Clamp(scrollTarget, 0, Math.Max(0, scroll.ScrollableHeight));
@@ -149,13 +151,17 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             if (!MP_Motion.Enabled) return;
             scrollTarget = Math.Clamp(scrollTarget - e.Delta / 120d * 110d,
                 0, Math.Max(0, scroll.ScrollableHeight));
-            MP_WpfMotion.Scroll(scrollProxy, scrollTarget, 230);
+            scrollMotion.To(scrollTarget);
             e.Handled = true;
         };
         var scrollHost = new WC.Grid { ClipToBounds = true };
         scrollHost.Children.Add(scroll);
         scrollRail = new MP_WpfScrollRail(scroll, scrollProxy,
-            offset => scrollTarget = offset);
+            offset =>
+            {
+                scrollTarget = offset;
+                scrollMotion.Jump(offset);
+            });
         WC.Panel.SetZIndex(scrollRail, 2);
         scrollHost.Children.Add(scrollRail);
         WC.Grid.SetRow(scrollHost, 2);

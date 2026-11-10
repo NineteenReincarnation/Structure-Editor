@@ -22,6 +22,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     private readonly MP_WpfTextureCache textures = new();
     private WC.ScrollViewer scroller;
     private MP_ScrollOffsetProxy scrollProxy;
+    private MP_LiltScroll scrollMotion;
     private MP_WpfScrollRail scrollRail;
     private bool scrollEventsHooked;
     private Catalog source;
@@ -128,8 +129,13 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
             {
                 scrollEventsHooked = true;
                 scrollProxy = new MP_ScrollOffsetProxy(scroller);
+                scrollMotion = new MP_LiltScroll(scrollProxy);
                 scrollRail = new MP_WpfScrollRail(scroller, scrollProxy,
-                    offset => targetScroll = offset);
+                    offset =>
+                    {
+                        targetScroll = offset;
+                        scrollMotion.Jump(offset);
+                    });
                 WC.Panel.SetZIndex(scrollRail, 2);
                 layout.Children.Add(scrollRail);
                 scroller.ScrollChanged += (_, _) =>
@@ -256,18 +262,10 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     private void ScrollTo(double destination)
     {
         if (scroller == null) return;
-        if (!MP_Motion.Enabled || scrollProxy == null)
-        {
+        if (scrollMotion == null)
             scroller.ScrollToVerticalOffset(destination);
-            return;
-        }
-        double from = scroller.VerticalOffset;
-        scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
-        scrollProxy.Offset = destination;
-        scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty,
-            new WA.DoubleAnimation(from, destination, TimeSpan.FromMilliseconds(245))
-            { EasingFunction = new WA.CubicEase
-                { EasingMode = WA.EasingMode.EaseOut } });
+        else
+            scrollMotion.To(destination);
     }
 
     private static T FindChild<T>(W.DependencyObject parent) where T : W.DependencyObject

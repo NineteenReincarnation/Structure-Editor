@@ -30,6 +30,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
     private readonly MP_LiltCursor travellingCursor;
     private readonly WM.TranslateTransform entranceTransform = new();
     private readonly MP_ScrollOffsetProxy scrollProxy;
+    private readonly MP_LiltScroll scrollMotion;
     private readonly System.Windows.Threading.DispatcherTimer filterDelay = new()
     {
         Interval = TimeSpan.FromMilliseconds(135)
@@ -144,6 +145,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
             PanningMode = WC.PanningMode.VerticalOnly
         };
         scrollProxy = new MP_ScrollOffsetProxy(scroller);
+        scrollMotion = new MP_LiltScroll(scrollProxy);
         scroller.ScrollChanged += (_, e) =>
         {
             if (e.ExtentHeightChange != 0 || e.ViewportHeightChange != 0)
@@ -238,10 +240,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
         double travel = Math.Max(1, scrollRail.ActualHeight - 6 - scrollThumb.Height);
         double ratio = Math.Clamp((position - 3 - scrollThumb.Height / 2) / travel, 0, 1);
         double target = ratio * scroller.ScrollableHeight;
-        scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
-        scrollProxy.Offset = target;
         scrollTarget = target;
-        scroller.ScrollToVerticalOffset(target);
+        scrollMotion.Jump(target);
     }
 
     private void OnPreviewKeyDown(object sender, WI.KeyEventArgs e)
@@ -332,9 +332,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
             travellingCursor.Move(selectedAt * RowHeight, RowHeight - 6, immediate: true);
         }
         scrollTarget = 0;
-        scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
-        scrollProxy.Offset = 0;
-        scroller.ScrollToVerticalOffset(0);
+        scrollMotion.Jump(0);
         RefreshImages();
         if (MP_Motion.Enabled && IsVisible)
         {
@@ -508,7 +506,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
     {
         target = Math.Clamp(target, 0, Math.Max(0, scroller.ScrollableHeight));
         scrollTarget = target;
-        MP_WpfMotion.Scroll(scrollProxy, target, 245);
+        scrollMotion.To(target);
     }
 
     private WB.BitmapSource Thumbnail(CatalogItem item)

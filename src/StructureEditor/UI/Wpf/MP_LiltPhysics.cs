@@ -239,3 +239,35 @@ internal sealed class MP_LiltCursor
         }
     }
 }
+
+// Scrolling also follows lilt's spring scheduler instead of restarting
+// fixed-duration DoubleAnimations for every wheel notch.
+internal sealed class MP_LiltScroll
+{
+    private readonly MP_ScrollOffsetProxy proxy;
+    private readonly MP_LiltValue position;
+
+    internal MP_LiltScroll(MP_ScrollOffsetProxy proxy)
+    {
+        this.proxy = proxy;
+        position = new MP_LiltValue(proxy.Offset, MP_LiltSpring.Snappy);
+        position.Changed = () => this.proxy.Offset = position.Current;
+    }
+
+    internal void To(double offset)
+    {
+        if (!double.IsFinite(offset)) return;
+        proxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
+        // Keyboard ScrollIntoView and mouse-drag scrollbars may move the
+        // ScrollViewer outside the spring; synchronize when at rest.
+        if (!position.Active && Math.Abs(proxy.Offset - position.Current) > .25)
+            position.Jump(proxy.Offset);
+        position.Set(offset);
+    }
+
+    internal void Jump(double offset)
+    {
+        proxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
+        position.Jump(offset);
+    }
+}
