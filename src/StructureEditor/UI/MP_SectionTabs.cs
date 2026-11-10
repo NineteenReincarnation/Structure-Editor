@@ -126,14 +126,10 @@ internal sealed class MP_StablePageHost : Panel
         SuspendLayout();
         try
         {
-            // Swap first, then show the new page; never clear the host,
-            // dispose pages or invalidate the whole editor window.
-            if (ActivePage != null)
-            {
-                ActivePage.MP_IsActive = false;
-                ActivePage.Visible = false;
-            }
-            ActivePage = target;
+            // Bring the new page forward before hiding the old one.
+            // Hiding first exposes a black parent for one frame in the
+            // ElementHost/HWND mixed compositor when toggling rapidly.
+            MP_PageSurface previous = ActivePage;
             if (target != null)
             {
                 target.Bounds = ClientRectangle;
@@ -141,6 +137,12 @@ internal sealed class MP_StablePageHost : Panel
                 target.Visible = true;
                 target.BringToFront();
             }
+            if (previous != null)
+            {
+                previous.MP_IsActive = false;
+                previous.Visible = false;
+            }
+            ActivePage = target;
         }
         finally { ResumeLayout(false); }
     }

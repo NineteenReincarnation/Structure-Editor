@@ -478,6 +478,16 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                 child.Visibility = folded ? W.Visibility.Collapsed : W.Visibility.Visible;
             RefreshKeyboardRows();
             slider.Visibility = W.Visibility.Collapsed;
+            // After layout shrinks, reset stale spring offsets. Otherwise
+            // the scroll animation keeps aiming beyond the new extent,
+            // producing a bounce/flicker when a folder collapses.
+            rows.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                double offset = Math.Clamp(scroll.VerticalOffset, 0,
+                    Math.Max(0, scroll.ScrollableHeight));
+                scrollTarget = offset;
+                scrollMotion.Jump(offset);
+            }), System.Windows.Threading.DispatcherPriority.Loaded);
             e.Handled = true;
         };
         return row;
