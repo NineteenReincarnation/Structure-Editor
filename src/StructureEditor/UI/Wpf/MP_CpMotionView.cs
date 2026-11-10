@@ -20,6 +20,10 @@ internal sealed class MP_CpMotionView : WC.UserControl
     private readonly WC.TextBox search;
     private readonly WC.TextBlock hint;
     private readonly WC.ScrollViewer scroller;
+    private readonly WC.Grid scrollRail;
+    private readonly WC.Border scrollThumb;
+    private readonly WM.TranslateTransform thumbTransform = new();
+    private bool draggingScrollThumb;
     private readonly WC.StackPanel rows;
     private readonly WC.Grid content;
     private readonly WC.Border selectionVisual;
@@ -141,6 +145,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
             if (e.ExtentHeightChange != 0 || e.ViewportHeightChange != 0)
                 scrollTarget = Math.Clamp(scrollTarget, 0, Math.Max(0, scroller.ScrollableHeight));
             RefreshImages();
+            UpdateScrollIndicator();
         };
         scroller.PreviewMouseWheel += (_, e) =>
         {
@@ -150,8 +155,50 @@ internal sealed class MP_CpMotionView : WC.UserControl
             ScrollTo(scrollTarget);
             e.Handled = true;
         };
-        WC.Grid.SetRow(scroller, 2);
-        root.Children.Add(scroller);
+        // Narrow translucent scroll affordance similar to the video; unlike
+        // the stock scrollbar it can also be dragged without changing layout.
+        var scrollHost = new WC.Grid { ClipToBounds = true };
+        scrollHost.Children.Add(scroller);
+        scrollRail = new WC.Grid
+        {
+            Width = 9, HorizontalAlignment = W.HorizontalAlignment.Right,
+            Margin = new W.Thickness(0, 3, 0, 3),
+            Background = Brush(Color(24, 58, 81, 95)),
+            Cursor = WI.Cursors.Hand
+        };
+        scrollThumb = new WC.Border
+        {
+            Background = Brush(Color(145, 184, 222, 234)),
+            CornerRadius = new W.CornerRadius(2),
+            Width = 3, Height = 24,
+            HorizontalAlignment = W.HorizontalAlignment.Center,
+            VerticalAlignment = W.VerticalAlignment.Top,
+            RenderTransform = thumbTransform,
+            IsHitTestVisible = false
+        };
+        scrollRail.Children.Add(scrollThumb);
+        scrollHost.Children.Add(scrollRail);
+        scrollRail.SizeChanged += (_, _) => UpdateScrollIndicator();
+        scrollRail.MouseLeftButtonDown += (_, e) =>
+        {
+            draggingScrollThumb = true;
+            scrollRail.CaptureMouse();
+            ScrollFromRail(e.GetPosition(scrollRail).Y);
+            e.Handled = true;
+        };
+        scrollRail.MouseMove += (_, e) =>
+        {
+            if (draggingScrollThumb) ScrollFromRail(e.GetPosition(scrollRail).Y);
+        };
+        scrollRail.MouseLeftButtonUp += (_, e) =>
+        {
+            draggingScrollThumb = false;
+            scrollRail.ReleaseMouseCapture();
+            e.Handled = true;
+        };
+        scrollRail.LostMouseCapture += (_, _) => draggingScrollThumb = false;
+        WC.Grid.SetRow(scrollHost, 2);
+        root.Children.Add(scrollHost);
         Content = root;
         PreviewKeyDown += OnPreviewKeyDown;
         IsVisibleChanged += (_, _) =>
@@ -161,6 +208,36 @@ internal sealed class MP_CpMotionView : WC.UserControl
             PlayEntrance();
         };
         Unloaded += (_, _) => filterDelay.Stop();
+    }
+
+    private void UpdateScrollIndicator()
+    {
+        if (scrollRail == null || scrollThumb == null || scroller == null) return;
+        double height = Math.Max(1, scrollRail.ActualHeight - 6);
+        if (scroller.ScrollableHeight <= 1 || scroller.ExtentHeight <= 0)
+        {
+            scrollRail.Visibility = W.Visibility.Collapsed;
+            return;
+        }
+        scrollRail.Visibility = W.Visibility.Visible;
+        scrollThumb.Height = Math.Clamp(
+            scroller.ViewportHeight / scroller.ExtentHeight * height,
+            Math.Min(22, height), height);
+        double available = Math.Max(0, height - scrollThumb.Height);
+        thumbTransform.Y = 3 + available *
+            Math.Clamp(scroller.VerticalOffset / scroller.ScrollableHeight, 0d, 1d);
+    }
+
+    private void ScrollFromRail(double position)
+    {
+        if (scroller.ScrollableHeight <= 0) return;
+        double travel = Math.Max(1, scrollRail.ActualHeight - 6 - scrollThumb.Height);
+        double ratio = Math.Clamp((position - 3 - scrollThumb.Height / 2) / travel, 0, 1);
+        double target = ratio * scroller.ScrollableHeight;
+        scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
+        scrollProxy.Offset = target;
+        scrollTarget = target;
+        scroller.ScrollToVerticalOffset(target);
     }
 
     private void OnPreviewKeyDown(object sender, WI.KeyEventArgs e)
@@ -368,12 +445,23 @@ internal sealed class MP_CpMotionView : WC.UserControl
     private void Select(int index)
     {
         if (index < 0 || index >= visible.Length) return;
+        bool hadSelection = currentIndex >= 0;
         currentIndex = index;
         selected = visible[index];
         selectionVisual.Visibility = W.Visibility.Visible;
         double target = index * RowHeight;
         double from = selectionTransform.Y;
-        if (MP_Motion.Enabled)
+        if (!hadSelection)
+        {
+            selectionTransform.BeginAnimation(WM.TranslateTransform.YProperty, null);
+            selectionTransform.Y = target;
+            selectionVisual.BeginAnimation(OpacityProperty, null);
+            selectionVisual.Opacity = 1;
+            if (MP_Motion.Enabled)
+                selectionVisual.BeginAnimation(OpacityProperty, new WA.DoubleAnimation(
+                    0.25, 1d, TimeSpan.FromMilliseconds(175)));
+        }
+        else if (MP_Motion.Enabled)
         {
             selectionTransform.BeginAnimation(WM.TranslateTransform.YProperty, null);
             selectionTransform.Y = target;
