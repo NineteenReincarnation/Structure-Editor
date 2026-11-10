@@ -146,7 +146,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
             PanningMode = WC.PanningMode.VerticalOnly
         };
         scrollProxy = new MP_ScrollOffsetProxy(scroller);
-        scrollMotion = new MP_LiltScroll(scrollProxy, scroller);
+        // Keep rubber-band motion clipped by the ScrollViewer viewport.
+        scrollMotion = new MP_LiltScroll(scrollProxy, content);
         scroller.ScrollChanged += (_, e) =>
         {
             if (e.ExtentHeightChange != 0 || e.ViewportHeightChange != 0)

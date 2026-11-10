@@ -235,7 +235,13 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
 
     private void RefreshSelectedRows()
     {
-        for (int i = 0; i < items.Length; i++)
+        // Only realized rows exist with recycling virtualization.
+        int first = scroller == null ? 0
+            : Math.Max(0, (int)(scroller.VerticalOffset / RowHeight) - 3);
+        int last = scroller == null ? Math.Min(items.Length, 25)
+            : Math.Min(items.Length, (int)Math.Ceiling(
+                (scroller.VerticalOffset + scroller.ViewportHeight) / RowHeight) + 5);
+        for (int i = first; i < last; i++)
         {
             if (list.ItemContainerGenerator.ContainerFromIndex(i) is WC.ListBoxItem container)
                 FindChild<MP_FluidAssetRow>(container)?.SetSelected(i == selectedIndex);
@@ -401,6 +407,11 @@ public sealed class MP_FluidAssetRow : WC.Border
         selectedState = false;
         hoverBrush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
         hoverBrush.Color = WM.Color.FromArgb(0, 70, 121, 144);
+        W.DependencyObject ancestor = this;
+        while (ancestor != null && ancestor is not WC.ListBoxItem)
+            ancestor = WM.VisualTreeHelper.GetParent(ancestor);
+        if (ancestor is WC.ListBoxItem holder)
+            SetSelected(holder.IsSelected);
         RefreshThumbnail();
     }
 

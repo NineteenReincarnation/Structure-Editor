@@ -208,10 +208,16 @@ internal sealed class MP_LiltCursor
         if (!initialized)
         {
             initialized = true;
+            if (immediate || !MP_Motion.Enabled)
+            {
+                leading.Jump(start);
+                trailing.Jump(start + length);
+                return;
+            }
             double midpoint = start + length / 2;
             leading.Jump(midpoint);
             trailing.Jump(midpoint);
-            // First focus grows from its own centre, like lilt.
+            // Animated first focus grows out of its target's centre.
         }
         else if (immediate || !MP_Motion.Enabled)
         {
@@ -352,7 +358,9 @@ internal sealed class MP_LiltWaveScroll
             state.Value.Spring = new MP_LiltSpring(
                 MP_LiltSpring.Default.Response * (1 + .2 * distance),
                 MP_LiltSpring.Default.Damping);
-            state.Value.Shift(Math.Clamp(delta * .075, -1.2, 1.2), 3);
+            // The wave is subpixel on desktop; clip margins remain intact
+            // even when neighbouring rows travel in opposite directions.
+            state.Value.Shift(Math.Clamp(delta * .03, -.4, .4), .7);
             index++;
         }
     }

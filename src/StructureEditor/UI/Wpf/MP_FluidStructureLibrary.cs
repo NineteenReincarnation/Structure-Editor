@@ -147,7 +147,9 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             PanningMode = WC.PanningMode.VerticalOnly
         };
         scrollProxy = new MP_ScrollOffsetProxy(scroll);
-        scrollMotion = new MP_LiltScroll(scrollProxy, scroll);
+        // Bounce only content INSIDE the viewport; never move the
+        // ScrollViewer itself into the search bar or preview panel.
+        scrollMotion = new MP_LiltScroll(scrollProxy, rowLayer);
         scroll.ScrollChanged += (_, change) =>
         {
             scrollTarget = Math.Clamp(scrollTarget, 0, Math.Max(0, scroll.ScrollableHeight));
