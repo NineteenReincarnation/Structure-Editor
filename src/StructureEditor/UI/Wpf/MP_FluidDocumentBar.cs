@@ -189,36 +189,14 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
         double w = visuals[active].Container.Width - 4;
         bool wasReady = ready && capsule.Visibility == W.Visibility.Visible;
         capsule.Visibility = W.Visibility.Visible;
-        double previousX = capsuleOffset.X, previousWidth = capsule.Width;
-        capsuleOffset.BeginAnimation(WM.TranslateTransform.XProperty, null);
-        capsule.BeginAnimation(WidthProperty, null);
-        capsuleOffset.X = x;
-        capsule.Width = w;
-        if (animate && wasReady && MP_Motion.Enabled)
-        {
-            capsuleOffset.BeginAnimation(WM.TranslateTransform.XProperty,
-                new WA.DoubleAnimation(previousX, x, TimeSpan.FromMilliseconds(245))
-                {
-                    EasingFunction = new WA.BackEase
-                        { Amplitude = .14, EasingMode = WA.EasingMode.EaseOut }
-                });
-            capsule.BeginAnimation(WidthProperty,
-                new WA.DoubleAnimation(previousWidth, w, TimeSpan.FromMilliseconds(225))
-                { EasingFunction = new WA.CubicEase
-                    { EasingMode = WA.EasingMode.EaseOut } });
-        }
+        MP_WpfMotion.Translate(capsuleOffset, WM.TranslateTransform.XProperty, x,
+            animate && wasReady ? 245 : 0);
+        MP_WpfMotion.Width(capsule, w, animate && wasReady ? 225 : 0);
         ready = true;
     }
 
     private static void AnimateColor(WM.SolidColorBrush brush, WM.Color to)
     {
-        var from = brush.Color;
-        brush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
-        brush.Color = to;
-        if (MP_Motion.Enabled)
-            brush.BeginAnimation(WM.SolidColorBrush.ColorProperty,
-                new WA.ColorAnimation(from, to, TimeSpan.FromMilliseconds(145))
-                { EasingFunction = new WA.CubicEase
-                    { EasingMode = WA.EasingMode.EaseOut } });
+        MP_WpfMotion.Tint(brush, to, 145);
     }
 }

@@ -88,6 +88,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
             IsHitTestVisible = false
         };
         filterDelay.Tick += (_, _) => { filterDelay.Stop(); Filter(); };
+        MP_WpfMotion.AttachSearch(search);
         search.TextChanged += (_, _) =>
         {
             placeholder.Visibility = search.Text.Length == 0 ? W.Visibility.Visible : W.Visibility.Collapsed;
@@ -461,20 +462,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
                 selectionVisual.BeginAnimation(OpacityProperty, new WA.DoubleAnimation(
                     0.25, 1d, TimeSpan.FromMilliseconds(175)));
         }
-        else if (MP_Motion.Enabled)
-        {
-            selectionTransform.BeginAnimation(WM.TranslateTransform.YProperty, null);
-            selectionTransform.Y = target;
-            selectionTransform.BeginAnimation(WM.TranslateTransform.YProperty,
-                new WA.DoubleAnimation(from, target, TimeSpan.FromMilliseconds(255))
-                {
-                    EasingFunction = new WA.BackEase
-                    {
-                        Amplitude = .18, EasingMode = WA.EasingMode.EaseOut
-                    }
-                });
-        }
-        else selectionTransform.Y = target;
+        else MP_WpfMotion.Translate(selectionTransform,
+            WM.TranslateTransform.YProperty, target, 245);
         double top = index * RowHeight;
         double bottom = top + RowHeight;
         double viewTop = scroller.VerticalOffset, viewBottom = viewTop + scroller.ViewportHeight;
@@ -488,15 +477,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
     {
         target = Math.Clamp(target, 0, Math.Max(0, scroller.ScrollableHeight));
         scrollTarget = target;
-        if (!MP_Motion.Enabled) { scroller.ScrollToVerticalOffset(target); return; }
-        double from = scroller.VerticalOffset;
-        scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
-        scrollProxy.Offset = target;
-        scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty,
-            new WA.DoubleAnimation(from, target, TimeSpan.FromMilliseconds(255))
-            {
-                EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut }
-            });
+        MP_WpfMotion.Scroll(scrollProxy, target, 245);
     }
 
     private WB.BitmapSource Thumbnail(CatalogItem item)
@@ -536,22 +517,12 @@ internal sealed class MP_CpMotionView : WC.UserControl
 
     private static void AnimateColor(WM.SolidColorBrush brush, WM.Color from, WM.Color to, int duration)
     {
-        brush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
-        brush.Color = to;
-        if (MP_Motion.Enabled)
-            brush.BeginAnimation(WM.SolidColorBrush.ColorProperty, new WA.ColorAnimation(
-                from, to, TimeSpan.FromMilliseconds(duration))
-            { EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut } });
+        MP_WpfMotion.Tint(brush, to, duration);
     }
 
     private static void AnimateMove(WM.TranslateTransform transform, double from, double to, int duration)
     {
-        transform.BeginAnimation(WM.TranslateTransform.XProperty, null);
-        transform.X = to;
-        if (MP_Motion.Enabled)
-            transform.BeginAnimation(WM.TranslateTransform.XProperty, new WA.DoubleAnimation(
-                from, to, TimeSpan.FromMilliseconds(duration))
-            { EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut } });
+        MP_WpfMotion.Translate(transform, WM.TranslateTransform.XProperty, to, duration, false);
     }
 }
 

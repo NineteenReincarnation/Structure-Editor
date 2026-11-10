@@ -89,6 +89,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         };
         searchHost.Children.Add(search);
         searchHost.Children.Add(watermark);
+        MP_WpfMotion.AttachSearch(search);
         search.TextChanged += (_, _) =>
         {
             watermark.Visibility = search.Text.Length == 0
@@ -142,13 +143,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             if (!MP_Motion.Enabled) return;
             scrollTarget = Math.Clamp(scrollTarget - e.Delta / 120d * 110d,
                 0, Math.Max(0, scroll.ScrollableHeight));
-            double from = scroll.VerticalOffset;
-            scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty, null);
-            scrollProxy.Offset = scrollTarget;
-            scrollProxy.BeginAnimation(MP_ScrollOffsetProxy.OffsetProperty,
-                new WA.DoubleAnimation(from, scrollTarget, TimeSpan.FromMilliseconds(230))
-                { EasingFunction = new WA.CubicEase
-                    { EasingMode = WA.EasingMode.EaseOut } });
+            MP_WpfMotion.Scroll(scrollProxy, scrollTarget, 230);
             e.Handled = true;
         };
         WC.Grid.SetRow(scroll, 2);
@@ -407,14 +402,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         bool wasVisible = slider.Visibility == W.Visibility.Visible;
         slider.Visibility = W.Visibility.Visible;
         slider.Height = row.ActualHeight;
-        double from = sliderOffset.Y;
-        sliderOffset.BeginAnimation(WM.TranslateTransform.YProperty, null);
-        sliderOffset.Y = to;
-        if (animate && wasVisible && MP_Motion.Enabled)
-            sliderOffset.BeginAnimation(WM.TranslateTransform.YProperty,
-                new WA.DoubleAnimation(from, to, TimeSpan.FromMilliseconds(255))
-                { EasingFunction = new WA.BackEase
-                    { Amplitude = .15, EasingMode = WA.EasingMode.EaseOut } });
+        MP_WpfMotion.Translate(sliderOffset, WM.TranslateTransform.YProperty,
+            to, animate && wasVisible ? 245 : 0);
     }
 
     internal void SetPreview(string id, System.Drawing.Image image)

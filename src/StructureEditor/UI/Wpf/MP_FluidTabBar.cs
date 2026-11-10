@@ -157,37 +157,12 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             layoutReady = true;
             return;
         }
-        var ease = new WA.BackEase
-        {
-            Amplitude = .14,
-            EasingMode = WA.EasingMode.EaseOut
-        };
-        double fromX = slide.X;
-        double fromWidth = slider.Width;
-        slide.BeginAnimation(WM.TranslateTransform.XProperty, null);
-        slider.BeginAnimation(WidthProperty, null);
-        slide.X = x;
-        slider.Width = width;
-        slide.BeginAnimation(WM.TranslateTransform.XProperty,
-            new WA.DoubleAnimation(fromX, x, TimeSpan.FromMilliseconds(245))
-            { EasingFunction = ease });
-        slider.BeginAnimation(WidthProperty,
-            new WA.DoubleAnimation(fromWidth, width, TimeSpan.FromMilliseconds(235))
-            {
-                EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut }
-            });
+        MP_WpfMotion.Translate(slide, WM.TranslateTransform.XProperty, x, 245);
+        MP_WpfMotion.Width(slider, width, 215);
     }
 
     private static void AnimateColor(WM.SolidColorBrush brush, WM.Color color, int ms)
     {
-        WM.Color from = brush.Color;
-        brush.BeginAnimation(WM.SolidColorBrush.ColorProperty, null);
-        brush.Color = color;
-        if (MP_Motion.Enabled)
-            brush.BeginAnimation(WM.SolidColorBrush.ColorProperty,
-                new WA.ColorAnimation(from, color, TimeSpan.FromMilliseconds(ms))
-                {
-                    EasingFunction = new WA.CubicEase { EasingMode = WA.EasingMode.EaseOut }
-                });
+        MP_WpfMotion.Tint(brush, color, ms);
     }
 }
