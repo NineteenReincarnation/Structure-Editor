@@ -149,9 +149,9 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         if (rows.Length == 0)
             lines.Children.Add(new WC.TextBlock
             {
-                Text = "暂无计入 CP 的设施", FontSize = 11,
+                Text = "暂无计入 CP 的设施", FontSize = 12,
                 FontFamily = MP_LiltTheme.WpfFont,
-                Foreground = Brush(121, 155, 170),
+                Foreground = MP_StudioTheme.Brush(MP_StudioTheme.Secondary),
                 Margin = new W.Thickness(0, 19, 0, 0)
             });
         else
@@ -174,7 +174,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
 
     private WC.Border CreateRow(MP_ClusterCombatPower.Row row)
     {
-        var bg = Brush(0, 88, 147, 163);
+        var bg = MP_StudioTheme.Brush(0, MP_StudioTheme.Text);
         var host = new WC.Border
         {
             Height = 34, Margin = new W.Thickness(0, 1, 0, 1),
@@ -204,8 +204,10 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         WC.Grid.SetColumn(value, 1);
         layout.Children.Add(name); layout.Children.Add(value);
         host.Child = layout;
-        host.MouseEnter += (_, _) => Animate(bg, WM.Color.FromArgb(64, 77, 147, 161));
-        host.MouseLeave += (_, _) => Animate(bg, WM.Color.FromArgb(0, 77, 147, 161));
+        host.MouseEnter += (_, _) => Animate(bg,
+            MP_StudioTheme.WpfOpacity(35, MP_StudioTheme.Text));
+        host.MouseLeave += (_, _) => Animate(bg,
+            MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text));
         return host;
     }
 

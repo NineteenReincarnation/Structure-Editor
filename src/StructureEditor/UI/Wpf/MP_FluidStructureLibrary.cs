@@ -86,7 +86,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             BorderThickness = new W.Thickness(1),
             Padding = new W.Thickness(9, 5, 7, 3), FontSize = 16,
             FontFamily = MP_LiltTheme.WpfFont,
-            CaretBrush = Cyan, SelectionBrush = Solid(93, 159, 179),
+            CaretBrush = Cyan, SelectionBrush = MP_StudioTheme.Brush(86, MP_StudioTheme.Text),
             VerticalContentAlignment = W.VerticalAlignment.Center
         };
         var watermark = new WC.TextBlock
@@ -410,7 +410,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private WC.Border Folder(string key, string name, int amount)
     {
         bool folded = collapsed.Contains(key);
-        var hover = Solid(0, 80, 154, 174);
+        var hover = MP_StudioTheme.Brush(0, MP_StudioTheme.Text);
         var grid = new WC.Grid { Margin = new W.Thickness(8, 0, 8, 0) };
         grid.ColumnDefinitions.Add(new WC.ColumnDefinition { Width = new W.GridLength(23) });
         grid.ColumnDefinitions.Add(new WC.ColumnDefinition
@@ -433,7 +433,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         {
             Text = amount.ToString("00"),
             FontFamily = MP_LiltTheme.WpfFont,
-            FontSize = 14, Foreground = Solid(120, 179, 198),
+            FontSize = 14, Foreground = Muted,
             VerticalAlignment = W.VerticalAlignment.Center,
             Margin = new W.Thickness(7, 0, 1, 0)
         };
@@ -446,9 +446,9 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             Child = grid
         };
         row.MouseEnter += (_, _) => MP_WpfMotion.Tint(hover,
-            WM.Color.FromArgb(43, 73, 138, 161), 135);
+            MP_StudioTheme.WpfOpacity(32, MP_StudioTheme.Text), 135);
         row.MouseLeave += (_, _) => MP_WpfMotion.Tint(hover,
-            WM.Color.FromArgb(0, 73, 138, 161), 120);
+            MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 120);
         row.MouseLeftButtonUp += (_, e) =>
         {
             if (!collapsed.Add(key)) collapsed.Remove(key);
@@ -464,7 +464,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         {
             Height = 40, Margin = new W.Thickness(2, 1, 2, 1),
             CornerRadius = new W.CornerRadius(0),
-            Background = Solid(0, 73, 125, 149),
+            Background = MP_StudioTheme.Brush(0, MP_StudioTheme.Text),
             Cursor = WI.Cursors.Hand,
             Focusable = true,
             ClipToBounds = true
@@ -476,12 +476,12 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         var marker = new WC.Border
         {
             Width = 4, Height = 4, CornerRadius = new W.CornerRadius(1),
-            Background = Solid(113, 188, 209),
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.Text),
             VerticalAlignment = W.VerticalAlignment.Center,
             HorizontalAlignment = W.HorizontalAlignment.Left,
             IsHitTestVisible = false
         };
-        var ink = Solid(201, 239, 246);
+        var ink = MP_StudioTheme.Brush(MP_StudioTheme.Text);
         leafInks[entry.Id] = ink;
         leafFills[entry.Id] = (WM.SolidColorBrush)row.Background;
         var text = new WC.TextBlock
@@ -501,13 +501,13 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         {
             if (active?.Id != entry.Id)
                 MP_WpfMotion.Tint(leafFills[entry.Id],
-                    WM.Color.FromArgb(37, 92, 147, 170), 120);
+                    MP_StudioTheme.WpfOpacity(35, MP_StudioTheme.Text), 120);
         };
         row.MouseLeave += (_, _) =>
         {
             if (active?.Id != entry.Id)
                 MP_WpfMotion.Tint(leafFills[entry.Id],
-                    WM.Color.FromArgb(0, 73, 125, 149), 120);
+                    MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 120);
         };
         row.MouseLeftButtonDown += (_, _) => travellingCursor.Press();
         row.MouseLeave += (_, _) => travellingCursor.Release();
@@ -524,8 +524,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         };
         var menu = new WC.ContextMenu
         {
-            Background = Solid(39, 53, 63), Foreground = Text,
-            BorderBrush = Solid(68, 96, 110)
+            Background = MP_StudioTheme.Brush(MP_StudioTheme.PanelRaised), Foreground = Text,
+            BorderBrush = MP_StudioTheme.Brush(MP_StudioTheme.Divider)
         };
         var rename = new WC.MenuItem { Header = "重命名…" };
         rename.Click += (_, _) => renameCallback?.Invoke(entry.File, entry.Id);
@@ -547,7 +547,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
             if (leafFills.TryGetValue(id, out var fill))
                 MP_WpfMotion.Tint(fill, selected
                     ? MP_StudioTheme.WpfColor(MP_StudioTheme.Active)
-                    : WM.Color.FromArgb(0, 73, 125, 149), 145);
+                    : MP_StudioTheme.WpfOpacity(0, MP_StudioTheme.Text), 145);
         }
     }
 
