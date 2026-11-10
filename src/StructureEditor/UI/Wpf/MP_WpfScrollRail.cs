@@ -32,7 +32,7 @@ internal sealed class MP_WpfScrollRail : WC.Grid
         {
             Width = 3, Height = 24,
             Background = MP_StudioTheme.Brush(MP_StudioTheme.Accent),
-            CornerRadius = new W.CornerRadius(2),
+            CornerRadius = new W.CornerRadius(1),
             HorizontalAlignment = W.HorizontalAlignment.Center,
             VerticalAlignment = W.VerticalAlignment.Top,
             RenderTransform = offset,

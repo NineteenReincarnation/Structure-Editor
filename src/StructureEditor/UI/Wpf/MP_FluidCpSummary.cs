@@ -177,7 +177,7 @@ internal sealed class MP_FluidCpSummary : WC.UserControl
         var bg = Brush(0, 88, 147, 163);
         var host = new WC.Border
         {
-            Height = 30, Margin = new W.Thickness(0, 1, 0, 1),
+            Height = 34, Margin = new W.Thickness(0, 1, 0, 1),
             CornerRadius = new W.CornerRadius(0), Background = bg
         };
         var layout = new WC.Grid { Margin = new W.Thickness(4, 0, 5, 0) };

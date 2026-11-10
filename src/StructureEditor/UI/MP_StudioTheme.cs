@@ -8,6 +8,7 @@ internal static class MP_StudioTheme
     internal static readonly Color Window = Color.FromArgb(20, 29, 37);
     internal static readonly Color Toolbar = Color.FromArgb(17, 27, 36);
     internal static readonly Color Panel = Color.FromArgb(23, 34, 43);
+    internal static readonly Color Canvas = Color.FromArgb(27, 35, 43);
     internal static readonly Color PanelRaised = Color.FromArgb(29, 43, 54);
     internal static readonly Color Input = Color.FromArgb(27, 42, 53);
     internal static readonly Color Divider = Color.FromArgb(53, 78, 92);

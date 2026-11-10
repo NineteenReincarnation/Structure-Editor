@@ -54,7 +54,7 @@ internal sealed class MP_DarkPaletteScrollbar : Control
         this.list = list;
         Width = 17;
         Dock = DockStyle.Right;
-        BackColor = Color.FromArgb(37, 49, 59);
+        BackColor = MP_StudioTheme.Panel;
         SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint |
             ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
         list.MouseWheel += (_, _) => BeginInvoke((Action)Invalidate);
@@ -81,11 +81,11 @@ internal sealed class MP_DarkPaletteScrollbar : Control
     {
         base.OnPaint(e);
         e.Graphics.Clear(BackColor);
-        using var edge = new Pen(Color.FromArgb(58, 76, 88));
+        using var edge = new Pen(MP_StudioTheme.Divider);
         e.Graphics.DrawLine(edge, 0, 0, 0, Height);
         Rectangle thumb = Thumb();
-        using var fill = new SolidBrush(dragging ? Color.FromArgb(111, 149, 163)
-            : Color.FromArgb(81, 113, 130));
+        using var fill = new SolidBrush(dragging ? MP_StudioTheme.Accent
+            : Color.FromArgb(96, 151, 173));
         e.Graphics.FillRectangle(fill, thumb);
     }
 

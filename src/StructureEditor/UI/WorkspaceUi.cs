@@ -78,8 +78,8 @@ public partial class MainForm
         librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 4, SplitterDistance = 282, BackColor = MP_StudioTheme.Divider };
         inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 284), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 4, SplitterDistance = Math.Max(330, ClientSize.Width - 664), BackColor = librarySplit.BackColor };
         librarySplit.Panel2.Controls.Add(inspectorSplit);
-        librarySplit.Panel1MinSize = 245; librarySplit.Panel2MinSize = 540;
-        inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 320;
+        librarySplit.Panel1MinSize = 258; librarySplit.Panel2MinSize = 540;
+        inspectorSplit.Panel1MinSize = 280; inspectorSplit.Panel2MinSize = 300;
 
         Panel library = new() { Dock = DockStyle.Fill, BackColor = surface,
             Padding = new(MP_StudioTheme.PanelInset) };
@@ -312,7 +312,7 @@ public partial class MainForm
         reviewRow.Controls.Add(MP_exportStatusDot);
         reviewRow.Controls.Add(MP_exportReviewStatus);
         Row(metadata, reviewRow, 27);
-        MP_exportReviewDetails.BackColor = Color.FromArgb(36, 48, 57);
+        MP_exportReviewDetails.BackColor = MP_StudioTheme.PanelRaised;
         MP_exportReviewDetails.ForeColor = text;
         MP_exportReviewDetails.BorderStyle = BorderStyle.None;
         Row(metadata, MP_exportReviewDetails, 72);
@@ -344,7 +344,7 @@ public partial class MainForm
         xmlPathBox.Multiline = false;
         xmlPathBox.ScrollBars = ScrollBars.None;
         xmlPathBox.BorderStyle = BorderStyle.None;
-        xmlPathBox.BackColor = Color.FromArgb(42, 55, 64);
+        xmlPathBox.BackColor = MP_StudioTheme.Input;
         xmlPathBox.ForeColor = text;
         Row(advanced, xmlPathBox, 28);
         Button exportFolder = MakeButton("更改 XML 目录…", 0, 0, 230);
@@ -355,7 +355,7 @@ public partial class MainForm
         saveFolderBox.Multiline = false;
         saveFolderBox.ScrollBars = ScrollBars.None;
         saveFolderBox.BorderStyle = BorderStyle.None;
-        saveFolderBox.BackColor = Color.FromArgb(42, 55, 64);
+        saveFolderBox.BackColor = MP_StudioTheme.Input;
         saveFolderBox.ForeColor = text;
         Row(advanced, saveFolderBox, 28);
         Button projectFolder = MakeButton("更改工程目录…", 0, 0, 230);
@@ -365,7 +365,7 @@ public partial class MainForm
         MP_exportDependencySummary.ForeColor = muted;
         Row(advanced, MP_exportDependencySummary);
         Button moreExport = MakeButton("更多导出方式 ▾", 0, 0, 230);
-        ContextMenuStrip moreMenu = new() { BackColor = Color.FromArgb(39, 52, 62),
+        ContextMenuStrip moreMenu = new() { BackColor = MP_StudioTheme.PanelRaised,
             ForeColor = text, ShowImageMargin = false };
         void More(string title, Action action)
         {
@@ -578,21 +578,21 @@ public partial class MainForm
     }
     private sealed class StudioColors : ProfessionalColorTable
     {
-        public override Color ToolStripDropDownBackground => Color.FromArgb(38, 44, 48);
+        public override Color ToolStripDropDownBackground => MP_StudioTheme.PanelRaised;
         public override Color ImageMarginGradientBegin => ToolStripDropDownBackground;
         public override Color ImageMarginGradientMiddle => ToolStripDropDownBackground;
         public override Color ImageMarginGradientEnd => ToolStripDropDownBackground;
-        public override Color MenuItemSelected => Color.FromArgb(61, 91, 95);
+        public override Color MenuItemSelected => Color.FromArgb(47, 76, 94);
         public override Color MenuItemSelectedGradientBegin => MenuItemSelected;
         public override Color MenuItemSelectedGradientEnd => MenuItemSelected;
         public override Color MenuItemPressedGradientBegin => MenuItemSelected;
         public override Color MenuItemPressedGradientEnd => MenuItemSelected;
         public override Color ButtonSelectedGradientBegin => MenuItemSelected;
         public override Color ButtonSelectedGradientEnd => MenuItemSelected;
-        public override Color ButtonCheckedGradientBegin => Color.FromArgb(54, 103, 96);
+        public override Color ButtonCheckedGradientBegin => MP_StudioTheme.Active;
         public override Color ButtonCheckedGradientMiddle => ButtonCheckedGradientBegin;
         public override Color ButtonCheckedGradientEnd => ButtonCheckedGradientBegin;
-        public override Color MenuBorder => Color.FromArgb(74, 96, 103);
-        public override Color ToolStripBorder => Color.FromArgb(47, 63, 73);
+        public override Color MenuBorder => MP_StudioTheme.Divider;
+        public override Color ToolStripBorder => MP_StudioTheme.Divider;
     }
 }

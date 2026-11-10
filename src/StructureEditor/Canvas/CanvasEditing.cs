@@ -59,7 +59,7 @@ public partial class StructureCanvas : Control
     public StructureCanvas()
     {
         SetStyle(ControlStyles.StandardClick | ControlStyles.StandardDoubleClick, true);
-        DoubleBuffered = true; BackColor = Color.FromArgb(29, 34, 37); Dock = DockStyle.Fill; TabStop = true;
+        DoubleBuffered = true; BackColor = MP_StudioTheme.Canvas; Dock = DockStyle.Fill; TabStop = true;
         Resize += (_, _) =>
         {
             if (origin == PointF.Empty) CenterView();
