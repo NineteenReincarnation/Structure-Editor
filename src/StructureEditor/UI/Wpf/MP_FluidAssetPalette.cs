@@ -118,8 +118,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
             {
                 if (items.Length == 0) return;
                 int step = e.Key is WI.Key.W or WI.Key.Up ? -1 : 1;
-                int next = selectedIndex < 0 ? 0
-                    : Math.Clamp(selectedIndex + step, 0, items.Length - 1);
+                int next = MP_LibraryNavigation.Step(selectedIndex, step, items.Length);
                 list.SelectedIndex = next;
                 list.ScrollIntoView(items[next]);
                 list.Focus();

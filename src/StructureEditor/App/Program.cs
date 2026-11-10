@@ -83,6 +83,14 @@ internal static class Program
                     spring.Step(1d / 240);
                 if (!double.IsFinite(spring.Current) || Math.Abs(spring.Current - 100) > .2)
                     throw new InvalidOperationException("lilt spring physics did not converge.");
+                if (MP_LibraryNavigation.Step(-1, -1, 4) != 3
+                    || MP_LibraryNavigation.Step(-1, 1, 4) != 0
+                    || MP_LibraryNavigation.Step(3, 1, 4) != 3
+                    || MP_LibraryNavigation.Step(0, -1, 4) != 0
+                    || MP_LibraryNavigation.StepPage(0, 1, 3) != 1
+                    || MP_LibraryNavigation.StepPage(2, 1, 3) != 2)
+                    throw new InvalidOperationException(
+                        "WASD library navigation index boundaries changed.");
                 // The document and canvas bars use the SAME physical row
                 // sizing as the WPF side navigation at all common DPIs.
                 foreach (int dpi in new[] { 96, 120, 144, 192 })

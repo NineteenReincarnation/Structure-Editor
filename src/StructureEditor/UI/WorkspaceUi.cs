@@ -63,7 +63,12 @@ public partial class MainForm
                 CheckOnClick = true, Checked = initial, ToolTipText = $"显示或隐藏{label}",
                 Padding = new Padding(4, 1, 4, 1)
             };
-            button.CheckedChanged += (_, _) => onChange(button.Checked);
+            button.CheckedChanged += (_, _) =>
+            {
+                onChange(button.Checked);
+                if (IsHandleCreated)
+                    MP_UiSound.Play(MP_UiSound.Cue.Toggle);
+            };
             actions.Items.Add(button);
             MP_rangeButtons[name] = button;
             return button;
@@ -553,7 +558,7 @@ public partial class MainForm
     private void MP_CycleLibraryPage(int delta)
     {
         if (MP_libraryTabs == null || delta == 0) return;
-        int next = Math.Clamp(MP_libraryTabs.SelectedIndex + Math.Sign(delta), 0, 2);
+        int next = MP_LibraryNavigation.StepPage(MP_libraryTabs.SelectedIndex, delta, 3);
         if (next == MP_libraryTabs.SelectedIndex) return;
         MP_libraryTabs.SelectedIndex = next;
         MP_UiSound.Play(MP_UiSound.Cue.Navigate);

@@ -267,9 +267,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
                     leafRows.TryGetValue(active.Id, out WC.Border selectedRow))
                     current = keyboardNodes.IndexOf(selectedRow);
                 bool down = e.Key is WI.Key.Down or WI.Key.S;
-                int target = down
-                    ? Math.Min(keyboardNodes.Count - 1, current + 1)
-                    : current < 0 ? keyboardNodes.Count - 1 : Math.Max(0, current - 1);
+                int target = MP_LibraryNavigation.Step(
+                    current, down ? 1 : -1, keyboardNodes.Count);
                 WC.Border row = keyboardNodes[target];
                 row.BringIntoView();
                 row.Focus();
