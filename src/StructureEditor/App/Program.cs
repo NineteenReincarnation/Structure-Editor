@@ -67,6 +67,9 @@ internal static class Program
             }
             if (args.Contains("--ui-smoke-test"))
             {
+                // No game installation needed: safeguard editor document
+                // serialization independently of the external game catalog.
+                MP_EditorRegressionChecks.Run();
                 if (Math.Abs(MP_Motion.EaseOut(0f)) > 0.00001f ||
                     Math.Abs(MP_Motion.EaseOut(1f) - 1f) > 0.00001f ||
                     Math.Abs(MP_Motion.EaseOut(.5f) - .875f) > 0.00001f ||
