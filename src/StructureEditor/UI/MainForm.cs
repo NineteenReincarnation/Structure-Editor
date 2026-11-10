@@ -22,7 +22,9 @@ public partial class MainForm : Form
     private MP_FluidAssetPalette MP_assetView;
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     private readonly Stack<StructureDocument> undo = new(), redo = new();
-    private readonly Color surface = Color.FromArgb(33, 43, 52), text = Color.FromArgb(224, 234, 240), muted = Color.FromArgb(156, 175, 188);
+    private readonly Color surface = Color.FromArgb(10, 15, 21),
+        text = Color.FromArgb(202, 233, 249),
+        muted = Color.FromArgb(131, 170, 193);
     private Catalog catalog;
     private StructureDocument document = new();
     private string currentFile;

@@ -9,7 +9,7 @@ public partial class MainForm
             button.Checked = !button.Checked;
     }
     private readonly System.Windows.Forms.Timer searchDelay = new() { Interval = 160 };
-    private readonly Font smallFont = new("Microsoft YaHei UI", 8);
+    private readonly Font smallFont = new(MP_LiltTheme.FontName, 8);
     private ToolStripStatusLabel selectionStatus;
     private SplitContainer librarySplit, inspectorSplit;
     private ComboBox MP_editLayerSelector;
@@ -24,9 +24,13 @@ public partial class MainForm
         SuspendLayout();
         ToolStripManager.Renderer = new StudioRenderer();
         MenuStrip menu = BuildMenus(); MainMenuStrip = menu;
+        menu.Font = Font;
+        menu.BackColor = Color.FromArgb(10, 15, 21);
+        menu.ForeColor = text;
         ApplyBranding();
-        // A symmetrical header keeps document tabs centered in the actual
-        // window, independently of the range actions on the right.
+        // Center the documents only while there is enough horizontal room.
+        // The old permanently balanced empty column squeezed open documents
+        // and caused clipping at narrow window sizes.
         MP_GlassLayout topBar = new()
         {
             Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1,
@@ -41,7 +45,7 @@ public partial class MainForm
         {
             Dock = DockStyle.Fill, GripStyle = ToolStripGripStyle.Hidden,
             AutoSize = true, CanOverflow = false,
-            Margin = Padding.Empty, BackColor = Color.FromArgb(35, 47, 57),
+            Margin = Padding.Empty, BackColor = Color.FromArgb(10, 15, 21),
             Padding = new Padding(6, 4, 8, 4),
             LayoutStyle = ToolStripLayoutStyle.HorizontalStackWithOverflow
         };
@@ -71,13 +75,17 @@ public partial class MainForm
         {
             int width = actions.GetPreferredSize(Size.Empty).Width;
             if (width <= 0) width = actions.Width;
-            if (width > 0 && Math.Abs(topBar.ColumnStyles[0].Width - width) > 1)
-                topBar.ColumnStyles[0].Width = width;
+            if (width <= 0) return;
+            int spare = Math.Max(0, (topBar.ClientSize.Width - width - 600) / 2);
+            int balance = Math.Min(width, spare);
+            if (Math.Abs(topBar.ColumnStyles[0].Width - balance) > 1)
+                topBar.ColumnStyles[0].Width = balance;
         }
         actions.SizeChanged += (_, _) => BalanceHeader();
+        topBar.SizeChanged += (_, _) => BalanceHeader();
         BalanceHeader();
 
-        librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 5, SplitterDistance = 306, BackColor = Color.FromArgb(39, 52, 61) };
+        librarySplit = new() { Size = ClientSize, Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, SplitterWidth = 5, SplitterDistance = 306, BackColor = Color.FromArgb(39, 71, 89) };
         inspectorSplit = new() { Size = new(Math.Max(700, ClientSize.Width - 284), ClientSize.Height), Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2, SplitterWidth = 5, SplitterDistance = Math.Max(330, ClientSize.Width - 664), BackColor = librarySplit.BackColor };
         librarySplit.Panel2.Controls.Add(inspectorSplit);
         librarySplit.Panel1MinSize = 245; librarySplit.Panel2MinSize = 540;
@@ -128,7 +136,7 @@ public partial class MainForm
 
         Panel viewport = new() { Dock = DockStyle.Fill };
         MP_SmoothLayout layerBar = new() { Dock = DockStyle.Top, Height = 36,
-            BackColor = Color.FromArgb(37, 50, 60), ColumnCount = 5 };
+            BackColor = Color.FromArgb(14, 22, 30), ColumnCount = 5 };
         layerBar.ColumnStyles.Add(new(SizeType.Absolute, 132));
         layerBar.ColumnStyles.Add(new(SizeType.AutoSize));
         layerBar.ColumnStyles.Add(new(SizeType.Absolute, 124));
@@ -382,7 +390,7 @@ public partial class MainForm
         inspectorColumn.Controls.Add(tabs, 0, 0);
         inspectorColumn.Controls.Add(MP_CreateClusterCpFooter(), 0, 1);
         inspectorSplit.Panel2.Controls.Add(inspectorColumn);
-        foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, dormancyBox }) { c.BackColor = Color.FromArgb(49, 58, 64); c.ForeColor = text; }
+        foreach (Control c in new Control[] { search, idBox, labelBox, kindBox, packBox, groupBox, scopeBox, materialBox, rotationBox, dormancyBox }) { c.BackColor = Color.FromArgb(17, 27, 37); c.ForeColor = text; }
         foreach (ComboBox combo in new[] { kindBox, packBox, groupBox, scopeBox, MP_editLayerSelector, materialBox, rotationBox, dormancyBox })
         {
             combo.FlatStyle = FlatStyle.Flat; combo.DrawMode = DrawMode.OwnerDrawFixed;
@@ -391,7 +399,7 @@ public partial class MainForm
             combo.DrawItem += (_, e) =>
             {
                 bool selected = (e.State & DrawItemState.Selected) != 0;
-                using SolidBrush background = new(selected ? Color.FromArgb(57, 91, 93) : Color.FromArgb(49, 58, 64));
+                using SolidBrush background = new(selected ? Color.FromArgb(53, 103, 133) : Color.FromArgb(17, 27, 37));
                 e.Graphics.FillRectangle(background, e.Bounds);
                 Rectangle textBounds = new(e.Bounds.X + 5, e.Bounds.Y, Math.Max(0, e.Bounds.Width - 8), e.Bounds.Height);
                 if (combo == materialBox && e.Index >= 0 &&
@@ -456,7 +464,7 @@ public partial class MainForm
         foreach (Control c in new Control[] { idBox, labelBox, dormant }) c.Leave += (_, _) => CommitMetadata();
         autoExport.CheckedChanged+=(_,_)=>{if(!updating)CommitMetadata();};
         canvas.ToolChanged += RefreshToolDisplay;
-        StatusStrip strip = new() { BackColor = Color.FromArgb(23, 29, 33), ForeColor = text, SizingGrip = false };
+        StatusStrip strip = new() { BackColor = Color.FromArgb(8, 11, 16), ForeColor = text, SizingGrip = false, Font = Font };
         selectionStatus = new() { BorderSides = ToolStripStatusLabelBorderSides.None, Text = "放置" };
         status.Text = "正在读取游戏素材…"; strip.Items.Add(status); strip.Items.Add(selectionStatus);
         MP_SmoothLayout workspace = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = Padding.Empty, Padding = Padding.Empty, BackColor = surface };
@@ -520,13 +528,13 @@ public partial class MainForm
                 Math.Max(1, e.Item.Height - 2));
             if (checkedItem)
             {
-                using SolidBrush checkedFill = new(Color.FromArgb(125, 66, 111, 112));
+                using SolidBrush checkedFill = new(Color.FromArgb(190, 100, 174, 207));
                 e.Graphics.FillRectangle(checkedFill, bounds);
             }
             if (level > .001f)
             {
                 using SolidBrush hoverFill = new(Color.FromArgb(
-                    Math.Clamp((int)(level * 105), 0, 255), 111, 170, 184));
+                    Math.Clamp((int)(level * 105), 0, 255), 94, 160, 196));
                 e.Graphics.FillRectangle(hoverFill, bounds);
             }
         }
@@ -545,14 +553,19 @@ public partial class MainForm
             if (e.ToolStrip is ToolStripDropDown) { base.OnRenderToolStripBackground(e); return; }
             Rectangle area = e.AffectedBounds;
             if (area.Width <= 0 || area.Height <= 0) return;
-            using var fill = new System.Drawing.Drawing2D.LinearGradientBrush(area,
-                Color.FromArgb(46, 62, 73), Color.FromArgb(34, 47, 57),
-                System.Drawing.Drawing2D.LinearGradientMode.Vertical);
+            // lilt-like OLED surface: flat pixels, no desktop gradient sheen.
+            using var fill = new SolidBrush(Color.FromArgb(10, 15, 21));
             e.Graphics.FillRectangle(fill, area);
-            using var line = new Pen(Color.FromArgb(54, 73, 83));
+            using var line = new Pen(Color.FromArgb(49, 79, 99));
             e.Graphics.DrawLine(line, area.Left, area.Bottom - 1, area.Right, area.Bottom - 1);
         }
-        protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e) { e.TextColor = Color.FromArgb(224, 231, 232); base.OnRenderItemText(e); }
+        protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+        {
+            e.TextColor = e.Item is ToolStripButton button && button.Checked
+                ? Color.FromArgb(9, 22, 32)
+                : Color.FromArgb(201, 231, 249);
+            base.OnRenderItemText(e);
+        }
     }
     private sealed class StudioColors : ProfessionalColorTable
     {

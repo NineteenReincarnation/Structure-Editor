@@ -22,7 +22,7 @@ internal static class MP_LiltTheme
     internal static bool HasUnifont => Available.Value;
     internal static string FontName => HasUnifont ? "Unifont" : "Microsoft YaHei UI";
     internal static WM.FontFamily WpfFont { get; } =
-        new("Unifont, Microsoft YaHei UI, Segoe UI");
+        new("Unifont, Consolas, Microsoft YaHei UI, Segoe UI");
 
     internal static void Apply(W.FrameworkElement element)
     {

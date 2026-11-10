@@ -54,10 +54,10 @@ internal sealed class MP_CpMotionView : WC.UserControl
         brush.Freeze();
         return brush;
     }
-    private static readonly WM.SolidColorBrush SurfaceBrush = Brush(Color(33, 43, 52));
-    private static readonly WM.SolidColorBrush Secondary = Brush(Color(157, 176, 188));
-    private static readonly WM.SolidColorBrush MainText = Brush(Color(224, 234, 240));
-    private static readonly WM.SolidColorBrush Accent = Brush(Color(173, 228, 240));
+    private static readonly WM.SolidColorBrush SurfaceBrush = Brush(Color(10, 15, 21));
+    private static readonly WM.SolidColorBrush Secondary = Brush(Color(137, 175, 197));
+    private static readonly WM.SolidColorBrush MainText = Brush(Color(202, 233, 249));
+    private static readonly WM.SolidColorBrush Accent = Brush(Color(187, 228, 249));
 
     internal MP_CpMotionView(Action<CatalogItem> onActivate)
     {
@@ -78,10 +78,10 @@ internal sealed class MP_CpMotionView : WC.UserControl
         var searchFrame = new WC.Grid { Margin = new W.Thickness(0, 0, 0, 5) };
         search = new WC.TextBox
         {
-            Background = Brush(Color(43, 58, 68)), Foreground = MainText,
+            Background = Brush(Color(11, 19, 28)), Foreground = MainText,
             BorderBrush = Brush(Color(66, 91, 104)), BorderThickness = new W.Thickness(1),
             Padding = new W.Thickness(9, 5, 6, 3),
-            FontSize = 12.5, FontFamily = MP_LiltTheme.WpfFont,
+            FontSize = 16, FontFamily = MP_LiltTheme.WpfFont,
             CaretBrush = Accent, SelectionBrush = Brush(Color(98, 177, 195)),
             VerticalContentAlignment = W.VerticalAlignment.Center
         };
@@ -89,7 +89,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             Text = "搜索集群建筑 / DefName",
             Foreground = Secondary, Margin = new W.Thickness(10, 7, 0, 0),
-            FontFamily = search.FontFamily, FontSize = 12.5,
+            FontFamily = search.FontFamily, FontSize = 16,
             IsHitTestVisible = false
         };
         filterDelay.Tick += (_, _) => { filterDelay.Stop(); Filter(); };
@@ -109,7 +109,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             Text = "尚未加载", Foreground = Secondary,
             VerticalAlignment = W.VerticalAlignment.Center,
-            FontFamily = search.FontFamily, FontSize = 11.5
+            FontFamily = search.FontFamily, FontSize = 14
         };
         WC.Grid.SetRow(hint, 1); root.Children.Add(hint);
 
@@ -118,7 +118,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
         {
             Background = Brush(Color(207, 135, 211, 227)),
             BorderBrush = Brush(Color(141, 120, 195, 212)),
-            BorderThickness = new W.Thickness(1), CornerRadius = new W.CornerRadius(5),
+            BorderThickness = new W.Thickness(1), CornerRadius = new W.CornerRadius(0),
             Margin = new W.Thickness(2, 3, 2, 0), Height = RowHeight - 6,
             VerticalAlignment = W.VerticalAlignment.Top,
             Visibility = W.Visibility.Collapsed,

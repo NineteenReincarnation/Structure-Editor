@@ -30,7 +30,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     private bool selecting;
     private int selectedIndex = -1;
     private double targetScroll;
-    private static readonly WM.SolidColorBrush Surface = Solid(34, 44, 53);
+    private static readonly WM.SolidColorBrush Surface = Solid(10, 15, 21);
 
     internal MP_FluidAssetPalette(Action<CatalogItem> onActivate)
     {
