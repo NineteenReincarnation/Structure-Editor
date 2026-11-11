@@ -32,6 +32,8 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
     private int selectedIndex = -1;
     private double targetScroll;
     private bool refreshQueued;
+    internal Action<int> MP_NavigateRegion { get; set; }
+    internal Action MP_NavigationFocused { get; set; }
     private static readonly WM.SolidColorBrush Surface = MP_StudioTheme.Brush(MP_StudioTheme.Panel);
 
     internal MP_FluidAssetPalette(Action<CatalogItem> onActivate,
@@ -40,6 +42,7 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         activate = onActivate;
         switchLibrary = onSwitchLibrary;
         MP_LiltTheme.Apply(this);
+        GotKeyboardFocus += (_, _) => MP_NavigationFocused?.Invoke();
         Background = Surface;
         layout = new WC.Grid { Background = Surface, ClipToBounds = true };
         var rowFactory = new W.FrameworkElementFactory(typeof(MP_FluidAssetRow));
@@ -107,7 +110,19 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
         };
         list.PreviewKeyDown += (_, e) =>
         {
+            if (e.Key == WI.Key.F6)
+            {
+                MP_NavigateRegion?.Invoke(WI.Keyboard.Modifiers == WI.ModifierKeys.Shift ? -1 : 1);
+                e.Handled = MP_NavigateRegion != null;
+                return;
+            }
             if (WI.Keyboard.Modifiers != WI.ModifierKeys.None) return;
+            if (e.Key == WI.Key.Tab)
+            {
+                MP_NavigateRegion?.Invoke(-1);
+                e.Handled = MP_NavigateRegion != null;
+                return;
+            }
             if (e.Key is WI.Key.A or WI.Key.D)
             {
                 switchLibrary?.Invoke(e.Key == WI.Key.A ? -1 : 1);
