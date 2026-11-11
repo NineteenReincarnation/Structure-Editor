@@ -43,6 +43,7 @@ public partial class MainForm : Form
         AutoScaleDimensions = new SizeF(96, 96); AutoScaleMode = AutoScaleMode.Dpi;
         MinimumSize = new Size(1000, 640); KeyPreview = true;
         BuildUi();
+        MP_InitializeKeyboardNavigation();
         RefreshMetadata(); ShowSelection();
         InitializeBackgroundLoading();
         KeyDown += (_, e) =>
