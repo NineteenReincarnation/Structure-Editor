@@ -25,6 +25,32 @@ the visible UI.** MP_ prefixes remain mandatory for new project-specific Defs.
 Do not duplicate document/catalog state inside WPF views. WPF receives data
 and callbacks and must not write structure JSON/XML directly.
 
+## Installed program folder
+
+```text
+app/
+└── StructureEditor.exe   # double-click to start (requires .NET 10 Desktop Runtime)
+```
+
+The executable is a framework-dependent .NET single-file publish. Managed
+dependencies (including NAudio), `.deps.json` and `.runtimeconfig.json` are
+bundled into it. The runtime must still be installed on Windows. Do not
+confuse these bundled dependencies with RimWorld's external game files;
+game assets continue to be read from the local installation as before.
+
+`scripts/build.ps1` removes only known old generated files, not the whole
+user-visible `app/` directory. The repository publishes no loose DLLs and
+does not add a second launcher, ZIP or dist directory. CI runs
+`app/StructureEditor.exe --ui-smoke-test` and
+`app/StructureEditor.exe --catalog-cache-test` directly.
+
+Existing untracked files in a user's local `app/` directory cannot be
+deleted through GitHub Desktop pull. After pulling the updated main, run
+`pwsh ./scripts/organize-app.ps1` once to move known old documents to
+`docs/app-legacy/` and local icon sources to `branding/`, and remove known
+obsolete runtime files. The script never deletes unknown user files.
+Preview changes first with `-WhatIf`.
+
 ## Repository structure and module rules
 
 ```text
