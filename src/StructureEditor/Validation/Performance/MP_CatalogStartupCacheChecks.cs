@@ -72,8 +72,8 @@ internal static class MP_CatalogStartupCacheChecks
                     "The updated catalog should be reusable on the next launch.");
             }
 
-            // ZIP offsets should never be computed merely to display the main
-            // window or list textures. They are first needed for decoding.
+            // Ordinary ZIPs should never build the expensive custom offset
+            // index; only the game's special Zstd compression requires it.
             string archive = Path.Combine(root, "textures.zip");
             using (Bitmap bitmap = new(2, 2))
             {
@@ -94,7 +94,8 @@ internal static class MP_CatalogStartupCacheChecks
             Need(IndexCount() == 0, "Opening a ZIP must not eagerly read its entire offset index.");
             Need(textures.Get("Test/Preview") is Bitmap,
                 "First texture request must still decode a standard ZIP entry.");
-            Need(IndexCount() == 1, "ZIP offset index must initialize once, on demand.");
+            Need(IndexCount() == 0,
+                "Standard ZIP textures must decode without a custom offset index.");
             // Include fast, index-backed directional/folder/appearance lookup
             // and structure-preview cache validity in every offline CI run.
             MP_AssetLoadChecks.Run(root);

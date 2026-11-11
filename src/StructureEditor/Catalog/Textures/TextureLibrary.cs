@@ -219,9 +219,21 @@ public class TextureLibrary : IDisposable
     private byte[] ReadArchiveEntry(Source source)
     {
         ZipArchiveEntry entry = source.Archive.GetEntry(source.Entry)!;
+        // Deflate/stored ZIPs can be decoded directly without enumerating
+        // every central-directory offset. RimWorld's method 93 (Zstd)
+        // is unsupported by ZipArchive and keeps the custom lazy fallback.
+        try
+        {
+            using Stream regular = entry.Open();
+            using MemoryStream data = new();
+            regular.CopyTo(data);
+            return data.ToArray();
+        }
+        catch (NotSupportedException) { }
+        catch (InvalidDataException) { }
+
         using FileStream file = File.OpenRead(source.ArchivePath);
-        // Called under the existing decoder lock, so the lazy index is shared
-        // across preview requests without racing other background workers.
+        // Only the first special-compression request builds this ZIP index.
         if (!offsets.TryGetValue(source.Archive, out var archiveOffsets))
             offsets[source.Archive] = archiveOffsets = ReadOffsets(source.ArchivePath);
         file.Position = archiveOffsets[source.Entry];
@@ -229,9 +241,7 @@ public class TextureLibrary : IDisposable
         int method = BinaryPrimitives.ReadUInt16LittleEndian(header.AsSpan(8));
         int names = BinaryPrimitives.ReadUInt16LittleEndian(header.AsSpan(26)) + BinaryPrimitives.ReadUInt16LittleEndian(header.AsSpan(28));
         if (method != 93)
-        {
-            using Stream regular = entry.Open(); using MemoryStream mem = new(); regular.CopyTo(mem); return mem.ToArray();
-        }
+            throw new InvalidDataException("ZIP entry cannot be decoded by the standard reader.");
         file.Position += names;
         byte[] compressed = new byte[checked((int)entry.CompressedLength)]; file.ReadExactly(compressed);
         using MemoryStream input = new(compressed);
