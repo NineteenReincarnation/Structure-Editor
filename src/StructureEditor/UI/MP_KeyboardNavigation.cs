@@ -51,6 +51,20 @@ public partial class MainForm
             next = (next + Math.Sign(direction) + 6) % 6;
             if (next == (int)MP_KeyboardPane.Filters && MP_libraryTabs.SelectedIndex != 0)
                 continue;
+            // When coming up from the asset list, land on the bottommost
+            // filter ("来源"), not on the first ("集合") at the top.
+            if (next == (int)MP_KeyboardPane.Filters && direction < 0)
+            {
+                ComboBox last = MP_FilterCombos.LastOrDefault(combo =>
+                    combo.Enabled && combo.Visible);
+                if (last != null)
+                {
+                    MP_activeKeyboardPane = MP_KeyboardPane.Filters;
+                    last.Focus();
+                    MP_UiSound.Play(MP_UiSound.Cue.Focus);
+                    return;
+                }
+            }
             MP_FocusKeyboardPane((MP_KeyboardPane)next);
             return;
         }
