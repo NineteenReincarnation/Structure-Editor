@@ -98,7 +98,7 @@ public partial class MainForm
         if (keyData == (Keys.Control | Keys.S)) { Safe(() => SaveDocument(false)); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { Safe(() => SaveDocument(true)); return true; }
         Control input = ShortcutInput;
-        if (keyData is Keys.F6 or (Keys.Shift | Keys.F6) &&
+        if ((keyData == Keys.F6 || keyData == (Keys.Shift | Keys.F6)) &&
             MP_HandleWorkspaceNavigation(keyData)) return true;
         // Calling the Form base method here still dispatches MenuStrip Ctrl+C/V/Z,
         // so explicitly complete native text edits before the menu sees the command.
