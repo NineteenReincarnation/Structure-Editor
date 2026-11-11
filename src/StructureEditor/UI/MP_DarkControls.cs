@@ -17,6 +17,18 @@ internal sealed class MP_DarkComboBox : ComboBox
     protected override bool ProcessDialogKey(Keys keyData)
         => MP_NavigationKey?.Invoke(keyData) == true || base.ProcessDialogKey(keyData);
 
+    protected override void OnDropDown(EventArgs e)
+    {
+        base.OnDropDown(e);
+        MP_UiSound.Play(MP_UiSound.Cue.Open);
+    }
+
+    protected override void OnSelectionChangeCommitted(EventArgs e)
+    {
+        base.OnSelectionChangeCommitted(e);
+        MP_UiSound.Play(MP_UiSound.Cue.Confirm);
+    }
+
     protected override void OnGotFocus(EventArgs e)
     {
         base.OnGotFocus(e);
