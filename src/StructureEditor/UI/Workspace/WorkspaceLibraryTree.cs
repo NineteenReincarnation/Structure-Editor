@@ -348,7 +348,7 @@ public partial class MainForm
             currentFile = activeDocument.File;
             document = activeDocument.Document;
             dirty = false;
-            undo.Clear(); redo.Clear();
+            MP_history.Clear();
             RefreshMetadata();
             canvas.Invalidate();
         }

@@ -77,7 +77,7 @@ internal static class StudioFrameworkChecks
         {
             player.Load(paths);var building=player.Find("Building","Test_PlayerBuilding");
             need(building?.IsMod==true&&building.PackageId=="tests.playerbuildings"&&building.Pack.Contains("玩家建筑测试模组"),"Enabled local mods must resolve by package ID and display their names");
-            need(CatalogCollections.Matches(building,5,paths)&&!CatalogCollections.Matches(building,6,paths),"Player buildings belong to the independent mod collection");
+            need(CatalogCollections.Matches(building,5,paths.Favorites,paths.RecentAssets)&&!CatalogCollections.Matches(building,6,paths.Favorites,paths.RecentAssets),"Player buildings belong to the independent mod collection");
         }
         string bridge=Path.Combine(Path.GetDirectoryName(config),"StructureFramework");Directory.CreateDirectory(bridge);
         File.WriteAllText(Path.Combine(bridge,"catalog.json"),JsonSerializer.Serialize(new{SchemaVersion=1,ExportedAtUtc=DateTime.UtcNow,ActivePackages=new[]{"ludeon.rimworld","tests.playerbuildings"},Items=new[]{new{Kind="Building",DefName="RuntimeOnlyBuilding",Label="代码生成建筑",Source=new{PackageId="tests.playerbuildings"},Width=3,Height=2,DesignationCategory="Production",ColorArgb=unchecked((int)0xffffffff)}},Materials=Array.Empty<object>()}));

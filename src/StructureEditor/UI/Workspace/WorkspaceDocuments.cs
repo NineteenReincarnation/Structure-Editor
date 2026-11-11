@@ -166,7 +166,7 @@ public partial class MainForm
         EnsureWorkspaceDocument();
         activeDocument.Document = document; activeDocument.File = currentFile; activeDocument.Dirty = dirty;
         activeDocument.Relocate = saveLocationChanged; activeDocument.SaveDirectory = Program.Paths.SaveDirectory;
-        activeDocument.Undo = undo.ToArray(); activeDocument.Redo = redo.ToArray();
+        activeDocument.Undo = MP_history.CaptureUndo(); activeDocument.Redo = MP_history.CaptureRedo();
         (activeDocument.ViewOrigin, activeDocument.ViewScale) = canvas.CaptureView();
     }
     private void RefreshDocumentTabs()
@@ -197,8 +197,7 @@ public partial class MainForm
         {
             activeDocument = session; document = session.Document; currentFile = session.File; dirty = session.Dirty;
             saveLocationChanged = session.Relocate; Program.Paths.SaveDirectory = session.SaveDirectory;
-            undo.Clear(); foreach (var item in session.Undo.Reverse()) undo.Push(item);
-            redo.Clear(); foreach (var item in session.Redo.Reverse()) redo.Push(item);
+            MP_history.Restore(session.Undo, session.Redo);
             canvas.Document = document; canvas.ClearSelection(); canvas.Tool = CanvasTool.Select;
             RefreshMetadata(); ShowSelection();
             if (session.ViewScale > 0) canvas.RestoreView(session.ViewOrigin, session.ViewScale); else canvas.CenterView();
@@ -241,7 +240,7 @@ public partial class MainForm
         if (documents.Count == 0)
         {
             activeDocument = null; document = new(); currentFile = null; dirty = false; saveLocationChanged = false;
-            undo.Clear(); redo.Clear(); canvas.Cancel(); canvas.Document = document; RefreshMetadata(); EnsureWorkspaceDocument();
+            MP_history.Clear(); canvas.Cancel(); canvas.Document = document; RefreshMetadata(); EnsureWorkspaceDocument();
         }
         PersistWorkspace();
     }

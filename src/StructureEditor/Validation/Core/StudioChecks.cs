@@ -35,9 +35,9 @@ internal static class StudioChecks
         MP_StructureRenameChecks.Run(folder,Need);
         MP_ShieldRangesChecks.Run(Need);
         Need(StructureStorage.ResolveTarget(legacyPath,legacy.DefName,legacy.DefName,folder,false)==Path.Combine(folder,legacy.DefName+".structure.json"),"Saving an imported XML creates a native project without overwriting the source");
-        var common=catalog.Items.Where(i=>CatalogCollections.Matches(i,1,paths)).ToList();Need(common.Any(i=>i.DefName=="Wall")&&common.Any(i=>i.DefName=="Bed"),"Common assets span construction and furniture");
+        var common=catalog.Items.Where(i=>CatalogCollections.Matches(i,1,paths.Favorites,paths.RecentAssets)).ToList();Need(common.Any(i=>i.DefName=="Wall")&&common.Any(i=>i.DefName=="Bed"),"Common assets span construction and furniture");
         var wall=catalog.Find("Building","Wall");var settings=new StudioPaths{Favorites=new(){CatalogCollections.Key(wall)},RecentAssets=new(){CatalogCollections.Key(wall)}};
-        Need(CatalogCollections.Matches(wall,2,settings)&&CatalogCollections.Matches(wall,3,settings),"Favorites and recent collections are independent of source/type");
+        Need(CatalogCollections.Matches(wall,2,settings.Favorites,settings.RecentAssets)&&CatalogCollections.Matches(wall,3,settings.Favorites,settings.RecentAssets),"Favorites and recent collections are independent of source/type");
         using(StructureCanvas canvas=new(){Catalog=catalog,Document=doc})using(Bitmap image=canvas.ExportPreview())image.Save(Path.Combine(folder,"structure-preview.png"),ImageFormat.Png);
         File.WriteAllText(Path.Combine(folder,"progress.txt"),DateTime.UtcNow.ToString("O")+" Interaction checks\n");
         string performance=StudioInteractionChecks.Run(catalog,folder,Need);
