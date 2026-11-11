@@ -47,8 +47,9 @@ internal static class MP_UiSound
                 mixer.AddMixerInput(new MP_Voice(Samples[index]));
             }
             catch (Exception e) when (e is InvalidOperationException or
-                System.ComponentModel.Win32Exception or IOException or
-                DllNotFoundException or TypeInitializationException)
+                NAudio.MmException or System.ComponentModel.Win32Exception or
+                IOException or DllNotFoundException or
+                TypeInitializationException or PlatformNotSupportedException)
             {
                 // Headless Windows, a disabled device or no available output
                 // must not break any editor command.
