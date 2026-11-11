@@ -6,6 +6,27 @@ namespace StructureEditor;
 // Cover only the arrow button after the OS has drawn the editable area.
 internal sealed class MP_DarkComboBox : ComboBox
 {
+    // Opt-in keyboard routing. Inspector combos keep native input behavior.
+    internal Func<Keys, bool> MP_NavigationKey { get; set; }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        => MP_NavigationKey?.Invoke(keyData) == true || base.ProcessCmdKey(ref msg, keyData);
+
+    protected override bool ProcessDialogKey(Keys keyData)
+        => MP_NavigationKey?.Invoke(keyData) == true || base.ProcessDialogKey(keyData);
+
+    protected override void OnGotFocus(EventArgs e)
+    {
+        base.OnGotFocus(e);
+        Invalidate();
+    }
+
+    protected override void OnLostFocus(EventArgs e)
+    {
+        base.OnLostFocus(e);
+        Invalidate();
+    }
+
     // Native themed dropdowns reserve a wider arrow well than 23px at
     // some DPI/theme combinations. Painting only the last 23px left an
     // exposed bright seam (the vertical white bar in the inspector).
@@ -36,7 +57,7 @@ internal sealed class MP_DarkComboBox : ComboBox
         });
         // The stock FlatStyle still leaves a bright 1px border under some
         // Windows themes. Paint a restrained frame with the same palette.
-        using var frame = new Pen(MP_StudioTheme.Divider);
+        using var frame = new Pen(Focused ? MP_StudioTheme.Accent : MP_StudioTheme.Divider);
         g.DrawRectangle(frame, 0, 0, ClientSize.Width - 1, ClientSize.Height - 1);
     }
 }
