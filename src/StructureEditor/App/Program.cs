@@ -221,6 +221,21 @@ internal static class Program
                     section.SelectedIndex = previous;
                     if (!section.MP_HasStablePages)
                         throw new InvalidOperationException("Page switch changed host/page ownership.");
+                    // Regression: A/D must activate the real page, not merely
+                    // move the animated cursor over an inactive heading.
+                    var layoutForNavigation = (TableLayoutPanel)section.Controls[0];
+                    var navBar = (MP_FluidTabBar)(
+                        (System.Windows.Forms.Integration.ElementHost)
+                        layoutForNavigation.GetControlFromPosition(0, 0)!).Child;
+                    int initial = section.SelectedIndex;
+                    navBar.MP_ActivateStep(1);
+                    if (section.SelectedIndex != initial + 1 || !section.MP_HasStablePages)
+                        throw new InvalidOperationException(
+                            "A/D moved only the library tab outline; the page did not switch.");
+                    navBar.MP_ActivateStep(-1);
+                    if (section.SelectedIndex != initial || !section.MP_HasStablePages)
+                        throw new InvalidOperationException(
+                            "Reverse A/D navigation did not restore the active page.");
                     var activeSurface = Descendants(section)
                         .OfType<MP_PageSurface>()
                         .SingleOrDefault(page => page.MP_IsActive);
@@ -272,7 +287,21 @@ internal static class Program
                     throw new InvalidOperationException(
                         "New/Open commands missing or duplicated in compact toolbar.");
                 if (!MP_UiSound.MP_ValidCueData())
-                    throw new InvalidOperationException("Generated UI audio cue was not valid WAV.");
+                    throw new InvalidOperationException("Controller UI audio samples are invalid.");
+                // Ensure the document strip also sends A/D to the real
+                // activation callback (without opening/closing anything).
+                int requestedDocument = -1;
+                MP_FluidDocumentBar documentTest = new((index, close) =>
+                    requestedDocument = close ? -2 : index);
+                documentTest.SetTabs([
+                    new MP_DocumentVisualState(0, "Alpha", true),
+                    new MP_DocumentVisualState(1, "Beta", false)
+                ]);
+                documentTest.MP_ActivateStep(1);
+                if (requestedDocument != 1)
+                    throw new InvalidOperationException(
+                        "Document A/D changed only the cursor, not the active document.");
+                return;
                 return;
             }
             if (args.Contains("--self-test")) { StudioChecks.Run(Paths, args.Contains("--turret-explosions")); return; }
