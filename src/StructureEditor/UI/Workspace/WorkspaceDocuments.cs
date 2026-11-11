@@ -2,18 +2,6 @@
 
 namespace StructureEditor;
 
-internal sealed class WorkspaceDocument
-{
-    public StructureDocument Document;
-    public string File, SourceFile, SourceId, SaveDirectory;
-    public string LastSavedId, LastXmlPath;
-    public bool Dirty, Relocate, Prepared;
-    public StructureDocument[] Undo = Array.Empty<StructureDocument>(), Redo = Array.Empty<StructureDocument>();
-    public PointF ViewOrigin;
-    public float ViewScale;
-    public MP_DocumentTabButton Tab;
-}
-
 public partial class MainForm
 {
     private readonly List<WorkspaceDocument> documents = new();

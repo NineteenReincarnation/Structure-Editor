@@ -49,4 +49,110 @@ public partial class MainForm
         var sources = list.Items.Cast<string>().ToList();
         if (!sources.SequenceEqual(Program.Paths.ExtraMods) || auto.Checked != Program.Paths.AutoLoadActiveMods || configPath != Program.Paths.ModsConfigPath) { Program.Paths.ExtraMods = sources; Program.Paths.AutoLoadActiveMods=auto.Checked; Program.Paths.ModsConfigPath=configPath; Program.SavePaths(); if (Program.IsGame(Program.Paths.GameRoot)) LoadCatalog(); }
     }
+
+    // Catalog search, list painting and brush selection share the same workspace state.
+    private void RefreshGroups()
+    {
+        if (catalog == null || filtering) return;
+        filtering = true;
+        try
+        {
+            string selected = groupBox.SelectedIndex > 0 ? groupBox.SelectedItem?.ToString() : null;
+            string pack = packBox.SelectedIndex > 0 ? packBox.SelectedItem?.ToString() : null;
+            groupBox.BeginUpdate(); groupBox.Items.Clear(); groupBox.Items.Add(ClusterScope ? "全部集群分类" : "全部分类");
+            IEnumerable<string> groups = ClusterScope ? MechClusterCatalog.Groups : catalog.Query(FilterKind, pack, null, null).Where(MatchesScope).Select(i => i.Group).Distinct().OrderBy(CatalogGrouping.Order).ThenBy(g => g);
+            foreach (string group in groups) groupBox.Items.Add(group);
+            groupBox.SelectedIndex = selected != null && groupBox.Items.Contains(selected) ? groupBox.Items.IndexOf(selected) : 0; groupBox.EndUpdate();
+        }
+        finally { filtering = false; }
+    }
+    private void FilterPalette()
+    {
+        if (catalog == null || filtering) return;
+        string query = search.Text.Trim(); string pack = packBox.SelectedIndex > 0 ? packBox.SelectedItem?.ToString() : null;
+        string group = groupBox.SelectedIndex > 0 ? groupBox.SelectedItem?.ToString() : null;
+        var results = catalog.Query(FilterKind, pack, group, query, ClusterScope).Where(MatchesScope)
+            .OrderBy(i => scopeBox.SelectedIndex == 3 ? Program.Paths.RecentAssets.IndexOf(CatalogCollections.Key(i)) : CatalogGrouping.Order(i.Group))
+            .ThenBy(i => i.Pack == "Core" ? 0 : 1).ThenBy(i => i.Label).ToArray();
+        // Avoid clearing/repainting the owner-drawn list when the result set is identical.
+        // This matters when users cycle layers or repeatedly change selection.
+        bool identical = palette.Items.Count == results.Length;
+        for (int i = 0; identical && i < results.Length; i++)
+            identical = ReferenceEquals(palette.Items[i], results[i]);
+        if (identical)
+        {
+            libraryInfo.Text = $"{results.Length} 个素材";
+            MP_assetView?.SetItems(catalog, results);
+            return;
+        }
+        CatalogItem previous = palette.SelectedItem as CatalogItem;
+        (palette as MP_MotionListBox)?.ResetMotion();
+        palette.BeginUpdate();
+        try
+        {
+            MP_rebuildingPalette = true;
+            palette.Items.Clear();
+            palette.Items.AddRange(results);
+            if (previous != null && results.Contains(previous)) palette.SelectedItem = previous;
+        }
+        finally
+        {
+            MP_rebuildingPalette = false;
+            palette.EndUpdate();
+        }
+        libraryInfo.Text = $"{results.Length} 个素材";
+        MP_assetView?.SetItems(catalog, results);
+    }
+    private void DrawPalette(object sender, DrawItemEventArgs e)
+    {
+        if (e.Index < 0 || catalog == null) return;
+        int Px(float value) => (int)Math.Round(value * DeviceDpi / 96f);
+        CatalogItem item = (CatalogItem)palette.Items[e.Index];
+        bool selected = (e.State & DrawItemState.Selected) != 0;
+        MP_MotionListBox motionList = palette as MP_MotionListBox;
+        Color background = MP_Motion.Blend(surface, MP_StudioTheme.Hover,
+            motionList?.Hover(e.Index) ?? 0);
+        background = MP_Motion.Blend(background, MP_StudioTheme.Active,
+            motionList?.Selected(e.Index) ?? (selected ? 1f : 0f));
+        using SolidBrush bg = new(background); e.Graphics.FillRectangle(bg, e.Bounds);
+        string texturePath = item.Icon ?? catalog.TextureFor(item);
+        Bitmap image = asyncThumbnails ? catalog.Textures.Request(texturePath) : catalog.Textures.Get(texturePath);
+        if (image != null)
+        {
+            Rectangle src = item.Linked && item.Icon == null && LinkedGraphics.IsAtlas(image, texturePath)
+                ? LinkedGraphics.Source(image.Width, image.Height, 0)
+                : new Rectangle(0, 0, image.Width, image.Height);
+            int iconSize = Px(47); float ratio = Math.Min((float)iconSize / src.Width, (float)iconSize / src.Height);
+            Rectangle dest = new(e.Bounds.X + Px(4) + (int)((iconSize - src.Width * ratio) / 2), e.Bounds.Y + Px(6) + (int)((iconSize - src.Height * ratio) / 2), (int)(src.Width * ratio), (int)(src.Height * ratio));
+            e.Graphics.DrawImage(image, dest, src, GraphicsUnit.Pixel);
+        }
+        string displayName = ClusterScope && !string.IsNullOrEmpty(item.ClusterWikiName) ? item.ClusterWikiName : item.Label;
+        if (Program.Paths.Favorites.Contains(CatalogCollections.Key(item))) displayName = "★ " + displayName;
+        TextRenderer.DrawText(e.Graphics, displayName, Font, new Rectangle(e.Bounds.X + Px(58), e.Bounds.Y + Px(9), Math.Max(1, e.Bounds.Width - Px(61)), Px(22)), selected ? MP_StudioTheme.ActiveText : text, TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
+        TextRenderer.DrawText(e.Graphics, item.DefName, smallFont, new Rectangle(e.Bounds.X + Px(58), e.Bounds.Y + Px(32), Math.Max(1, e.Bounds.Width - Px(61)), Px(22)), selected ? MP_StudioTheme.ActiveText : muted, TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
+        string category = ClusterScope ? item.ClusterGroup + (item.ClusterWikiEntry ? "" : " / 模组扩展") : item.Group;
+        TextRenderer.DrawText(e.Graphics, category + " · " + item.Pack, smallFont, new Rectangle(e.Bounds.X + Px(58), e.Bounds.Y + Px(51), Math.Max(1, e.Bounds.Width - Px(61)), Px(18)), muted, TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
+    }
+    private void SelectBrush()
+    {
+        if (MP_rebuildingPalette || palette.SelectedItem is not CatalogItem item) return;
+        // Clear the separate CP-list highlight when switching to another brush.
+        MP_cpMotionView?.ClearSelection();
+        MP_ActivatePaletteBrush(item);
+    }
+
+    // One selection path for the ordinary palette and the mech-cluster CP list.
+    private void MP_ActivatePaletteBrush(CatalogItem item)
+    {
+        if (item == null) return;
+        RememberAsset(item);
+        MP_assetView?.MarkSelected(item);
+        bool keepRectangle = canvas.Tool == CanvasTool.Rectangle && item.Kind == "Terrain";
+        canvas.Brush = item;
+        canvas.BrushRotation = item.Kind == "Pawn" ? 2 : 0;
+        canvas.Tool = keepRectangle ? CanvasTool.Rectangle : CanvasTool.Place;
+        canvas.ClearSelection();
+        ShowItem(item, null);
+        canvas.Invalidate();
+    }
 }

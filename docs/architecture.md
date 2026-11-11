@@ -92,6 +92,34 @@ produces deterministic sound samples without audio-device side effects;
 The offline UI smoke checks moved from the entry point to
 `Validation/Smoke/MP_UiSmokeChecks.cs`.
 
+### Internal refactor: application and workspace responsibilities
+
+The public editor behavior is unchanged; these are **source ownership**
+changes within the same `StructureEditor` assembly and namespace:
+
+- `App/Program.cs`: startup dispatch and error reporting only.
+- `App/MP_ProgramLocations.cs`: existing directory lookup and Steam/RimWorld
+  discovery methods (unchanged lookup order and fallback).
+- `App/MP_ProgramSettings.cs` / `App/StudioPaths.cs`: existing settings
+  persistence and JSON-compatible settings model, separate from startup.
+- `UI/Workspace/MainForm.cs`: main window fields, constructor, event hookups
+  and common widget factory only.
+- `UI/Workspace/MP_PaletteCollectionCommands.cs`: collection filters,
+  material palette drawing, sources, favorites and brush activation.
+- `UI/Workspace/MP_InspectorController.cs`: selected-object inspector.
+- `UI/Workspace/MP_DocumentStateController.cs`: undo/redo, metadata and title.
+- `UI/Workspace/MP_DocumentDialogs.cs`: native file dialogs and user file
+  actions, separate from document state.
+- `UI/Workspace/MP_WorkspaceDocument.cs`: one document tab's session fields,
+  separate from `WorkspaceDocuments.cs` session coordination.
+
+These remain `partial MainForm` and `partial Program` declarations, not
+new data stores or a second controller implementation. Methods and their
+original expressions have been moved verbatim. The module validation step
+checks ownership to prevent incidental re-coupling. This does **not** change
+window layout, keyboard navigation, audio samples, timers, XML/JSON data,
+RimWorld asset loading, save paths or the single-file `app/` distribution.
+
 SDK recursive compilation includes all module directories without namespace
 or assembly changes. No structure DefName, JSON/XML schema, export profile,
 `structures/` layout, resource filename or existing external runtime file
