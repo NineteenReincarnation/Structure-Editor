@@ -47,6 +47,8 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
     private readonly MP_LiltScroll scrollMotion;
     private readonly Action<int> switchLibrary;
     private double scrollTarget;
+    internal Action<int> MP_NavigateRegion { get; set; }
+    internal Action MP_NavigationFocused { get; set; }
 
     private static WM.SolidColorBrush Solid(byte r, byte g, byte b)
         => new(WM.Color.FromRgb(r, g, b));
@@ -68,6 +70,7 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         openCallback = onOpened;
         renameCallback = onRenamed;
         MP_LiltTheme.Apply(this);
+        GotKeyboardFocus += (_, _) => MP_NavigationFocused?.Invoke();
         Background = Surface;
         var layout = new WC.Grid
         {
@@ -248,6 +251,24 @@ internal sealed class MP_FluidStructureLibrary : WC.UserControl
         Content = layout;
         PreviewKeyDown += (_, e) =>
         {
+            if (e.Key == WI.Key.F6)
+            {
+                MP_NavigateRegion?.Invoke(WI.Keyboard.Modifiers == WI.ModifierKeys.Shift ? -1 : 1);
+                e.Handled = MP_NavigateRegion != null;
+                return;
+            }
+            if (e.Key == WI.Key.Tab && WI.Keyboard.Modifiers == WI.ModifierKeys.None
+                && WI.Keyboard.FocusedElement is WC.Border focusedRow)
+            {
+                if (focusedRow.Tag is string folder && folderToggles.TryGetValue(folder, out Action flip))
+                {
+                    flip();
+                    MP_UiSound.Play(MP_UiSound.Cue.Open);
+                }
+                else MP_NavigateRegion?.Invoke(-1);
+                e.Handled = true;
+                return;
+            }
             if (e.OriginalSource is WC.TextBox ||
                 WI.Keyboard.Modifiers != WI.ModifierKeys.None) return;
             if (e.Key is WI.Key.A or WI.Key.D)
