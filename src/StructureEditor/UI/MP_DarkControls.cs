@@ -17,6 +17,19 @@ internal sealed class MP_DarkComboBox : ComboBox
     protected override bool ProcessDialogKey(Keys keyData)
         => MP_NavigationKey?.Invoke(keyData) == true || base.ProcessDialogKey(keyData);
 
+    // ComboBox can classify W/S as text-input keys, bypassing ProcessCmdKey.
+    // Route them here as well so keyboard focus never gets trapped in a filter.
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (MP_NavigationKey?.Invoke(e.KeyData) == true)
+        {
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            return;
+        }
+        base.OnKeyDown(e);
+    }
+
     protected override void OnDropDown(EventArgs e)
     {
         base.OnDropDown(e);
