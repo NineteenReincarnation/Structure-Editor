@@ -78,21 +78,25 @@ $program = Get-Content -LiteralPath (Join-Path $src 'App/Program.cs') -Raw
 if ($program -match '(?m)^\s*(?:private|public|internal)\s+(?:void|bool|string)\s+(?:SavePaths|FindGame|IsGame)\s*\(') {
     throw 'Program.cs has regained environment/settings responsibilities.'
 }
-# Module ownership checks: no application-global settings in catalog queries,
-# no presentation dependence in document history, no entry-point coupling in IO.
-$catalogScope = Get-Content -LiteralPath (Join-Path $src 'Catalog/Collections/CatalogCollections.cs') -Raw
+# Module ownership checks: ignore comments, which may document forbidden
+# dependencies by name without introducing one into executable C# code.
+function ReadModuleCode([string]$relative) {
+    $source = Get-Content -LiteralPath (Join-Path $src $relative) -Raw
+    return [regex]::Replace($source, '(?m)^[ \t]*//[^\r\n]*', '')
+}
+$catalogScope = ReadModuleCode 'Catalog/Collections/CatalogCollections.cs'
 if ($catalogScope -match 'StudioPaths|Program\.Paths|System\.Windows') {
     throw 'CatalogCollections must only accept filtering data.'
 }
-$catalogQuery = Get-Content -LiteralPath (Join-Path $src 'Catalog/Collections/MP_CatalogPaletteQuery.cs') -Raw
+$catalogQuery = ReadModuleCode 'Catalog/Collections/MP_CatalogPaletteQuery.cs'
 if ($catalogQuery -match 'StudioPaths|Program\.|System\.Windows') {
     throw 'Catalog palette query must stay independent of UI and settings.'
 }
-$history = Get-Content -LiteralPath (Join-Path $src 'Core/Services/MP_DocumentHistory.cs') -Raw
+$history = ReadModuleCode 'Core/Services/MP_DocumentHistory.cs'
 if ($history -match 'MainForm|System\.Windows|Program\.') {
     throw 'Document history must stay independent of UI and app initialization.'
 }
-$storage = Get-Content -LiteralPath (Join-Path $src 'Formats/Export/MP_StructureStorage.cs') -Raw
+$storage = ReadModuleCode 'Formats/Export/MP_StructureStorage.cs'
 if ($storage -match 'MainForm|System\.Windows|Program\.') {
     throw 'Structure persistence must not depend on the UI or Program.'
 }
