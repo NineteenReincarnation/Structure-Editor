@@ -131,8 +131,16 @@ internal sealed class MP_FluidAssetPalette : WC.UserControl
             }
             if (e.Key is WI.Key.W or WI.Key.S or WI.Key.Up or WI.Key.Down)
             {
-                if (items.Length == 0) return;
                 int step = e.Key is WI.Key.W or WI.Key.Up ? -1 : 1;
+                // At the first row, moving upward enters the filter controls,
+                // instead of trapping the keyboard cursor at the list edge.
+                if (step < 0 && selectedIndex <= 0 && MP_NavigateRegion != null)
+                {
+                    MP_NavigateRegion(-1);
+                    e.Handled = true;
+                    return;
+                }
+                if (items.Length == 0) return;
                 int next = MP_LibraryNavigation.Step(selectedIndex, step, items.Length);
                 list.SelectedIndex = next;
                 list.ScrollIntoView(items[next]);
