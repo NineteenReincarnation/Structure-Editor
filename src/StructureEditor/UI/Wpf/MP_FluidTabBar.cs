@@ -133,15 +133,7 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         }
         if (e.Key is WI.Key.A or WI.Key.D or WI.Key.Left or WI.Key.Right)
         {
-            if (tabs.Count == 0) return;
-            int step = e.Key is WI.Key.A or WI.Key.Left ? -1 : 1;
-            int next = MP_LibraryNavigation.StepPage(active, step, tabs.Count);
-            // Select the real page. The host callback updates content AND tab style.
-            if (next != active)
-            {
-                activate?.Invoke(next);
-                MP_UiSound.Play(MP_UiSound.Cue.Navigate);
-            }
+            MP_ActivateStep(e.Key is WI.Key.A or WI.Key.Left ? -1 : 1);
             e.Handled = true;
             return;
         }
@@ -151,6 +143,17 @@ internal sealed class MP_FluidTabBar : WC.UserControl
             MP_UiSound.Play(MP_UiSound.Cue.Confirm);
             e.Handled = true;
         }
+    }
+
+    // The selected page and visible content always change together.
+    // Used by A/D and the Windows UI smoke test.
+    internal void MP_ActivateStep(int step)
+    {
+        if (tabs.Count == 0) return;
+        int next = MP_LibraryNavigation.StepPage(active, step, tabs.Count);
+        if (next == active) return;
+        activate?.Invoke(next);
+        MP_UiSound.Play(MP_UiSound.Cue.Navigate);
     }
 
     internal void AddTab(string title)
