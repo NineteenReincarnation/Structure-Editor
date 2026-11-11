@@ -157,6 +157,34 @@ public partial class MainForm
         return false;
     }
 
+    private void MP_FocusLibrarySearch()
+    {
+        switch (MP_libraryTabs.SelectedIndex)
+        {
+            case 0:
+                MP_activeKeyboardPane = MP_KeyboardPane.Filters;
+                search.Focus();
+                break;
+            case 1:
+                MP_activeKeyboardPane = MP_KeyboardPane.Items;
+                MP_structureView?.FocusSearch();
+                break;
+            case 2:
+                MP_activeKeyboardPane = MP_KeyboardPane.Items;
+                MP_cpMotionView?.FocusSearch();
+                break;
+        }
+        MP_UiSound.Play(MP_UiSound.Cue.Focus);
+    }
+
+    private void MP_SelectLibraryPageFromKeyboard(int index)
+    {
+        if (index < 0 || index > 2) return;
+        MP_libraryTabs.SelectedIndex = index;
+        MP_FocusKeyboardPane(MP_KeyboardPane.Items);
+        MP_UiSound.Play(MP_UiSound.Cue.Confirm);
+    }
+
     private bool MP_HandleWorkspaceNavigation(Keys key)
     {
         if (key is Keys.F6 or (Keys.Shift | Keys.F6))
