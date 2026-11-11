@@ -149,6 +149,17 @@ public partial class StructureCanvas : Control
             SelectItems(Array.Empty<PlacedItem>());
     }
     public void SelectAll() { Tool = CanvasTool.Select; SelectItems(Document.Items.Where(Editable)); }
+    // Alt + left click selects all placements of the same XML thing definition,
+    // not the same material, rotation or current selection rectangle.
+    public int MP_SelectMatchingDefinition(PlacedItem item)
+    {
+        if (item == null || Document == null) return 0;
+        Tool = CanvasTool.Select;
+        SelectItems(Document.Items.Where(candidate =>
+            candidate.Kind == item.Kind &&
+            string.Equals(candidate.DefName, item.DefName, StringComparison.Ordinal)));
+        return selection.Count;
+    }
     public void SelectArea(Rectangle bounds, bool additive = false)
     {
         var items = Document.Items.Where(i => Editable(i) && bounds.IntersectsWith(StructureDocument.Footprint(i, Catalog))).ToList();
@@ -242,6 +253,17 @@ public partial class StructureCanvas : Control
             erasing = true; Capture = true; PaintAt(lastGrid); Invalidate(); return;
         }
         if (e.Button != MouseButtons.Left) return;
+        if ((InputModifiers & Keys.Alt) != 0)
+        {
+            PlacedItem matching = At(lastGrid);
+            if (matching != null)
+            {
+                int count = MP_SelectMatchingDefinition(matching);
+                Hint?.Invoke($"已选中 {count} 个 {matching.DefName}（当前 XML 中同类对象）");
+                MP_UiSound.Play(MP_UiSound.Cue.Confirm);
+            }
+            return;
+        }
         if (e.Clicks >= 2 && InputModifiers == Keys.None && PickBrushAt(lastGrid)) return;
         bool shift = (InputModifiers & Keys.Shift) != 0, ctrl = (InputModifiers & Keys.Control) != 0;
         if (shift || ctrl || Tool == CanvasTool.Select)
