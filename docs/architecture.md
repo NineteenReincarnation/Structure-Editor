@@ -7,21 +7,74 @@ Structure Framework XML and existing JSON compatibility; imported historical
 formats are handled by the existing codecs. **Never couple the domain model to
 the visible UI.** MP_ prefixes remain mandatory for new project-specific Defs.
 
-| Layer | Responsible code | Owns |
+| Layer | Directory | Responsibility |
 | --- | --- | --- |
-| Application | `App/Program.cs` | Startup, paths and CI smoke checks |
-| Domain | `Core/StructureDocument.cs`, `Core/StructureIndex.cs` | Objects, validation, copy, JSON serialization |
-| Import/export | `Formats/` | Canonical XML, imported formats and export dependencies |
-| Catalog | `Catalog/` | Definitions, searchable collections and texture cache |
-| Editing | `Canvas/` | Selection, placement, drawing, undo/redo and preview rendering |
-| Workspace | `UI/MainForm.cs`, `UI/Workspace*.cs` | Document sessions, commands, saving and UI coordination |
-| Presentation | `UI/Wpf/` and `UI/MP_InspectorLayout.cs` | Appearance, lists, navigation, animation and responsive fields |
-| Compatibility | `Compatibility/` | Optional MechProtocol rules, naming and CP model |
-| Regression | `Validation/` | Behavior, persistence, layout and performance checks |
+| Application | `App/` | Startup, settings, branding and command-line dispatch |
+| Domain | `Core/Models/`, `Core/Services/` | Structures, spatial indexing, safe rename |
+| Canvas | `Canvas/Editing/`, `Canvas/Rendering/` | Placement, selection, drawing and preview |
+| Catalog | `Catalog/{Discovery,Collections,Textures,Caching,Metadata}/` | Game defs, queries, textures, cache and metadata |
+| Import/export | `Formats/{Codecs,Export}/` | Structure Framework XML, legacy imports, dependencies |
+| Workspace | `UI/Workspace/` | MainForm partial controllers, menus, sessions, saves, shortcuts |
+| WinForms bridge | `UI/Controls/` | Native controls and WPF page host |
+| WPF presentation | `UI/Wpf/{Navigation,Libraries,Inspector,Motion,Primitives}/` | Visible tabs, lists, inspectors and motion |
+| UI services | `UI/{Audio,Theme,Motion,Help}/` | Audio mixer, pure sound synthesis, theme and helpers |
+| Compatibility | `Compatibility/` | Optional MP integration, cluster naming and CP |
+| Regression | `Validation/{Core,Interaction,Structures,Workspace,Performance,Smoke}/` | Offline and RimWorld-backed checks |
 
 `MainForm` remains a partial bridge for the WinForms canvas and commands.
 Do not duplicate document/catalog state inside WPF views. WPF receives data
 and callbacks and must not write structure JSON/XML directly.
+
+## Repository structure and module rules
+
+```text
+Structure-Editor/
+├── .github/workflows/      CI build and tracked app/ sync
+├── app/                    Generated executable; never edit manually
+├── assets/                 README illustrations, not game textures
+├── docs/                   Architecture, design standards, UI and dependency notes
+├── scripts/                Build, module-boundary check, game-data verification
+├── src/StructureEditor/
+│   ├── App/                Program and branding
+│   ├── Canvas/             Editing/ and Rendering/
+│   ├── Catalog/            Discovery/, Collections/, Textures/, Caching/, Metadata/
+│   ├── Compatibility/      Optional integration with other mods
+│   ├── Core/               Models/ and Services/
+│   ├── Formats/            Codecs/ and Export/
+│   ├── UI/
+│   │   ├── Workspace/      MainForm and controller partial classes
+│   │   ├── Controls/       Native widgets and hybrid hosting
+│   │   ├── Wpf/            Navigation/, Libraries/, Inspector/, Motion/, Primitives/
+│   │   ├── Audio/          Mixer and independent gamepad sound synthesis
+│   │   └── Theme/, Motion/, Help/
+│   └── Validation/         Core/, Interaction/, Structures/, Workspace/,
+│                           Performance/, Smoke/
+└── structures/             Only canonical editable structure JSON/XML library
+```
+
+The boundary is **Domain → Workspace → Presentation**: Core, Catalog,
+Formats and Compatibility never store Form controls, event handlers or WPF
+view state. The Canvas owns interactive editing and rendering, but the
+Workspace owns the active document session, undo stacks and persistence.
+WPF views receive data and callbacks rather than writing structure files.
+
+`CatalogCollections` now contains only the collection model; the former
+favorites, source-dialog and filtering controls are in
+`UI/Workspace/MP_PaletteCollectionCommands.cs`. `MP_GamepadSoundDesign`
+produces deterministic sound samples without audio-device side effects;
+`MP_UiSound` separately owns the NAudio mixer, sound settings and fallback.
+The offline UI smoke checks moved from the entry point to
+`Validation/Smoke/MP_UiSmokeChecks.cs`.
+
+SDK recursive compilation includes all module directories without namespace
+or assembly changes. No structure DefName, JSON/XML schema, export profile,
+`structures/` layout, resource filename or existing external runtime file
+should change in an architectural refactor. The generated `app/` remains
+the sole CI-managed output, not a manually edited source directory.
+
+Verify module placement with `scripts/check-architecture.ps1`; CI then
+runs Windows publish, `--ui-smoke-test` and `--catalog-cache-test` before
+synchronizing the executable into `main:app/`.
 
 ## Human-facing information hierarchy
 

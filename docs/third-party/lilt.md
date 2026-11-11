@@ -2,7 +2,7 @@
 
 Source: https://github.com/chhongzh/lilt (branch `dev`, inspected 2026-11-10).
 
-The C# motion code in `src/StructureEditor/UI/Wpf/MP_LiltPhysics.cs` adapts
+The C# motion code in `src/StructureEditor/UI/Wpf/Motion/MP_LiltPhysics.cs` adapts
 lilt's `anim.Value`, spring presets, fixed-substep integration and
 focus-cursor lead/trail model for WPF. The original lilt Go framework is not
 embedded or invoked by Structure-Editor.

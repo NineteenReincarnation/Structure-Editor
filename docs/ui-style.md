@@ -9,7 +9,7 @@
 - For this project the user-provided PNG/GIF is the **visual reference**:
   dominant background `#080A0E`, dominant foreground / inverse fill
   `#C8E6FF`, low-relief outer surface `#0D1117`.
-- Color tokens come exclusively from `src/StructureEditor/UI/MP_StudioTheme.cs`.
+- Color tokens come exclusively from `src/StructureEditor/UI/Theme/MP_StudioTheme.cs`.
   Do not reintroduce a custom blue-grey gradient palette.
 
 ## Uniform surfaces
