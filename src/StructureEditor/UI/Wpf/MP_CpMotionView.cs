@@ -257,6 +257,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
 
     internal Action<int> SwitchLibrary { get; set; }
 
+    internal void FocusSearch() => search.Focus();
+
     internal void FocusNavigation()
     {
         if (currentIndex >= 0 && currentIndex < rows.Children.Count &&
