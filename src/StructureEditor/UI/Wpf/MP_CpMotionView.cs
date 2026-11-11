@@ -44,6 +44,8 @@ internal sealed class MP_CpMotionView : WC.UserControl
     private CatalogItem selected;
     private double scrollTarget;
     private int currentIndex = -1;
+    internal Action<int> MP_NavigateRegion { get; set; }
+    internal Action MP_NavigationFocused { get; set; }
 
     private static WM.Color Color(byte r, byte g, byte b) => WM.Color.FromRgb(r, g, b);
     private static WM.Color Color(byte a, byte r, byte g, byte b) => WM.Color.FromArgb(a, r, g, b);
@@ -64,6 +66,7 @@ internal sealed class MP_CpMotionView : WC.UserControl
     {
         activate = onActivate;
         MP_LiltTheme.Apply(this);
+        GotKeyboardFocus += (_, _) => MP_NavigationFocused?.Invoke();
         this.Background = SurfaceBrush; // visual resource shared across lists
         Focusable = true;
         var root = new WC.Grid
@@ -266,6 +269,19 @@ internal sealed class MP_CpMotionView : WC.UserControl
 
     private void OnPreviewKeyDown(object sender, WI.KeyEventArgs e)
     {
+        if (e.Key == WI.Key.F6)
+        {
+            MP_NavigateRegion?.Invoke(WI.Keyboard.Modifiers == WI.ModifierKeys.Shift ? -1 : 1);
+            e.Handled = MP_NavigateRegion != null;
+            return;
+        }
+        if (e.Key == WI.Key.Tab && WI.Keyboard.Modifiers == WI.ModifierKeys.None &&
+            WI.Keyboard.FocusedElement is WC.Border)
+        {
+            MP_NavigateRegion?.Invoke(-1);
+            e.Handled = MP_NavigateRegion != null;
+            return;
+        }
         if (WI.Keyboard.Modifiers != WI.ModifierKeys.None ||
             e.OriginalSource is WC.TextBox) return;
         if (e.Key is WI.Key.A or WI.Key.D)
