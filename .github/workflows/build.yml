@@ -35,17 +35,17 @@ jobs:
         shell: pwsh
         run: ./scripts/build.ps1
 
-      - name: Smoke-test editor startup (WinForms tab hosts)
+      - name: Smoke-test bundled executable (WinForms/WPF)
         shell: pwsh
         run: |
-          dotnet ./app/StructureEditor.dll --ui-smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "WinForms startup smoke test failed." }
+          $run = Start-Process -FilePath "./app/StructureEditor.exe" -ArgumentList "--ui-smoke-test" -Wait -PassThru
+          if ($run.ExitCode -ne 0) { throw "Single-file editor startup smoke test failed (exit $($run.ExitCode))." }
 
       - name: Verify warm catalog cache and lazy asset indexing
         shell: pwsh
         run: |
-          dotnet ./app/StructureEditor.dll --catalog-cache-test
-          if ($LASTEXITCODE -ne 0) { throw "Catalog cache regression check failed." }
+          $run = Start-Process -FilePath "./app/StructureEditor.exe" -ArgumentList "--catalog-cache-test" -Wait -PassThru
+          if ($run.ExitCode -ne 0) { throw "Single-file catalog cache check failed (exit $($run.ExitCode))." }
 
       # Only main is updated. All other branches remain untouched for
       # the repository owner to delete manually.
