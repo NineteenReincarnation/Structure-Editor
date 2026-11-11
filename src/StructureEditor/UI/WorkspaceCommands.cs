@@ -94,6 +94,15 @@ public partial class MainForm
             EnsureWorkspaceDocument(); int step = (keyData & Keys.Shift) != 0 ? -1 : 1;
             Safe(() => SwitchWorkspaceDocument(documents[(documents.IndexOf(activeDocument) + step + documents.Count) % documents.Count])); return true;
         }
+        if (keyData == (Keys.Control | Keys.F)) { MP_FocusLibrarySearch(); return true; }
+        if (keyData == (Keys.Control | Keys.L))
+        { MP_FocusKeyboardPane(MP_KeyboardPane.Toolbar); return true; }
+        if (keyData is (Keys.Alt | Keys.D1) or (Keys.Alt | Keys.NumPad1))
+        { MP_SelectLibraryPageFromKeyboard(0); return true; }
+        if (keyData is (Keys.Alt | Keys.D2) or (Keys.Alt | Keys.NumPad2))
+        { MP_SelectLibraryPageFromKeyboard(1); return true; }
+        if (keyData is (Keys.Alt | Keys.D3) or (Keys.Alt | Keys.NumPad3))
+        { MP_SelectLibraryPageFromKeyboard(2); return true; }
         if (keyData == Keys.F5) { LoadCatalog(); return true; }
         if (keyData == (Keys.Control | Keys.S)) { Safe(() => SaveDocument(false)); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { Safe(() => SaveDocument(true)); return true; }
