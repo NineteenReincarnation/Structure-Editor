@@ -121,6 +121,12 @@ internal sealed class MP_FluidTabBar : WC.UserControl
 
     private void MP_OnKeyboardNavigation(object sender, WI.KeyEventArgs e)
     {
+        if (e.Key == WI.Key.F6)
+        {
+            MP_NavigateRegion?.Invoke(WI.Keyboard.Modifiers == WI.ModifierKeys.Shift ? -1 : 1);
+            e.Handled = MP_NavigateRegion != null;
+            return;
+        }
         if (WI.Keyboard.Modifiers != WI.ModifierKeys.None) return;
         if (e.Key is WI.Key.W or WI.Key.S or WI.Key.Tab)
         {
