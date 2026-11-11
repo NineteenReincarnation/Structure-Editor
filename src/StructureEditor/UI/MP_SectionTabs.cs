@@ -16,6 +16,18 @@ internal sealed class MP_SectionTabs : UserControl
 
     internal event EventHandler SelectedIndexChanged;
 
+    internal Action<int> MP_NavigateRegion
+    {
+        set => bar.MP_NavigateRegion = value;
+    }
+
+    internal Action MP_NavigationFocused
+    {
+        set => bar.MP_NavigationFocused = value;
+    }
+
+    internal void MP_FocusNavigation() => bar.FocusNavigation();
+
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     internal int SelectedIndex
     {
@@ -42,7 +54,7 @@ internal sealed class MP_SectionTabs : UserControl
         header = new ElementHost
         {
             Child = bar, Dock = DockStyle.Fill,
-            BackColor = MP_StudioTheme.Toolbar, TabStop = false
+            BackColor = MP_StudioTheme.Toolbar, TabStop = true
         };
         navigationLayout = new TableLayoutPanel
         {
