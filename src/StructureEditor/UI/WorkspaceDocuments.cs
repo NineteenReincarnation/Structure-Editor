@@ -60,7 +60,7 @@ public partial class MainForm
         {
             Dock = DockStyle.Fill,
             BackColor = Color.FromArgb(35, 47, 57),
-            Child = MP_documentMotionBar, TabStop = false
+            Child = MP_documentMotionBar, TabStop = true
         });
         MP_documentHost.SizeChanged += (_, _) => MP_CenterDocumentBar();
         return MP_documentHost;
