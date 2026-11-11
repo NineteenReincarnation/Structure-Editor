@@ -99,6 +99,7 @@ internal static class MP_CatalogStartupCacheChecks
             // Include fast, index-backed directional/folder/appearance lookup
             // and structure-preview cache validity in every offline CI run.
             MP_AssetLoadChecks.Run(root);
+            MP_StructureHeaderIndexChecks.Run(root);
         }
         finally
         {

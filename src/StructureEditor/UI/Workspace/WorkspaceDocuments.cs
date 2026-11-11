@@ -4,6 +4,7 @@ namespace StructureEditor;
 
 public partial class MainForm
 {
+    private readonly MP_StructureHeaderIndex MP_structureHeaders = new();
     private readonly List<WorkspaceDocument> documents = new();
     private WorkspaceDocument activeDocument;
     private ToolStrip documentBar;
@@ -97,50 +98,32 @@ public partial class MainForm
         var result = new List<(string File, string Id, string Label)>();
         string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
         var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (string folder in new[] { Program.StructureLibraryFolder }.Concat(StructureFolders()).Append(Program.DefaultProjects).Append(desktop).Where(Directory.Exists).Distinct(StringComparer.OrdinalIgnoreCase))
-            foreach (string file in Directory.EnumerateFiles(folder, "*", SamePath(folder, desktop) ? SearchOption.TopDirectoryOnly : SearchOption.AllDirectories)
-                .Where(p => p.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".json", StringComparison.OrdinalIgnoreCase))) files.Add(Path.GetFullPath(file));
+        foreach (string folder in new[] { Program.StructureLibraryFolder }.Concat(StructureFolders())
+            .Append(Program.DefaultProjects).Append(desktop).Where(Directory.Exists)
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (string file in Directory.EnumerateFiles(folder, "*",
+                SamePath(folder, desktop) ? SearchOption.TopDirectoryOnly : SearchOption.AllDirectories)
+                .Where(p => p.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+                    || p.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+                files.Add(Path.GetFullPath(file));
+
         foreach (string file in files)
         {
             try
             {
-                if (file.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-                {
-                    using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(file));
-                    if (json.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object
-                        || !json.RootElement.TryGetProperty("DefName", out _)
-                        || !json.RootElement.TryGetProperty("Items", out _)) continue;
-                    if (json.RootElement.GetProperty("DefName").ValueKind != System.Text.Json.JsonValueKind.String) continue;
-                    string id = json.RootElement.GetProperty("DefName").GetString();
-                    if (!string.IsNullOrWhiteSpace(id))
-                    {
-                        string label = json.RootElement.TryGetProperty("Label", out var labelElement)
-                            && labelElement.ValueKind == System.Text.Json.JsonValueKind.String
-                            ? labelElement.GetString() : null;
-                        result.Add((file, id, string.IsNullOrWhiteSpace(label) ? id : label));
-                    }
-                    continue;
-                }
-                var root = XDocument.Load(file).Root;
-                foreach (var def in (root?.Name.LocalName == "Defs" ? root.Elements()
-                    : root == null ? Enumerable.Empty<XElement>() : new[] { root })
-                    .Where(e => e.Name.LocalName is "MechProtocol.MP_StructureDef" or "StructureFramework.StructureDef"
-                        or "StructureEditor.StructureDef" or "PrefabDef")
-                    .Where(e => !string.Equals((string)e.Attribute("Abstract"), "true", StringComparison.OrdinalIgnoreCase)))
-                {
-                    string id = (string)def.Element("defName");
-                    if (!string.IsNullOrWhiteSpace(id))
-                        result.Add((file, id, (string)def.Element("label") ?? id));
-                }
+                foreach (var (id, label) in MP_structureHeaders.Read(file))
+                    result.Add((file, id, label));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
                 or System.Xml.XmlException or System.Text.Json.JsonException
                 or InvalidDataException or ArgumentException)
             {
-                // The next Refresh will retry XML files that were still being saved.
+                // Do not cache incomplete writes. A later refresh retries them.
             }
         }
-        return result.DistinctBy(x => (Path.GetFullPath(x.File).ToUpperInvariant(), x.Id)).OrderBy(x => x.Label).ToList();
+        MP_structureHeaders.Prune(files);
+        return result.DistinctBy(x => (Path.GetFullPath(x.File).ToUpperInvariant(), x.Id))
+            .OrderBy(x => x.Label).ToList();
     }
 
     private void EnsureWorkspaceDocument()
