@@ -1,93 +1,143 @@
-using System.Media;
-using System.Text;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace StructureEditor;
 
-// Original low-volume cues, synthesized in code. No external media files.
-// Navigation is rate-limited; missing audio hardware must not fail commands.
+// Original 8-bit inspired UI sound palette. All voices are synthesized locally,
+// mixed at low gain and reused without storing or shipping third-party samples.
+// NAudio provides low-latency nonblocking playback and safe overlapping cues.
 internal static class MP_UiSound
 {
-    internal enum Cue { Navigate, Confirm, Toggle, Close }
-    private static readonly SoundPlayer[] Players = Build();
-    private static readonly long[] LastPlayed = new long[4];
+    internal enum Cue { Navigate, Confirm, Toggle, Close, Open, Cancel, Focus, Error, Place, Select }
+
+    private readonly record struct MP_Note(double Start, double End, int Milliseconds,
+        double Gain = 0.055, bool HardPulse = false);
+
+    private const int Rate = 44100;
     private static readonly object Sync = new();
+    private static readonly long[] LastPlayed = new long[Enum.GetValues<Cue>().Length];
+    private static readonly float[][] Samples = Enum.GetValues<Cue>().Select(Synthesize).ToArray();
+    private static WaveOutEvent output;
+    private static MixingSampleProvider mixer;
+    private static bool audioUnavailable;
 
     internal static bool Enabled => Program.Paths?.MP_UiSoundsEnabled ?? true;
 
     internal static void Play(Cue cue)
     {
-        if (!Enabled) return;
+        if (!Enabled || audioUnavailable) return;
         int index = (int)cue;
         lock (Sync)
         {
             long now = Environment.TickCount64;
-            if (now - LastPlayed[index] < (cue == Cue.Navigate ? 65 : 42)) return;
+            int cooldown = cue is Cue.Navigate or Cue.Focus ? 48 : 28;
+            if (now - LastPlayed[index] < cooldown) return;
             LastPlayed[index] = now;
-        }
-        try { Players[index]?.Play(); }
-        catch (Exception e) when (e is InvalidOperationException or
-            System.ComponentModel.Win32Exception or IOException)
-        { /* Audio is never required to use the editor. */ }
-    }
-
-    private static SoundPlayer[] Build()
-    {
-        SoundPlayer[] players = new SoundPlayer[4];
-        (double start, double end, int length)[] tones = {
-            (570, 635, 38), (725, 855, 60),
-            (615, 520, 50), (505, 400, 58)
-        };
-        for (int i = 0; i < tones.Length; i++)
-        {
             try
             {
-                var wav = Wave(tones[i].start, tones[i].end, tones[i].length);
-                var player = new SoundPlayer(new MemoryStream(wav, writable: false));
-                player.Load();
-                players[i] = player;
+                if (output == null)
+                {
+                    mixer = new MixingSampleProvider(
+                        WaveFormat.CreateIeeeFloatWaveFormat(Rate, 1))
+                    { ReadFully = true };
+                    output = new WaveOutEvent { DesiredLatency = 72, NumberOfBuffers = 3 };
+                    output.Init(mixer);
+                    output.Play();
+                }
+                mixer.AddMixerInput(new MP_Voice(Samples[index]));
             }
             catch (Exception e) when (e is InvalidOperationException or
-                System.ComponentModel.Win32Exception or IOException)
-            { /* Silent fallback on headless systems. */ }
+                System.ComponentModel.Win32Exception or IOException or
+                DllNotFoundException or TypeInitializationException)
+            {
+                // Headless Windows, a disabled device or no available output
+                // must not break any editor command.
+                audioUnavailable = true;
+                output?.Dispose();
+                output = null;
+                mixer = null;
+            }
         }
-        return players;
     }
 
-    private static byte[] Wave(double start, double end, int durationMs)
+    internal static void Shutdown()
     {
-        const int rate = 22050;
-        int count = rate * durationMs / 1000;
-        using var stream = new MemoryStream(44 + count * 2);
-        using var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true);
-        writer.Write(Encoding.ASCII.GetBytes("RIFF"));
-        writer.Write(36 + count * 2);
-        writer.Write(Encoding.ASCII.GetBytes("WAVEfmt "));
-        writer.Write(16);
-        writer.Write((short)1);
-        writer.Write((short)1);
-        writer.Write(rate);
-        writer.Write(rate * 2);
-        writer.Write((short)2);
-        writer.Write((short)16);
-        writer.Write(Encoding.ASCII.GetBytes("data"));
-        writer.Write(count * 2);
-        double phase = 0;
-        for (int i = 0; i < count; i++)
+        lock (Sync)
         {
-            double t = i / (double)count;
-            phase += 2 * Math.PI * (start + (end - start) * t) / rate;
-            double envelope = Math.Min(1, t * 40) * Math.Pow(1 - t, 2);
-            writer.Write((short)Math.Round(Math.Sin(phase) * 1250 * envelope));
+            output?.Stop();
+            output?.Dispose();
+            output = null;
+            mixer = null;
         }
-        writer.Flush();
-        return stream.ToArray();
+    }
+
+    private static MP_Note[] Pattern(Cue cue) => cue switch
+    {
+        Cue.Navigate => [new(585, 755, 36, .043, true)],
+        Cue.Confirm => [new(570, 725, 42, .061), new(845, 1040, 53, .054)],
+        Cue.Toggle => [new(445, 520, 34, .049, true), new(600, 710, 39, .044)],
+        Cue.Close => [new(690, 480, 41, .05), new(410, 290, 49, .040, true)],
+        Cue.Open => [new(360, 490, 30, .045), new(500, 730, 55, .055)],
+        Cue.Cancel => [new(420, 310, 58, .047, true), new(260, 220, 36, .033)],
+        Cue.Focus => [new(760, 780, 24, .025, true)],
+        Cue.Error => [new(205, 190, 85, .056, true), new(170, 150, 85, .043, true)],
+        Cue.Place => [new(350, 460, 34, .049, true), new(515, 620, 32, .040)],
+        Cue.Select => [new(460, 630, 50, .050)],
+        _ => []
+    };
+
+    private static float[] Synthesize(Cue cue)
+    {
+        var notes = Pattern(cue);
+        const int gapMs = 3;
+        int samples = notes.Sum(n => n.Milliseconds + gapMs) * Rate / 1000;
+        float[] data = new float[samples];
+        int offset = 0;
+        double phase = 0;
+        foreach (var note in notes)
+        {
+            int count = note.Milliseconds * Rate / 1000;
+            for (int i = 0; i < count; i++)
+            {
+                double progress = i / (double)Math.Max(1, count - 1);
+                double hz = note.Start * Math.Pow(note.End / note.Start, progress);
+                phase += 2 * Math.PI * hz / Rate;
+                // Crunchy pulse plus rounded triangle: recognizable 1980s
+                // game-console transients without the harshness of raw squares.
+                double triangle = 2 / Math.PI * Math.Asin(Math.Sin(phase));
+                double pulse = Math.Sin(phase) >= .28 ? 1 : -1;
+                double color = note.HardPulse
+                    ? triangle * .35 + pulse * .65
+                    : triangle * .77 + pulse * .23;
+                double attack = Math.Min(1, i / (Rate * .0035));
+                double release = Math.Min(1, (count - 1 - i) / (Rate * .012));
+                double envelope = Math.Max(0, Math.Min(attack, release)) *
+                    (1 - .27 * progress);
+                data[offset + i] = (float)(color * envelope * note.Gain);
+            }
+            offset += count + gapMs * Rate / 1000;
+        }
+        return data;
+    }
+
+    private sealed class MP_Voice(float[] samples) : ISampleProvider
+    {
+        private int position;
+        public WaveFormat WaveFormat { get; } =
+            WaveFormat.CreateIeeeFloatWaveFormat(Rate, 1);
+
+        public int Read(float[] buffer, int offset, int count)
+        {
+            int read = Math.Min(count, samples.Length - position);
+            if (read <= 0) return 0;
+            Array.Copy(samples, position, buffer, offset, read);
+            position += read;
+            return read;
+        }
     }
 
     internal static bool MP_ValidCueData()
-    {
-        byte[] data = Wave(570, 635, 38);
-        return data.Length > 44
-            && Encoding.ASCII.GetString(data, 0, 4) == "RIFF"
-            && Encoding.ASCII.GetString(data, 8, 4) == "WAVE";
-    }
+        => Samples.Length == Enum.GetValues<Cue>().Length
+        && Samples.All(samples => samples.Length > 100
+            && samples.Any(value => float.IsFinite(value) && Math.Abs(value) > .001f));
 }
