@@ -16,11 +16,15 @@ internal sealed class MP_SectionTabs : UserControl
 
     internal event EventHandler SelectedIndexChanged;
 
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    [System.ComponentModel.Browsable(false)]
     internal Action<int> MP_NavigateRegion
     {
         set => bar.MP_NavigateRegion = value;
     }
 
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    [System.ComponentModel.Browsable(false)]
     internal Action MP_NavigationFocused
     {
         set => bar.MP_NavigationFocused = value;
