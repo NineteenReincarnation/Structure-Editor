@@ -7,6 +7,8 @@ namespace StructureEditor;
 internal sealed class MP_DarkComboBox : ComboBox
 {
     // Opt-in keyboard routing. Inspector combos keep native input behavior.
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    [System.ComponentModel.Browsable(false)]
     internal Func<Keys, bool> MP_NavigationKey { get; set; }
 
     protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
