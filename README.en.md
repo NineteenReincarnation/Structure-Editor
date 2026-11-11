@@ -22,22 +22,13 @@ Still writing XML by hand to design buildings, mechanoid clusters, and special e
 
 With its grid-based editor, you can place buildings, adjust their positions, plan defensive outposts, and see the entire layout as you work—much like building directly in the game.
 
-## Launch and folders
-
-Open **[`app/StructureEditor.exe`](./app/StructureEditor.exe)** from the repository. After pulling `main`, CI updates this executable directly. No separate root-level launcher is needed. You may create a personal Windows shortcut targeting `app/StructureEditor.exe` (local `.lnk` files are not tracked).
-
-- `app/`: generated runtime files only; do not edit or store structures here.
-- `structures/`: the single editable JSON/XML structure library.
-- `docs/`: user and engineering documentation; `src/`: code; `scripts/`: build and validation.
-- No ZIP or standalone archives are generated or uploaded. Windows CI updates only `main/app/` with the executable and runtime files; pull `main` and run `app/StructureEditor.exe` from the repository.
-
 ## Key Features
 
 - **Visual structure editing**: Place, move, rotate, and remove objects on an intuitive grid-based canvas.
 - **Game asset library**: Browse and search building assets, with filters for collections, types, categories, and sources.
 - **Multiple structures**: Work on different layouts using tabs.
 - **Convenient editing tools**: Use selection boxes, panning, zooming, and keyboard shortcuts to speed up your workflow.
-- **Structure properties**: Customize structure identifiers, display names, categories, and save directories.
+- **Structure properties**: Customize structure identifiers, display names, and save directories.
 - **Structure export**: Save projects as JSON and export structure XML for RimWorld.
 
 Whether you're building a mechanoid cluster, an enemy outpost, a unique building complex, or a special event scene, you can plan everything in a standalone editor without repeatedly launching the game to make adjustments.

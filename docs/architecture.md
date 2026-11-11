@@ -1,228 +1,57 @@
-# Structure Editor — Architecture and UI invariants
+# Structure Editor · 当前架构规范
 
-## Purpose and ownership
+本文件只记录**当前生效**的模块职责、兼容边界和验证方式，不记录已完成版本的开发过程。机械集群 CP 规则见 [STANDARDS.md](STANDARDS.md)，界面与快捷键规则见 [ui-style.md](ui-style.md)，第三方许可及字体说明见 [third-party/lilt.md](third-party/lilt.md)。
 
-The editor creates and edits RimWorld structures. New work must retain
-Structure Framework XML and existing JSON compatibility; imported historical
-formats are handled by the existing codecs. **Never couple the domain model to
-the visible UI.** MP_ prefixes remain mandatory for new project-specific Defs.
-
-| Layer | Directory | Responsibility |
-| --- | --- | --- |
-| Application | `App/` | Startup, settings, branding and command-line dispatch |
-| Domain | `Core/Models/`, `Core/Services/` | Structures, spatial indexing, safe rename |
-| Canvas | `Canvas/Editing/`, `Canvas/Rendering/` | Placement, selection, drawing and preview |
-| Catalog | `Catalog/{Discovery,Collections,Textures,Caching,Metadata}/` | Game defs, queries, textures, cache and metadata |
-| Import/export | `Formats/{Codecs,Export}/` | Structure Framework XML, legacy imports, dependencies |
-| Workspace | `UI/Workspace/` | MainForm partial controllers, menus, sessions, saves, shortcuts |
-| WinForms bridge | `UI/Controls/` | Native controls and WPF page host |
-| WPF presentation | `UI/Wpf/{Navigation,Libraries,Inspector,Motion,Primitives}/` | Visible tabs, lists, inspectors and motion |
-| UI services | `UI/{Audio,Theme,Motion,Help}/` | Audio mixer, pure sound synthesis, theme and helpers |
-| Infrastructure | `Infrastructure/Paths/` | Shared app data locations, avoiding reverse dependencies on Program |
-| Compatibility | `Compatibility/` | Optional MP integration, cluster naming and CP |
-| Regression | `Validation/{Core,Interaction,Structures,Workspace,Performance,Smoke}/` | Offline and RimWorld-backed checks |
-
-`MainForm` remains a partial bridge for the WinForms canvas and commands.
-Do not duplicate document/catalog state inside WPF views. WPF receives data
-and callbacks and must not write structure JSON/XML directly.
-
-## Installed program folder
-
-```text
-app/
-└── StructureEditor.exe   # double-click to start (requires .NET 10 Desktop Runtime)
-```
-
-The executable is a framework-dependent .NET single-file publish. Managed
-dependencies (including NAudio), `.deps.json` and `.runtimeconfig.json` are
-bundled into it. The runtime must still be installed on Windows. Do not
-confuse these bundled dependencies with RimWorld's external game files;
-game assets continue to be read from the local installation as before.
-
-`scripts/build.ps1` removes only known old generated files, not the whole
-user-visible `app/` directory. The repository publishes no loose DLLs and
-does not add a second launcher, ZIP or dist directory. CI runs
-`app/StructureEditor.exe --ui-smoke-test` and
-`app/StructureEditor.exe --catalog-cache-test` directly.
-
-Existing untracked files in a user's local `app/` directory cannot be
-deleted through GitHub Desktop pull. After pulling the updated main, run
-`pwsh ./scripts/organize-app.ps1` once to move known old documents to
-`docs/app-legacy/` and local icon sources to `branding/`, and remove known
-obsolete runtime files. The script never deletes unknown user files.
-Preview changes first with `-WhatIf`.
-
-## Repository structure and module rules
+## 目录与依赖边界
 
 ```text
 Structure-Editor/
-├── .github/workflows/      CI build and tracked app/ sync
-├── app/                    Generated executable; never edit manually
-├── assets/                 README illustrations, not game textures
-├── docs/                   Architecture, design standards, UI and dependency notes
-├── scripts/                Build, module-boundary check, game-data verification
-├── src/StructureEditor/
-│   ├── App/                Program and branding
-│   ├── Canvas/             Editing/ and Rendering/
-│   ├── Catalog/            Discovery/, Collections/, Textures/, Caching/, Metadata/
-│   ├── Compatibility/      Optional integration with other mods
-│   ├── Infrastructure/     Shared environment and filesystem paths
-│   ├── Core/               Models/ and Services/
-│   ├── Formats/            Codecs/ and Export/
-│   ├── UI/
-│   │   ├── Workspace/      MainForm and controller partial classes
-│   │   ├── Controls/       Native widgets and hybrid hosting
-│   │   ├── Wpf/            Navigation/, Libraries/, Inspector/, Motion/, Primitives/
-│   │   ├── Audio/          Mixer and independent gamepad sound synthesis
-│   │   └── Theme/, Motion/, Help/
-│   └── Validation/         Core/, Interaction/, Structures/, Workspace/,
-│                           Performance/, Smoke/
-└── structures/             Only canonical editable structure JSON/XML library
+├── app/                         CI 生成的 StructureEditor.exe
+├── assets/                      README 展示素材
+├── docs/                        现行规范与第三方许可
+├── scripts/                     构建、架构检查、游戏数据验证
+├── structures/                  唯一可编辑结构库（JSON/XML）
+└── src/StructureEditor/
+    ├── App/                     启动、设置及文档会话引用
+    ├── Infrastructure/Paths/    应用数据路径
+    ├── Core/                    结构模型、索引、文档历史及重命名
+    ├── Catalog/                 游戏 Def 扫描、筛选、贴图和缓存
+    ├── Formats/                 Framework 编解码、导出、备份和存储
+    ├── Canvas/                  画布编辑与渲染
+    ├── Compatibility/           可选 Mod 命名与 CP 集成
+    ├── UI/
+    │   ├── Workspace/           MainForm 工作区、命令与文档会话
+    │   ├── Controls/            WinForms 控件及 WPF 宿主
+    │   ├── Wpf/                 页签、素材库、检查器和动效
+    │   └── Audio, Theme, Motion, Help/
+    └── Validation/              独立回归与离线启动检查
 ```
 
-The boundary is **Domain → Workspace → Presentation**: Core, Catalog,
-Formats and Compatibility never store Form controls, event handlers or WPF
-view state. The Canvas owns interactive editing and rendering, but the
-Workspace owns the active document session, undo stacks and persistence.
-WPF views receive data and callbacks rather than writing structure files.
+- **领域层不引用视图。** `Core`、`Catalog`、`Formats`、`Infrastructure`、`Compatibility` 不持有 `MainForm`、WinForms 控件或 WPF 状态。
+- **Workspace 是唯一协调层。** `MainForm` 采用 partial 文件划分工作区职责，不复制第二份文档、撤销或素材选中状态。WPF 控件接收数据和回调，不负责结构文件写入。
+- **功能逻辑按职责归属。** `MP_DocumentHistory` 管理历史栈及文档切换后的恢复，`MP_CatalogPaletteQuery` 接收明确的筛选数据，`MP_StructureStorage` 管理 XML/JSON 和备份，`MP_DataDirectories` 管理应用数据路径。接口变更需同步所有调用点与验证代码。
+- **可扩展且不重复。** WPF 素材库和结构库是唯一可见列表；不能重新启用重复的原生树形列表或独立结构选择器。动效、选中填充和缩略图缓存需遵守 [UI 规范](ui-style.md)。
 
-`CatalogCollections` now contains only the collection model; the former
-favorites, source-dialog and filtering controls are in
-`UI/Workspace/MP_PaletteCollectionCommands.cs`. `MP_GamepadSoundDesign`
-produces deterministic sound samples without audio-device side effects;
-`MP_UiSound` separately owns the NAudio mixer, sound settings and fallback.
-The offline UI smoke checks moved from the entry point to
-`Validation/Smoke/MP_UiSmokeChecks.cs`.
+## 数据和发布兼容
 
-### Internal refactor: application and workspace responsibilities
+- 新导出的 XML 只使用 `StructureFramework.StructureDef`，旧 PrefabDef、MechProtocol XML 仍需可导入。项目 JSON 与旧有 DefName、休眠状态、旋转和物料语义保持兼容；不恢复已移除的结构分类字段。
+- `structures/` 是用户工程库。不得借重构删除、迁移、重命名其中的 JSON/XML，或写入机器专属绝对路径。导出不得覆盖无关 Def，重命名须同步关联文件并保留必要备份。
+- `app/` 只发布单文件 `StructureEditor.exe`。该程序依赖 Windows 上安装的 .NET 10 Desktop Runtime；无需散列 DLL、另外的启动器、ZIP 或 dist 包。 `app/` 仅由 CI 生成，代码改动不得直接提交二进制。
+- 不把游戏资源、用户设置、字体文件、临时文件、备份或历史版本更新记录纳入源码仓库。
+- 对第三方派生实现保留必要的归属及许可说明；尤其不得删除 [lilt MIT 声明](third-party/lilt.md)。
 
-The public editor behavior is unchanged; these are **source ownership**
-changes within the same `StructureEditor` assembly and namespace:
+## 稳定的界面与性能约束
 
-- `App/Program.cs`: startup dispatch and error reporting only.
-- `App/MP_ProgramLocations.cs`: existing directory lookup and Steam/RimWorld
-  discovery methods (unchanged lookup order and fallback).
-- `App/MP_ProgramSettings.cs` / `App/StudioPaths.cs`: existing settings
-  persistence and JSON-compatible settings model, separate from startup.
-- `UI/Workspace/MainForm.cs`: main window fields, constructor, event hookups
-  and common widget factory only.
-- `UI/Workspace/MP_PaletteCollectionCommands.cs`: collection filters,
-  material palette drawing, sources, favorites and brush activation.
-- `UI/Workspace/MP_InspectorController.cs`: selected-object inspector.
-- `UI/Workspace/MP_DocumentStateController.cs`: undo/redo, metadata and title.
-- `UI/Workspace/MP_DocumentDialogs.cs`: native file dialogs and user file
-  actions, separate from document state.
-- `UI/Workspace/MP_WorkspaceDocument.cs`: one document tab's session fields,
-  separate from `WorkspaceDocuments.cs` session coordination.
+- 文档标签的关闭按钮须保留脏数据保存确认；`Ctrl+G/H/J` 分别控制相应范围叠加显示；`Ctrl+D` 复制对象。
+- 素材流程为搜索 → 集合 → 类型 → 分类 → 来源；选中行背景不得越界，标签栏不覆盖工具栏。画布、面板、检查器与 CP 摘要须兼顾 DPI 与窄窗口。
+- 纹理解码结果共享缓存，缩略图异步批量刷新；预览任务可取消，过期结果不可覆盖当前选中；尊重减少动效设置。具体样式以 `MP_StudioTheme` 和 [UI 规范](ui-style.md) 为准。
 
-These remain `partial MainForm` and `partial Program` declarations, not
-new data stores or a second controller implementation. Methods and their
-original expressions have been moved verbatim. The module validation step
-checks ownership to prevent incidental re-coupling. This does **not** change
-window layout, keyboard navigation, audio samples, timers, XML/JSON data,
-RimWorld asset loading, save paths or the single-file `app/` distribution.
+## 验证
 
-SDK recursive compilation includes all module directories without namespace
-or assembly changes. No structure DefName, JSON/XML schema, export profile,
-`structures/` layout, resource filename or existing external runtime file
-should change in an architectural refactor. The generated `app/` remains
-the sole CI-managed output, not a manually edited source directory.
+- `scripts/check-architecture.ps1`：检查目录与模块边界。
+- `scripts/build.ps1`：Windows 发布单文件 EXE。
+- `--ui-smoke-test`：离线验证界面宿主、快捷键、序列化、文档历史和素材筛选。
+- `--catalog-cache-test`：离线验证素材缓存。
+- `scripts/verify.ps1 -GameRoot <RimWorld 目录>`：需要游戏文件的完整验证；CI 不具备用户的本地 RimWorld 数据。
 
-Verify module placement with `scripts/check-architecture.ps1`; CI then
-runs Windows publish, `--ui-smoke-test` and `--catalog-cache-test` before
-synchronizing the executable into `main:app/`.
-
-## Cohesion and dependency boundaries
-
-The editor retains the same single Windows assembly and observable behavior,
-but cross-layer logic has been extracted into data-only services.
-
-- `Core/Services/MP_DocumentHistory.cs` owns snapshot copying, bounded
-  history, undo/redo and per-document stack export/restore. `MainForm`
-  passes the active document but no longer owns raw undo/redo stacks.
-  Workspace tab changes preserve the original top-of-stack-first arrays.
-- `Catalog/Collections/MP_CatalogPaletteQuery.cs` orders and filters plain
-  catalog items, receiving scope/favorites/recent IDs explicitly rather than
-  looking up `Program.Paths` or reading controls. Existing category/pack
-  search and selection semantics are unchanged.
-- `Formats/Export/MP_StructureStorage.cs` owns JSON/XML persistence,
-  duplicate checks, XML merging and backups. The controller in
-  `UI/Workspace/WorkspaceSaving.cs` only coordinates user dialogs/state.
-- `Infrastructure/Paths/MP_DataDirectories.cs` supplies the same
-  LocalApplicationData directory to both storage and the entry point;
-  `Program.DataDirectory` remains an alias for existing callers.
-- `App/WorkspaceReference.cs` is a pure persisted-settings DTO, separate
-  from `UI/Workspace/WorkspaceDocuments.cs`. Names and JSON fields remain
-  unchanged.
-
-`Validation/Core/MP_DocumentHistoryChecks.cs` and
-`Validation/Core/MP_CatalogPaletteQueryChecks.cs` run in the existing
-offline smoke test. They check history ordering and limits, session recovery
-and catalog source/favorite/recent filtering without installing RimWorld.
-The architecture script also rejects accidental Program/UI references in the
-newly isolated services.
-
-## Human-facing information hierarchy
-
-1. **Application menu** — file/edit/object/view/window/help, always available
-2. **Open documents** — active document clearly distinguished; a separate
-   close target retains the existing unsaved-change confirmation
-3. **Library / canvas / properties** — choose an asset or structure on the
-   left, perform editing in the middle, inspect selection on the right
-4. **Canvas controls** — New/Open, current editing layer and layer visibility;
-   keep these separate from document tabs
-5. **CP footer** — secondary contextual feedback below the object inspector;
-   cannot consume the entire inspector at narrow sizes
-
-Library workflow: search → scope → type → category → source → favorites/reset.
-Avoid repeating the active page heading in its content. Folder rows need
-distinct icon/disclosure/count and files need a different icon and indentation.
-Long labels have accessible tooltips rather than spilling into adjacent columns.
-
-Inspector workflow: selected object's name/DefName → origin/footprint →
-material (if eligible) → orientation (if eligible) → dormancy (if eligible).
-Only show fields applicable to the selected object. Project/export settings
-remain in the separate **工程** tab.
-
-## Layout ownership
-
-- `MP_StudioTheme`: only source for dark palette and common spacing
-- `MP_SectionTabs`: permanent WinForms page host and DPI-correct WPF header
-- `MP_InspectorLayout`: inspector page/row composition and CP footer sizing
-- `MP_FluidTabBar`: fits labels to the WPF viewport; no drawing over sibling
-  controls
-- `MP_FluidStructureLibrary`: folder/file hierarchy and selection
-- `MP_FluidAssetPalette`, `MP_CpMotionView`: virtualized catalog lists
-- `MP_FluidCpSummary`: display of the compatibility CP calculation only
-- `MP_FluidDocumentBar`: document tabs; does not own document persistence
-
-Never place a WPF header in a fixed-size WinForms row without DPI conversion.
-Viewport rows retain independent bounds. Fields must accommodate font height.
-CP footer height is capped so editing always has priority.
-
-## Rendering/performance boundaries
-
-- Decoded textures are cached and shared, not re-encoded per scroll event
-- Coalesce bursts of thumbnail refreshes to a single dispatcher pass
-- Generate expensive structure previews on a cancellable STA worker; a stale
-  selection must never replace a newer preview
-- Do not destroy/rebuild whole side pages on every tab switch
-- Keep selected-row fills within the selected row. Animate bounded edges
-  without causing overlapping hit targets, text, or thumbnail artifacts
-- Honor reduced motion; instantaneous selection must remain functional
-
-## Validation
-
-Automatic Windows CI runs the release publish, `--ui-smoke-test`
-(including offline JSON/XML and deep-copy contracts) and
-`--catalog-cache-test`. It checks visible page ownership, toolbar/page
-boundaries and common DPI/window sizes without requiring the user's game.
-
-The full game-data suite is `--self-test --game <RimWorld-path>` and exercises
-materials, editing, undo/redo, document sessions, naming and export.
-It requires real RimWorld files and is not covered by the offline CI.
-
-**Scope of assurance:** automated checks cannot prove there are no errors or
-substitute for Windows 100–200% DPI visual/interaction testing. Investigate
-actual overlapping rectangles, rapid tab switches and GPU paint artifacts
-rather than attempting to mask errors with palette or animation changes.
+CI 运行离线检查并在成功后更新 `main:app/`，其他分支不自动处理。编译与离线测试不能替代实际 Windows 下不同 DPI、连续切换页签及快速滚动的人工交互检查。
