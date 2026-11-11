@@ -95,6 +95,9 @@ internal static class MP_CatalogStartupCacheChecks
             Need(textures.Get("Test/Preview") is Bitmap,
                 "First texture request must still decode a standard ZIP entry.");
             Need(IndexCount() == 1, "ZIP offset index must initialize once, on demand.");
+            // Include fast, index-backed directional/folder/appearance lookup
+            // and structure-preview cache validity in every offline CI run.
+            MP_AssetLoadChecks.Run(root);
         }
         finally
         {

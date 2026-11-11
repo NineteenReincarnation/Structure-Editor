@@ -1,6 +1,4 @@
 using System.Drawing.Imaging;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace StructureEditor;
 
@@ -137,9 +135,15 @@ public partial class MainForm
         }
     }
 
-    private static Task<byte[]> MP_RenderLibraryPreviewStaAsync(
+    private static async Task<byte[]> MP_RenderLibraryPreviewStaAsync(
         string path, string id, Catalog catalogSnapshot, CancellationToken token)
     {
+        // Read existing PNGs on the thread pool; no WinForms control or
+        // dedicated STA thread is needed for a cache hit.
+        byte[] cached = await Task.Run(
+            () => MP_LibraryPreviewCache.TryRead(path, id, token), token).ConfigureAwait(false);
+        if (cached != null) return cached;
+
         var completion = new TaskCompletionSource<byte[]>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var worker = new Thread(() =>
@@ -166,51 +170,35 @@ public partial class MainForm
         };
         worker.SetApartmentState(ApartmentState.STA);
         worker.Start();
-        return completion.Task;
+        return await completion.Task.ConfigureAwait(false);
     }
 
     private static byte[] MP_ReadOrGeneratePreview(
         string input, string id, Catalog catalogSnapshot, CancellationToken token)
     {
-        string file = Path.GetFullPath(input);
-        string basename = Path.GetFileNameWithoutExtension(file);
-        if (basename.EndsWith(".structure", StringComparison.OrdinalIgnoreCase))
-            basename = basename[..^".structure".Length];
-        string folder = Path.GetDirectoryName(file)!;
-        string previewFile = new[]
-        {
-            Path.Combine(folder, basename + ".png"),
-            Path.Combine(folder, basename + "_preview.png"),
-            Path.Combine(folder, basename + ".preview.png")
-        }.FirstOrDefault(File.Exists);
-        if (previewFile == null)
-        {
-            string hash = Convert.ToHexString(
-                SHA256.HashData(Encoding.UTF8.GetBytes(file + "|" + id)))[..24];
-            string cacheFolder = Path.Combine(Program.DataDirectory, "PreviewCache");
-            Directory.CreateDirectory(cacheFolder);
-            string cacheFile = Path.Combine(cacheFolder, hash + ".png");
-            if (!File.Exists(cacheFile) ||
-                File.GetLastWriteTimeUtc(cacheFile) < File.GetLastWriteTimeUtc(file))
-            {
-                token.ThrowIfCancellationRequested();
-                if (catalogSnapshot == null)
-                    throw new InvalidOperationException("请先加载 RimWorld 游戏素材。");
-                StructureDocument target = StructureDocument.Load(file, catalogSnapshot, id);
-                token.ThrowIfCancellationRequested();
-                using var renderer = new StructureCanvas
-                {
-                    Catalog = catalogSnapshot, Document = target, AsyncTextures = false,
-                    ShowGrid = false, ShowProximityRanges = false
-                };
-                using Bitmap bitmap = renderer.ExportPreview(420);
-                token.ThrowIfCancellationRequested();
-                bitmap.Save(cacheFile, ImageFormat.Png);
-            }
-            previewFile = cacheFile;
-        }
+        // Check again on the STA worker in case another operation published
+        // the preview while this request waited for the worker.
+        byte[] ready = MP_LibraryPreviewCache.TryRead(input, id, token);
+        if (ready != null) return ready;
+
         token.ThrowIfCancellationRequested();
-        return File.ReadAllBytes(previewFile);
+        if (catalogSnapshot == null)
+            throw new InvalidOperationException("请先加载 RimWorld 游戏素材。");
+
+        string cacheFile = MP_LibraryPreviewCache.CachePath(input, id);
+        Directory.CreateDirectory(Path.GetDirectoryName(cacheFile)!);
+        StructureDocument target = StructureDocument.Load(
+            Path.GetFullPath(input), catalogSnapshot, id);
+        token.ThrowIfCancellationRequested();
+        using var renderer = new StructureCanvas
+        {
+            Catalog = catalogSnapshot, Document = target, AsyncTextures = false,
+            ShowGrid = false, ShowProximityRanges = false
+        };
+        using Bitmap bitmap = renderer.ExportPreview(420);
+        token.ThrowIfCancellationRequested();
+        bitmap.Save(cacheFile, ImageFormat.Png);
+        return File.ReadAllBytes(cacheFile);
     }
 
     private void MP_RenameLibraryEntry(MP_LibraryEntry entry)

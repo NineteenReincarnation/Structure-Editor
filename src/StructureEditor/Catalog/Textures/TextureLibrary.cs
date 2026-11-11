@@ -21,6 +21,15 @@ public class TextureLibrary : IDisposable
     private record Source(string File, ZipArchive Archive, string Entry, string ArchivePath = null);
     private readonly List<ZipArchive> archives = new();
     private readonly Dictionary<string, Source> sources = new(StringComparer.OrdinalIgnoreCase);
+    // Built alongside the source manifest, not inside paint/decode calls.
+    // Retain insertion order exactly: the first texture in a folder is the
+    // same fallback the previous sources.Keys.FirstOrDefault returned.
+    private readonly Dictionary<string, string> firstUnderDirectory = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<string>> directChildren = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly string[] KeyPrefixes = ["Resources/Textures/", "Textures/"];
+    private static readonly string[] KeySuffixes = [".dds.split", ".dds", ".png", ".psd", ".jpg", ".jpeg"];
+    private static readonly HashSet<string> ImageExtensions =
+        new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".dds" };
     private readonly Dictionary<string, Bitmap> cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(string, int), Bitmap> requests = new();
     // Background decoding takes the synchronous lock. Previously Request()
@@ -36,12 +45,34 @@ public class TextureLibrary : IDisposable
     private static string Key(string path)
     {
         string s = path.Replace('\\', '/');
-        foreach (string prefix in new[] { "Resources/Textures/", "Textures/" })
+        foreach (string prefix in KeyPrefixes)
             if (s.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) s = s[prefix.Length..];
-        foreach (string suffix in new[] { ".dds.split", ".dds", ".png", ".psd", ".jpg", ".jpeg" })
+        foreach (string suffix in KeySuffixes)
             if (s.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) s = s[..^suffix.Length];
         return s;
     }
+    private void RegisterSource(string key, Source source)
+    {
+        // Replacing a source does not reorder Dictionary keys; retain the
+        // original first-match preference for mod overrides.
+        bool isNew = !sources.ContainsKey(key);
+        sources[key] = source;
+        if (!isNew) return;
+        for (int slash = key.IndexOf('/'); slash >= 0; slash = key.IndexOf('/', slash + 1))
+        {
+            string prefix = key[..(slash + 1)];
+            firstUnderDirectory.TryAdd(prefix, key);
+        }
+        int lastSlash = key.LastIndexOf('/');
+        if (lastSlash >= 0)
+        {
+            string folder = key[..(lastSlash + 1)];
+            if (!directChildren.TryGetValue(folder, out List<string> children))
+                directChildren[folder] = children = new List<string>();
+            children.Add(key);
+        }
+    }
+
     public void AddArchive(string path)
     {
         if (!File.Exists(path)) return;
@@ -53,15 +84,15 @@ public class TextureLibrary : IDisposable
         // The normal UI path only needs entry names during catalog indexing.
         foreach (ZipArchiveEntry e in zip.Entries)
             if ((e.FullName.Contains("Textures/", StringComparison.OrdinalIgnoreCase)) && (e.Name.EndsWith(".dds.split") || e.Name.EndsWith(".dds") || e.Name.EndsWith(".png")))
-                sources[Key(e.FullName)] = new Source(null, zip, e.FullName, path);
+                RegisterSource(Key(e.FullName), new Source(null, zip, e.FullName, path));
     }
     public void AddFolder(string path)
     {
         if (!Directory.Exists(path)) return;
         appearancePaths.Clear();
         foreach (string file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
-            if (new[] { ".png", ".jpg", ".jpeg", ".dds" }.Contains(Path.GetExtension(file).ToLowerInvariant()))
-                sources[Key(Path.GetRelativePath(path, file))] = new Source(file, null, null);
+            if (ImageExtensions.Contains(Path.GetExtension(file)))
+                RegisterSource(Key(Path.GetRelativePath(path, file)), new Source(file, null, null));
     }
     // Graphic_Appearances selects the texture whose name ends in the stuff appearance.
     // A folder's first entry can be a MenuIcon, not a sixteen-state linked atlas.
@@ -72,9 +103,10 @@ public class TextureLibrary : IDisposable
         if (appearancePaths.TryGetValue(request, out var ready)) return ready;
         // Sources are fixed after catalog loading; do not wait on the decoder's lock in Paint.
         string folder = Key(path).TrimEnd('/') + "/";
-        string Find(string suffix) => sources.Keys.FirstOrDefault(k =>
-            k.StartsWith(folder, StringComparison.OrdinalIgnoreCase)
-            && !k[folder.Length..].Contains('/') && k.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+        string Find(string suffix) =>
+            directChildren.TryGetValue(folder, out List<string> children)
+                ? children.FirstOrDefault(k => k.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                : null;
         return appearancePaths.GetOrAdd(request, Find(request.Item2) ?? Find("Smooth") ?? path);
     }
     public Bitmap Get(string path, int rotation = 2)
@@ -134,7 +166,7 @@ public class TextureLibrary : IDisposable
             if (sources.ContainsKey(key + "_" + direction)) key += "_" + direction;
             else if (rotation == 3 && sources.ContainsKey(key + "_east")) key += "_east";
             else if (sources.ContainsKey(key + "_south")) key += "_south";
-            else key = sources.Keys.FirstOrDefault(k => k.StartsWith(key + "/", StringComparison.OrdinalIgnoreCase)) ?? key;
+            else key = firstUnderDirectory.GetValueOrDefault(key + "/") ?? key;
         }
         if (cache.TryGetValue(key, out Bitmap ready))
         {
