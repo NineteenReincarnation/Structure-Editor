@@ -11,6 +11,8 @@ internal static class MP_EditorRegressionChecks
         Directory.CreateDirectory(folder);
         try
         {
+            MP_DocumentHistoryChecks.Run();
+            MP_CatalogPaletteQueryChecks.Run();
             var source = new StructureDocument
             {
                 DefName = "MP_EditorSmoke",

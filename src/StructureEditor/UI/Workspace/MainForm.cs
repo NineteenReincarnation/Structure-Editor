@@ -21,7 +21,7 @@ public partial class MainForm : Form
     private readonly ListBox palette = new MP_MotionListBox();
     private MP_FluidAssetPalette MP_assetView;
     private readonly ToolStripStatusLabel status = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
-    private readonly Stack<StructureDocument> undo = new(), redo = new();
+    private readonly MP_DocumentHistory MP_history = new();
     private readonly Color surface = MP_StudioTheme.Panel,
         text = MP_StudioTheme.Text,
         muted = MP_StudioTheme.Secondary;

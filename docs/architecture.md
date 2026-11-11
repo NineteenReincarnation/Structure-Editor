@@ -18,6 +18,7 @@ the visible UI.** MP_ prefixes remain mandatory for new project-specific Defs.
 | WinForms bridge | `UI/Controls/` | Native controls and WPF page host |
 | WPF presentation | `UI/Wpf/{Navigation,Libraries,Inspector,Motion,Primitives}/` | Visible tabs, lists, inspectors and motion |
 | UI services | `UI/{Audio,Theme,Motion,Help}/` | Audio mixer, pure sound synthesis, theme and helpers |
+| Infrastructure | `Infrastructure/Paths/` | Shared app data locations, avoiding reverse dependencies on Program |
 | Compatibility | `Compatibility/` | Optional MP integration, cluster naming and CP |
 | Regression | `Validation/{Core,Interaction,Structures,Workspace,Performance,Smoke}/` | Offline and RimWorld-backed checks |
 
@@ -65,6 +66,7 @@ Structure-Editor/
 │   ├── Canvas/             Editing/ and Rendering/
 │   ├── Catalog/            Discovery/, Collections/, Textures/, Caching/, Metadata/
 │   ├── Compatibility/      Optional integration with other mods
+│   ├── Infrastructure/     Shared environment and filesystem paths
 │   ├── Core/               Models/ and Services/
 │   ├── Formats/            Codecs/ and Export/
 │   ├── UI/
@@ -129,6 +131,36 @@ the sole CI-managed output, not a manually edited source directory.
 Verify module placement with `scripts/check-architecture.ps1`; CI then
 runs Windows publish, `--ui-smoke-test` and `--catalog-cache-test` before
 synchronizing the executable into `main:app/`.
+
+## Cohesion and dependency boundaries
+
+The editor retains the same single Windows assembly and observable behavior,
+but cross-layer logic has been extracted into data-only services.
+
+- `Core/Services/MP_DocumentHistory.cs` owns snapshot copying, bounded
+  history, undo/redo and per-document stack export/restore. `MainForm`
+  passes the active document but no longer owns raw undo/redo stacks.
+  Workspace tab changes preserve the original top-of-stack-first arrays.
+- `Catalog/Collections/MP_CatalogPaletteQuery.cs` orders and filters plain
+  catalog items, receiving scope/favorites/recent IDs explicitly rather than
+  looking up `Program.Paths` or reading controls. Existing category/pack
+  search and selection semantics are unchanged.
+- `Formats/Export/MP_StructureStorage.cs` owns JSON/XML persistence,
+  duplicate checks, XML merging and backups. The controller in
+  `UI/Workspace/WorkspaceSaving.cs` only coordinates user dialogs/state.
+- `Infrastructure/Paths/MP_DataDirectories.cs` supplies the same
+  LocalApplicationData directory to both storage and the entry point;
+  `Program.DataDirectory` remains an alias for existing callers.
+- `App/WorkspaceReference.cs` is a pure persisted-settings DTO, separate
+  from `UI/Workspace/WorkspaceDocuments.cs`. Names and JSON fields remain
+  unchanged.
+
+`Validation/Core/MP_DocumentHistoryChecks.cs` and
+`Validation/Core/MP_CatalogPaletteQueryChecks.cs` run in the existing
+offline smoke test. They check history ordering and limits, session recovery
+and catalog source/favorite/recent filtering without installing RimWorld.
+The architecture script also rejects accidental Program/UI references in the
+newly isolated services.
 
 ## Human-facing information hierarchy
 

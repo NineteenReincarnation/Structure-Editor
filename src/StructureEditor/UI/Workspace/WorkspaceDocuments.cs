@@ -274,9 +274,3 @@ public partial class MainForm
         if (documents.Contains(original)) SwitchWorkspaceDocument(original); RefreshDocumentTabs();
     }
 }
-
-public sealed class WorkspaceReference
-{
-    public string File { get; set; }
-    public string Definition { get; set; }
-}

@@ -6,13 +6,10 @@ public partial class MainForm
     private void Snapshot()
     {
         if (updating) return;
-        undo.Push(document.Copy()); redo.Clear();
-        int cost = 0;
-        var kept = undo.Take(64).TakeWhile((d, n) => { cost += d.Items.Count; return n < 2 || cost <= 250000; }).Reverse().ToList();
-        undo.Clear(); foreach (var d in kept) undo.Push(d);
+        MP_history.Snapshot(document);
     }
-    private void Undo() { CommitInspectorEdit(); if (undo.Count == 0) return; redo.Push(document.Copy()); document = undo.Pop(); RestoreDocument(); }
-    private void Redo() { CommitInspectorEdit(); if (redo.Count == 0) return; undo.Push(document.Copy()); document = redo.Pop(); RestoreDocument(); }
+    private void Undo() { CommitInspectorEdit(); StructureDocument previous = MP_history.Undo(document); if (previous == null) return; document = previous; RestoreDocument(); }
+    private void Redo() { CommitInspectorEdit(); StructureDocument next = MP_history.Redo(document); if (next == null) return; document = next; RestoreDocument(); }
     private void RestoreDocument() { canvas.Document = document; canvas.ClearSelection(); dirty = true; RefreshMetadata(); canvas.Invalidate(); }
     private void RefreshMetadata()
     {

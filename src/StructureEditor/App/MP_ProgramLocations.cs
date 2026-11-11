@@ -5,7 +5,7 @@ namespace StructureEditor;
 // Paths and local RimWorld discovery. No changes to lookup order or fallback.
 internal static partial class Program
 {
-    public static readonly string DataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "StructureEditor");
+    public static readonly string DataDirectory = MP_DataDirectories.DataDirectory;
     public static string SettingsFile => Path.Combine(DataDirectory, "settings.json");
     public static string DefaultProjects => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Structure Editor");
     // Prefer the repository's editable structures/ folder when running from app/.

@@ -17,7 +17,8 @@ public partial class MainForm
         }
         finally { filtering = false; }
     }
-    private bool MatchesScope(CatalogItem item) => CatalogCollections.Matches(item, scopeBox.SelectedIndex, Program.Paths);
+    private bool MatchesScope(CatalogItem item) => CatalogCollections.Matches(
+        item, scopeBox.SelectedIndex, Program.Paths.Favorites, Program.Paths.RecentAssets);
     private void ToggleFavorite()
     {
         CatalogItem item = canvas.Selected != null ? catalog?.Find(canvas.Selected.Kind, canvas.Selected.DefName) : canvas.Brush;
@@ -71,9 +72,9 @@ public partial class MainForm
         if (catalog == null || filtering) return;
         string query = search.Text.Trim(); string pack = packBox.SelectedIndex > 0 ? packBox.SelectedItem?.ToString() : null;
         string group = groupBox.SelectedIndex > 0 ? groupBox.SelectedItem?.ToString() : null;
-        var results = catalog.Query(FilterKind, pack, group, query, ClusterScope).Where(MatchesScope)
-            .OrderBy(i => scopeBox.SelectedIndex == 3 ? Program.Paths.RecentAssets.IndexOf(CatalogCollections.Key(i)) : CatalogGrouping.Order(i.Group))
-            .ThenBy(i => i.Pack == "Core" ? 0 : 1).ThenBy(i => i.Label).ToArray();
+        var results = MP_CatalogPaletteQuery.Select(
+            catalog.Query(FilterKind, pack, group, query, ClusterScope),
+            scopeBox.SelectedIndex, Program.Paths.Favorites, Program.Paths.RecentAssets);
         // Avoid clearing/repainting the owner-drawn list when the result set is identical.
         // This matters when users cycle layers or repeatedly change selection.
         bool identical = palette.Items.Count == results.Length;
