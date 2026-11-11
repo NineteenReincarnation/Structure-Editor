@@ -21,7 +21,6 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     private readonly List<(WC.Border Container, WC.TextBlock Title, System.Windows.Shapes.Path CloseGlyph)> visuals = new();
     private MP_DocumentVisualState[] current = Array.Empty<MP_DocumentVisualState>();
     private int active = -1;
-    private int keyboardCandidate = -1;
     internal Action<int> MP_NavigateRegion { get; set; }
     internal Action MP_NavigationFocused { get; set; }
     private bool ready;
@@ -37,7 +36,6 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
         MP_LiltTheme.Apply(this);
         Focusable = true;
         GotKeyboardFocus += (_, _) => MP_NavigationFocused?.Invoke();
-        LostKeyboardFocus += (_, _) => { keyboardCandidate = -1; Move(false); };
         PreviewKeyDown += MP_OnKeyboardNavigation;
         Background = MP_StudioTheme.Brush(MP_StudioTheme.Toolbar);
         HorizontalAlignment = W.HorizontalAlignment.Stretch;
@@ -92,8 +90,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     internal void FocusNavigation()
     {
         Focus();
-        keyboardCandidate = active >= 0 ? active : (current.Length > 0 ? 0 : -1);
-        MP_MoveKeyboardCandidate();
+        Move(false);
     }
 
     private void MP_OnKeyboardNavigation(object sender, WI.KeyEventArgs e)
@@ -115,30 +112,23 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
         {
             if (current.Length == 0) return;
             int step = e.Key is WI.Key.A or WI.Key.Left ? -1 : 1;
-            keyboardCandidate = MP_LibraryNavigation.StepPage(
-                keyboardCandidate < 0 ? active : keyboardCandidate, step, current.Length);
-            MP_MoveKeyboardCandidate();
-            MP_UiSound.Play(MP_UiSound.Cue.Navigate);
+            int next = MP_LibraryNavigation.StepPage(active, step, current.Length);
+            if (next != active)
+            {
+                // The workspace callback changes the actual open document.
+                // Never position the focus outline independently of active.
+                invoke?.Invoke(current[next].Index, false);
+                MP_UiSound.Play(MP_UiSound.Cue.Navigate);
+            }
             e.Handled = true;
             return;
         }
-        if (e.Key == WI.Key.Enter && keyboardCandidate >= 0)
+        if (e.Key == WI.Key.Enter && active >= 0)
         {
-            invoke?.Invoke(current[keyboardCandidate].Index, false);
+            MP_NavigateRegion?.Invoke(1);
             MP_UiSound.Play(MP_UiSound.Cue.Confirm);
             e.Handled = true;
         }
-    }
-
-    private void MP_MoveKeyboardCandidate()
-    {
-        if (keyboardCandidate < 0 || keyboardCandidate >= visuals.Count) return;
-        double x = 0;
-        for (int i = 0; i < keyboardCandidate; i++) x += visuals[i].Container.Width;
-        capsule.Visibility = W.Visibility.Visible;
-        travellingCursor.Move(x, Math.Max(1, visuals[keyboardCandidate].Container.Width - 4),
-            immediate: !MP_Motion.Enabled);
-        visuals[keyboardCandidate].Container.BringIntoView();
     }
 
     internal void SetTabs(MP_DocumentVisualState[] next)
