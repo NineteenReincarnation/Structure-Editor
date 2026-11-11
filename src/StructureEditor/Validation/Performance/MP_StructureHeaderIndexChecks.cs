@@ -34,6 +34,14 @@ internal static class MP_StructureHeaderIndexChecks
             || xmlHeaders[1].Id != "MP_Two" || xmlHeaders[1].Label != "MP_Two")
             throw new InvalidOperationException("XML definition selection changed.");
 
+        // Old projects may be saved as BOM-marked UTF-16 JSON.
+        string unicodePath = Path.Combine(root, "Unicode.structure.json");
+        File.WriteAllText(unicodePath,
+            "{\"DefName\":\"MP_Unicode\",\"Label\":\"Legacy\",\"Items\":[]}",
+            System.Text.Encoding.Unicode);
+        if (index.Read(unicodePath).Single().Id != "MP_Unicode")
+            throw new InvalidOperationException("Legacy UTF-16 structure indexing changed.");
+
         // Failed parsing must not poison the cache.
         File.WriteAllText(path, "{incomplete");
         File.SetLastWriteTimeUtc(path, original.AddMinutes(2));

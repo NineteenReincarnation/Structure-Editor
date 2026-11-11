@@ -42,10 +42,20 @@ internal sealed class MP_StructureHeaderIndex
     {
         if (file.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
         {
-            // Deserialize directly from the stream, avoiding a second full
-            // UTF-16 string allocation for large structure layouts.
+            // Most saved projects are UTF-8. Retain File.ReadAllText's
+            // BOM-aware behavior for legacy UTF-16/UTF-32 JSON documents.
             using FileStream input = File.OpenRead(file);
-            using JsonDocument json = JsonDocument.Parse(input);
+            Span<byte> header = stackalloc byte[4];
+            int count = input.Read(header);
+            input.Position = 0;
+            bool unicode = count >= 2 &&
+                ((header[0] == 0xFF && header[1] == 0xFE)
+                || (header[0] == 0xFE && header[1] == 0xFF)
+                || (count >= 4 && header[0] == 0 && header[1] == 0
+                    && header[2] == 0xFE && header[3] == 0xFF));
+            using JsonDocument json = unicode
+                ? JsonDocument.Parse(File.ReadAllText(file))
+                : JsonDocument.Parse(input);
             if (json.RootElement.ValueKind != JsonValueKind.Object
                 || !json.RootElement.TryGetProperty("DefName", out JsonElement idElement)
                 || !json.RootElement.TryGetProperty("Items", out _)
