@@ -3,9 +3,9 @@ using NAudio.Wave.SampleProviders;
 
 namespace StructureEditor;
 
-// Soft, physical controller-button feedback: a filtered plastic contact
-// followed by a very quiet membrane/rebound thump, never a pitched UI beep.
-// NAudio mixes short local samples asynchronously without bundling sound files.
+// Dry gamepad-button clicks: a gentle midrange plastic snap with a short
+// rubber membrane decay. No musical tones, shrill square waves, or dull thuds.
+// Samples are synthesized locally and mixed asynchronously via NAudio.
 internal static class MP_UiSound
 {
     internal enum Cue { Navigate, Confirm, Toggle, Close, Open, Cancel, Focus, Error, Place, Select }
@@ -71,29 +71,29 @@ internal static class MP_UiSound
         }
     }
 
-    // A two-stage low-pass filters the contact noise to the frequency
-    // range of a real rubber-dome controller, rather than bright square waves.
-    // Each cue has its own press/release weight but stays under 75 ms.
+    // Each cue is a brief contact and a smaller release. Give the front
+    // edge a 1-3 kHz click; remove the low-frequency boom of the previous
+    // rubber-dome model without returning to an 8-bit high-pitched beep.
     private static MP_Click[] Pattern(Cue cue) => cue switch
     {
-        Cue.Navigate => [new(0, 23, 158, .068, .39),
-                         new(18, 14, 118, .020, .24)],
-        Cue.Confirm => [new(0, 34, 132, .088, .48),
-                        new(23, 27, 108, .048, .32)],
-        Cue.Toggle => [new(0, 28, 149, .065, .45),
-                       new(21, 18, 121, .028, .24)],
-        Cue.Close => [new(0, 33, 116, .078, .38),
-                      new(24, 22, 97, .034, .22)],
-        Cue.Open => [new(0, 32, 144, .068, .41),
-                     new(22, 22, 137, .038, .29)],
-        Cue.Cancel => [new(0, 31, 108, .067, .36),
-                       new(17, 24, 91, .028, .21)],
-        Cue.Focus => [new(0, 17, 120, .030, .26)],
-        Cue.Error => [new(0, 53, 88, .075, .32),
-                      new(27, 36, 82, .042, .25)],
-        Cue.Place => [new(0, 34, 124, .084, .51),
-                      new(22, 18, 109, .031, .27)],
-        Cue.Select => [new(0, 29, 141, .061, .37)],
+        Cue.Navigate => [new(0, 19, 208, .091, .68),
+                         new(16, 12, 167, .025, .48)],
+        Cue.Confirm => [new(0, 26, 191, .116, .73),
+                        new(19, 21, 183, .058, .58)],
+        Cue.Toggle => [new(0, 23, 194, .094, .70),
+                       new(18, 16, 159, .036, .53)],
+        Cue.Close => [new(0, 25, 174, .100, .72),
+                      new(19, 16, 148, .034, .51)],
+        Cue.Open => [new(0, 25, 207, .100, .69),
+                     new(17, 19, 180, .040, .55)],
+        Cue.Cancel => [new(0, 27, 166, .087, .65),
+                       new(17, 17, 149, .030, .52)],
+        Cue.Focus => [new(0, 15, 193, .048, .58)],
+        Cue.Error => [new(0, 36, 150, .092, .63),
+                      new(24, 21, 135, .041, .48)],
+        Cue.Place => [new(0, 27, 182, .111, .74),
+                      new(20, 18, 166, .042, .56)],
+        Cue.Select => [new(0, 23, 200, .082, .67)],
         _ => []
     };
 
@@ -112,29 +112,30 @@ internal static class MP_UiSound
             if (length <= 0) continue;
 
             var noise = new Random(14387 + (int)cue * 977 + layer * 173);
-            double filter = 0, filter2 = 0, phase = 0;
-            // Damping > 1 kHz prevents the sharp treble of the old chiptune.
-            double cutoff = 700 + click.Contact * 560;
-            double alpha = 1 - Math.Exp(-2 * Math.PI * cutoff / Rate);
+            double fast = 0, slow = 0, phase = 0;
+            double highCut = 2250 + click.Contact * 1100;
+            double fastAlpha = 1 - Math.Exp(-2 * Math.PI * highCut / Rate);
+            double slowAlpha = 1 - Math.Exp(-2 * Math.PI * 430 / Rate);
 
             for (int i = 0; i < length; i++)
             {
                 double progress = i / (double)length;
-                phase += 2 * Math.PI * click.Hz * (1 - progress * .12) / Rate;
-                double unfiltered = noise.NextDouble() * 2 - 1;
-                filter += alpha * (unfiltered - filter);
-                filter2 += alpha * (filter - filter2);
+                phase += 2 * Math.PI * click.Hz * (1 - progress * .08) / Rate;
+                double raw = noise.NextDouble() * 2 - 1;
+                fast += fastAlpha * (raw - fast);
+                slow += slowAlpha * (raw - slow);
 
-                // The contact is a quiet filtered knock, while a damped bass
-                // membrane gives the button its soft, close-up controller feel.
-                double contact = filter2 * (1.8 + click.Contact) *
-                    Math.Exp(-progress * 8);
-                double membrane = Math.Sin(phase) * Math.Exp(-progress * 3.6);
-                double ramp = Math.Min(1d, i / (Rate * .00065));
-                double tail = Math.Min(1d, (length - i) / (Rate * .003));
-                double level = click.Gain * Math.Min(ramp, tail);
-                samples[offset + i] += (float)(level *
-                    (membrane * (1 - click.Contact * .35) + contact * click.Contact));
+                // Band-limited transient supplies the distinct click of
+                // plastic-on-rubber. No sharp full-band noise or sustained tone.
+                double snap = (fast - slow) *
+                    Math.Exp(-progress * 8.4) * (1.15 + click.Contact * .55);
+                double dome = Math.Sin(phase) * .27 *
+                    Math.Exp(-progress * 5.8);
+                double attack = Math.Min(1, i / (Rate * .0003));
+                double release = Math.Min(1, (length - i) / (Rate * .0035));
+                samples[offset + i] += (float)(click.Gain *
+                    Math.Min(attack, release) *
+                    (snap * click.Contact + dome * (1 - click.Contact * .4)));
             }
         }
         return samples;
