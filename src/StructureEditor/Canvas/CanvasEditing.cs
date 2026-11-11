@@ -140,6 +140,7 @@ public partial class StructureCanvas : Control
         selection.Clear();
         foreach (var item in next) selection.Add(item);
         Selected = selection.LastOrDefault();
+        if (selection.Count > 0) MP_UiSound.Play(MP_UiSound.Cue.Select);
         SelectionChanged?.Invoke();
         Invalidate();
     }
@@ -284,7 +285,11 @@ public partial class StructureCanvas : Control
             if (Brush?.Kind != "Terrain") { Hint?.Invoke("先选择地板素材，再拖动矩形。"); return; }
             rectangle = true; Capture = true;
         }
-        else { painting = true; Capture = true; PaintAt(lastGrid); }
+        else
+        {
+            painting = true; Capture = true; PaintAt(lastGrid);
+            MP_UiSound.Play(MP_UiSound.Cue.Place);
+        }
         Invalidate();
     }
     protected override void OnMouseMove(MouseEventArgs e)
@@ -314,7 +319,11 @@ public partial class StructureCanvas : Control
             Tool = CanvasTool.Select;
             SelectItems(items);
         }
-        if (e.Button == MouseButtons.Left && rectangle) PaintRectangle(Between(gestureStart, Grid(e.Location)));
+        if (e.Button == MouseButtons.Left && rectangle)
+        {
+            PaintRectangle(Between(gestureStart, Grid(e.Location)));
+            MP_UiSound.Play(MP_UiSound.Cue.Place);
+        }
         EndGesture();
     }
     protected override void OnMouseWheel(MouseEventArgs e)
