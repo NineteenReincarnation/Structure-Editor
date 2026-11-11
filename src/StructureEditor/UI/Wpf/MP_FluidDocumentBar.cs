@@ -21,6 +21,9 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     private readonly List<(WC.Border Container, WC.TextBlock Title, System.Windows.Shapes.Path CloseGlyph)> visuals = new();
     private MP_DocumentVisualState[] current = Array.Empty<MP_DocumentVisualState>();
     private int active = -1;
+    private int keyboardCandidate = -1;
+    internal Action<int> MP_NavigateRegion { get; set; }
+    internal Action MP_NavigationFocused { get; set; }
     private bool ready;
 
     private static WM.SolidColorBrush Brush(byte r, byte g, byte b) =>
@@ -32,6 +35,10 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
     {
         invoke = onAction;
         MP_LiltTheme.Apply(this);
+        Focusable = true;
+        GotKeyboardFocus += (_, _) => MP_NavigationFocused?.Invoke();
+        LostKeyboardFocus += (_, _) => { keyboardCandidate = -1; Move(false); };
+        PreviewKeyDown += MP_OnKeyboardNavigation;
         Background = MP_StudioTheme.Brush(MP_StudioTheme.Toolbar);
         HorizontalAlignment = W.HorizontalAlignment.Stretch;
         VerticalAlignment = W.VerticalAlignment.Stretch;
@@ -80,6 +87,52 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
         Content = scrollingTabs;
         Loaded += (_, _) => Move(false);
         SizeChanged += (_, _) => Move(false);
+    }
+
+    internal void FocusNavigation()
+    {
+        Focus();
+        keyboardCandidate = active >= 0 ? active : (current.Length > 0 ? 0 : -1);
+        MP_MoveKeyboardCandidate();
+    }
+
+    private void MP_OnKeyboardNavigation(object sender, WI.KeyEventArgs e)
+    {
+        if (WI.Keyboard.Modifiers != WI.ModifierKeys.None) return;
+        if (e.Key is WI.Key.W or WI.Key.S or WI.Key.Tab)
+        {
+            MP_NavigateRegion?.Invoke(e.Key == WI.Key.W ? -1 : 1);
+            e.Handled = MP_NavigateRegion != null;
+            return;
+        }
+        if (e.Key is WI.Key.A or WI.Key.D or WI.Key.Left or WI.Key.Right)
+        {
+            if (current.Length == 0) return;
+            int step = e.Key is WI.Key.A or WI.Key.Left ? -1 : 1;
+            keyboardCandidate = MP_LibraryNavigation.StepPage(
+                keyboardCandidate < 0 ? active : keyboardCandidate, step, current.Length);
+            MP_MoveKeyboardCandidate();
+            MP_UiSound.Play(MP_UiSound.Cue.Navigate);
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == WI.Key.Enter && keyboardCandidate >= 0)
+        {
+            invoke?.Invoke(current[keyboardCandidate].Index, false);
+            MP_UiSound.Play(MP_UiSound.Cue.Confirm);
+            e.Handled = true;
+        }
+    }
+
+    private void MP_MoveKeyboardCandidate()
+    {
+        if (keyboardCandidate < 0 || keyboardCandidate >= visuals.Count) return;
+        double x = 0;
+        for (int i = 0; i < keyboardCandidate; i++) x += visuals[i].Container.Width;
+        capsule.Visibility = W.Visibility.Visible;
+        travellingCursor.Move(x, Math.Max(1, visuals[keyboardCandidate].Container.Width - 4),
+            immediate: !MP_Motion.Enabled);
+        visuals[keyboardCandidate].Container.BringIntoView();
     }
 
     internal void SetTabs(MP_DocumentVisualState[] next)
