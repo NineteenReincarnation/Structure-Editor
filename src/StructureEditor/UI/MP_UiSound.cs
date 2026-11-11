@@ -41,7 +41,7 @@ internal static class MP_UiSound
                         WaveFormat.CreateIeeeFloatWaveFormat(Rate, 1))
                     { ReadFully = true };
                     output = new WaveOutEvent { DesiredLatency = 72, NumberOfBuffers = 3 };
-                    output.Init(mixer);
+                    output.Init(new SampleToWaveProvider(mixer));
                     output.Play();
                 }
                 mixer.AddMixerInput(new MP_Voice(Samples[index]));
