@@ -110,16 +110,7 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
         }
         if (e.Key is WI.Key.A or WI.Key.D or WI.Key.Left or WI.Key.Right)
         {
-            if (current.Length == 0) return;
-            int step = e.Key is WI.Key.A or WI.Key.Left ? -1 : 1;
-            int next = MP_LibraryNavigation.StepPage(active, step, current.Length);
-            if (next != active)
-            {
-                // The workspace callback changes the actual open document.
-                // Never position the focus outline independently of active.
-                invoke?.Invoke(current[next].Index, false);
-                MP_UiSound.Play(MP_UiSound.Cue.Navigate);
-            }
+            MP_ActivateStep(e.Key is WI.Key.A or WI.Key.Left ? -1 : 1);
             e.Handled = true;
             return;
         }
@@ -129,6 +120,17 @@ internal sealed class MP_FluidDocumentBar : WC.UserControl
             MP_UiSound.Play(MP_UiSound.Cue.Confirm);
             e.Handled = true;
         }
+    }
+
+    // Called by A/D and the Windows UI smoke test.
+    // The real session switch updates active through SetTabs().
+    internal void MP_ActivateStep(int step)
+    {
+        if (current.Length == 0) return;
+        int next = MP_LibraryNavigation.StepPage(active, step, current.Length);
+        if (next == active) return;
+        invoke?.Invoke(current[next].Index, false);
+        MP_UiSound.Play(MP_UiSound.Cue.Navigate);
     }
 
     internal void SetTabs(MP_DocumentVisualState[] next)
