@@ -43,6 +43,9 @@ internal sealed class MP_FluidTabBar : WC.UserControl
     private readonly List<Entry> tabs = new();
     private readonly Action<int> activate;
     private int active = -1;
+    private int keyboardCandidate = -1;
+    internal Action<int> MP_NavigateRegion { get; set; }
+    internal Action MP_NavigationFocused { get; set; }
     private bool laidOut;
     private double lastAvailable;
     private static readonly WM.Color Muted = MP_StudioTheme.WpfColor(MP_StudioTheme.Secondary);
@@ -53,6 +56,10 @@ internal sealed class MP_FluidTabBar : WC.UserControl
     {
         activate = onActivate;
         MP_LiltTheme.Apply(this);
+        Focusable = true;
+        GotKeyboardFocus += (_, _) => MP_NavigationFocused?.Invoke();
+        LostKeyboardFocus += (_, _) => { keyboardCandidate = -1; Position(false); };
+        PreviewKeyDown += MP_OnKeyboardNavigation;
         Height = MP_StudioTheme.HeaderHeight;
         var surface = new WC.Grid
         {
@@ -103,6 +110,49 @@ internal sealed class MP_FluidTabBar : WC.UserControl
         Content = surface;
         SizeChanged += (_, _) => FitToViewport();
         Loaded += (_, _) => FitToViewport();
+    }
+
+    internal void FocusNavigation()
+    {
+        Focus();
+        keyboardCandidate = active < 0 ? 0 : active;
+        MP_MoveKeyboardCandidate();
+    }
+
+    private void MP_OnKeyboardNavigation(object sender, WI.KeyEventArgs e)
+    {
+        if (WI.Keyboard.Modifiers != WI.ModifierKeys.None) return;
+        if (e.Key is WI.Key.W or WI.Key.S or WI.Key.Tab)
+        {
+            MP_NavigateRegion?.Invoke(e.Key == WI.Key.W ? -1 : 1);
+            e.Handled = MP_NavigateRegion != null;
+            return;
+        }
+        if (e.Key is WI.Key.A or WI.Key.D or WI.Key.Left or WI.Key.Right)
+        {
+            if (tabs.Count == 0) return;
+            int step = e.Key is WI.Key.A or WI.Key.Left ? -1 : 1;
+            keyboardCandidate = MP_LibraryNavigation.StepPage(keyboardCandidate, step, tabs.Count);
+            MP_MoveKeyboardCandidate();
+            MP_UiSound.Play(MP_UiSound.Cue.Navigate);
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == WI.Key.Enter && keyboardCandidate >= 0)
+        {
+            activate?.Invoke(keyboardCandidate);
+            MP_UiSound.Play(MP_UiSound.Cue.Confirm);
+            e.Handled = true;
+        }
+    }
+
+    private void MP_MoveKeyboardCandidate()
+    {
+        if (keyboardCandidate < 0 || keyboardCandidate >= tabs.Count) return;
+        double x = 0;
+        for (int i = 0; i < keyboardCandidate; i++) x += tabs[i].Host.Width;
+        travellingCursor.Move(x, Math.Max(1, tabs[keyboardCandidate].Host.Width - 6),
+            immediate: !MP_Motion.Enabled);
     }
 
     internal void AddTab(string title)
