@@ -18,6 +18,9 @@
   <ItemGroup>
     <Using Include="System.IO" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
   <ItemGroup Condition="Exists('$(MPClusterNamingSource)')">
     <Compile Remove="Compatibility/MP_ClusterNaming.cs" />
     <Compile Include="$(MPClusterNamingSource)" Link="Compatibility/Shared/MP_ClusterNaming.cs" />
