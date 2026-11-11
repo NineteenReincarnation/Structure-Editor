@@ -98,10 +98,13 @@ public partial class MainForm
         if (keyData == (Keys.Control | Keys.S)) { Safe(() => SaveDocument(false)); return true; }
         if (keyData == (Keys.Control | Keys.Shift | Keys.S)) { Safe(() => SaveDocument(true)); return true; }
         Control input = ShortcutInput;
+        if (keyData is Keys.F6 or (Keys.Shift | Keys.F6) &&
+            MP_HandleWorkspaceNavigation(keyData)) return true;
         // Calling the Form base method here still dispatches MenuStrip Ctrl+C/V/Z,
         // so explicitly complete native text edits before the menu sees the command.
         if (input is TextBoxBase textInput && HandleTextShortcut(textInput, keyData)) return true;
         if (InputOwnsShortcut(input, keyData)) return base.ProcessCmdKey(ref msg, keyData);
+        if (MP_HandleWorkspaceNavigation(keyData)) return true;
         if (keyData == (Keys.Control | Keys.G)) { MP_ToggleRange("TurretExplosionRanges"); return true; }
         if (keyData == (Keys.Control | Keys.H)) { MP_ToggleRange("ProximityRanges"); return true; }
         if (keyData == (Keys.Control | Keys.J)) { MP_ToggleRange("ShieldRanges"); return true; }
@@ -144,7 +147,7 @@ public partial class MainForm
     }
     protected override void Dispose(bool disposing)
     {
-        if (disposing) { StopBackgroundLoading(); searchDelay.Dispose(); namingSwitchDelay.Dispose(); smallFont.Dispose(); if (!borrowedCatalog) catalog?.Dispose(); }
+        if (disposing) { MP_UiSound.Shutdown(); StopBackgroundLoading(); searchDelay.Dispose(); namingSwitchDelay.Dispose(); smallFont.Dispose(); if (!borrowedCatalog) catalog?.Dispose(); }
         base.Dispose(disposing);
     }
     // Render and exercise the application's own controls in a headless verification process.
